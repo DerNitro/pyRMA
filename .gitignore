@@ -1,0 +1,7 @@
+.idea/**
+*.log
+*.log.*
+*.pyc
+*.lic
+old/**
+lib/garda/__pycache__/*
