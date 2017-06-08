@@ -4,9 +4,7 @@
 
 import sys
 import traceback
-from acs import parameters
-from acs import interface
-from acs import schema
+from acs import parameters, interface, schema
 import sqlalchemy.orm
 from sqlalchemy import create_engine
 from acs.utils import *

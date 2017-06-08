@@ -6,7 +6,7 @@ from acs import log
 import configparser
 import os
 
-pathConfigFile = '../etc/acs.conf'
+pathConfigFile = './etc/acs.conf'
 
 
 def check_config(config):

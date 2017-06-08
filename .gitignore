@@ -4,4 +4,4 @@
 *.pyc
 *.lic
 old/**
-lib/garda/__pycache__/*
+lib/*/__pycache__/*

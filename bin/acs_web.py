@@ -3,7 +3,7 @@
 # encoding: utf-8
 
 from bottle import Bottle, template, response, request, static_file, redirect
-from acs import parameters, weblib, schema
+from acs import parameters, weblib
 import logging
 from logging import handlers, Formatter
 import os.path
@@ -29,7 +29,7 @@ log_format = Formatter('[%(asctime)s] [%(levelname)-8s] - %(message)s')
 h.setFormatter(log_format)
 logger.addHandler(h)
 
-siteMap = {'dashboard': 'index.html',
+siteMap = {'index': 'index.html',
            'login': 'login.html'}
 
 
@@ -49,7 +49,7 @@ def root():
 @app.route('/index.html')
 def index():
     logger.info(log_access(request, response))
-    return template(os.path.join(webParameters.template, siteMap['dashboard']))
+    return template(os.path.join(webParameters.template, siteMap['index']))
 
 
 @app.route('/login.html')
@@ -74,32 +74,6 @@ def post_login():
 def error404(error):
     logger.info(log_access(request, response))
     return '<b>"Nothing here, sorry"</b>!'
-
-
-@app.get('/style/<filepath:re:.*\.(css|png)>')
-def style(filepath):
-    return static_file(filepath, root=os.path.join(webParameters.template, 'style'))
-
-
-@app.get('/res/<filepath:re:.*\.(js|gif|png)>')
-def res(filepath):
-    return static_file(filepath, root=os.path.join(webParameters.template, 'res'))
-
-
-@app.get('/menu/<filepath:re:.*\.png>')
-def menu(filepath):
-    return static_file(filepath, root=os.path.join(webParameters.template, 'menu'))
-
-
-@app.get('/<favicon:re:.favicon\.(png|ico)>')
-def favicon():
-    return static_file('favicon.png)', root=os.path.join(webParameters.template))
-
-
-@app.get('/pcss/<filepath:re:.*\.css>')
-def pcss(filepath):
-    return static_file(filepath, root=os.path.join(webParameters.template, 'pcss'))
-
 
 
 if webParameters.template is not None:
