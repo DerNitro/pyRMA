@@ -1,12 +1,19 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8" />
-<title>ACS - Access Control System</title>
-</head>
-<header></header>
-<body>
-This is work Login
-</body>
-<footer></footer>
-</html>
+% rebase(path + '/' + 'main.html')
+<center>
+    <form action="/login.html" method="POST" name="register">
+        <span>Логин:</span><br>
+        <input name="username" type="text" size="45"/><br/>
+        <span>Пароль:</span><br>
+        <input name="password" type="password" size="45"/><br>
+        <span><input name="remember_me" type="checkbox">Запомнить на 30 дней</span><br>
+        <input class="submit_login" type="submit" value="Войти"/><br>
+    </form>
+</center>
+
+%setdefault('status','')
+%if status != '':
+<center>
+    <br>
+    <h3>{{ status }}</h3>
+</center>
+%end

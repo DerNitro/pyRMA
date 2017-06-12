@@ -8,6 +8,7 @@ import logging
 from logging import handlers, Formatter
 import os.path
 from sqlalchemy import create_engine
+import sys
 
 
 webParameters = parameters.WebParameters()
@@ -49,24 +50,25 @@ def root():
 @app.route('/index.html')
 def index():
     logger.info(log_access(request, response))
-    return template(os.path.join(webParameters.template, siteMap['index']))
+    return template(os.path.join(webParameters.template, siteMap['index']), path=webParameters.template, menu=True)
 
 
 @app.route('/login.html')
 def login():
     logger.info(log_access(request, response))
-    return template(os.path.join(webParameters.template, siteMap['login']))
+    return template(os.path.join(webParameters.template, siteMap['login']), path=webParameters.template, menu=False)
 
 
 @app.post('/login.html')
 def post_login():
-    username = request.forms.get('login')
+    username = request.forms.get('username')
     password = request.forms.get('password')
     remember = request.forms.get('remember_me')
-    if weblib.login_access(username, password, engine):
-        return '<b>True</b>'.format(username, password, remember)
+    logger.info(log_access(request, response))
+    if weblib.login_access(username, password, request.remote_addr, engine):
+        redirect('/')
     else:
-        return '<b>False</b>'.format(username, password, remember)
+        return template(os.path.join(webParameters.template, siteMap['login']), path=webParameters.template, menu=False, status='Не верный пароль')
 
 
 # Статические страницы
@@ -74,6 +76,11 @@ def post_login():
 def error404(error):
     logger.info(log_access(request, response))
     return '<b>"Nothing here, sorry"</b>!'
+
+
+@app.get('/<filename:re:.*\.css>')
+def stylesheets(filename):
+    return static_file(filename, root=webParameters.template)
 
 
 if webParameters.template is not None:
