@@ -4,10 +4,25 @@
 from acs import schema, utils
 import hashlib
 import sqlalchemy
+import datetime
 
 
 def check_access(request, engine):
-    return False
+    user_id = request.get_cookie('id', default=None)
+    key = request.get_cookie('key', default=None)
+    if user_id and key:
+        with schema.db_select(engine) as db:
+            access = db.query(schema.WebAccess).filter(schema.WebAccess.user == int(user_id)).one
+        if not access:
+            return False
+
+        if key == access.key and request.remote_addr == access.ip and datetime.datetime.now() < access.expires:
+            return True
+        else:
+            return False
+
+    else:
+        return False
 
 
 def login_access(username, password, ip, engine):
@@ -29,3 +44,8 @@ def login_access(username, password, ip, engine):
         return False
 
     return True
+
+
+def set_cookie(response, username, remote_addr, engine):
+    response.set_
+

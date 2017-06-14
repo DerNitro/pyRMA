@@ -42,6 +42,7 @@ def install(engine):
     AAAGroupList.__table__.create(bind=engine)
     Action.__table__.create(bind=engine)
     Parameter.__table__.create(bind=engine)
+    WebAccess.__table_.create(bind=engine)
 
     # Добавляем необходимые данные в таблицу
     cl_session = sessionmaker(bind=engine)
@@ -217,3 +218,4 @@ class WebAccess(Base):
     session = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
     ip = sqlalchemy.Column(sqlalchemy.String, nullable=False)
     expires = sqlalchemy.Column(sqlalchemy.DateTime, nullable=False)
+    key = sqlalchemy.Column(sqlalchemy.String, nullable=False)

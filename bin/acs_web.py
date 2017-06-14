@@ -3,7 +3,7 @@
 # encoding: utf-8
 
 from bottle import Bottle, template, response, request, static_file, redirect
-from acs import parameters, weblib
+from acs import parameters, weblib, schema
 import logging
 from logging import handlers, Formatter
 import os.path
@@ -66,6 +66,7 @@ def post_login():
     remember = request.forms.get('remember_me')
     logger.info(log_access(request, response))
     if weblib.login_access(username, password, request.remote_addr, engine):
+        weblib.set_cookie(response, username, request.remote_addr, engine)
         redirect('/')
     else:
         return template(os.path.join(webParameters.template, siteMap['login']), path=webParameters.template, menu=False, status='Не верный пароль')
@@ -84,6 +85,7 @@ def stylesheets(filename):
 
 
 if webParameters.template is not None:
+    # schema.WebAccess.__table__.create(bind=engine)
     app.run(host=webParameters.ip, port=webParameters.port)
 else:
     print('Not set template!!!')
