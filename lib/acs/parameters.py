@@ -105,3 +105,17 @@ class WebParameters:
     def __repr__(self):
         return "{0}".format(self.__dict__)
 
+
+class PamParametrs:
+    def __init__(self):
+        if not os.path.isfile(pathConfigFile):
+            raise FileNotFoundError('Отсутствует кофигурационный файл: {0}'.format(pathConfigFile))
+
+        conf = configparser.ConfigParser()
+        conf.read(pathConfigFile)
+        self.dbase = conf.get('DataBase', 'provider', fallback='postgresql')
+        self.dbase_param = [conf.get('DataBase', 'dbhost', fallback='localhost'),
+                            conf.get('DataBase', 'dbport', fallback=5432),
+                            conf.get('DataBase', 'dbuser', fallback='acs'),
+                            conf.get('DataBase', 'dbpass', fallback='acs'),
+                            conf.get('DataBase', 'dbname', fallback='acs')]
