@@ -3,6 +3,13 @@ import ipaddress
 
 
 def check_license(lic):
+    """
+    Проверка валидности файла лицензии
+
+    :param lic: путь к файлу лицензии string
+    :type lic:  str
+    :return: Возвращает Истина если файл валидный.
+    """
     from platform import system
     from socket import gethostname
     import hashlib
@@ -29,6 +36,15 @@ def check_license(lic):
 
 
 def check_ip(user_ip, ip_address):
+    """
+    Проверка корректности IP адреса
+
+    :param user_ip: IP адрес клиента
+    :type user_ip: str
+    :param ip_address:  Строка со списком адресов, разделитель ';'
+    :type ip_address: str
+    :return: Возвращает истину/ложь вхождения IP клиента в список разрешенных адресов
+    """
     ips = ip_address.split(';')
     user_ip = ipaddress.ip_address(user_ip)
     for ip in ips:
@@ -50,6 +66,17 @@ def check_ip(user_ip, ip_address):
 
 
 def password(passwd, magic, action):
+    """
+    Функция маскировки/демаскировки пароля
+
+    :param passwd: Исходный пароль
+    :type passwd: str
+    :param magic: Магическое число
+    :type magic: int
+    :param action: кодирование/декодирование
+    :type action: bool
+    :return: Возвращает преобразованый пароль
+    """
     c_h = 'PQRabc=>?@[\]defghijkopqJKLrstuv&\'wxy234789!"#$%()*+z01,-./:;<}~ABCDlmnEFGHI56MNOST^_`{|UVWXYZ'
     result = ''
     magic = list(str(magic))

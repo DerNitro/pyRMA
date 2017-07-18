@@ -17,6 +17,12 @@ import hashlib
 
 
 def get_user(login):
+    """
+    Функция получения данных о пользователе из СУБД.
+    :param login: Имя пользователя
+    :type login: str
+    :return: Возвращает информацию user, group, group_list
+    """
     try:
         pam_parameters = parameters.PamParametrs()
     except FileNotFoundError:
@@ -82,3 +88,6 @@ def pam_sm_close_session(pamh, flags, argv):
 def pam_sm_chauthtok(pamh, flags, argv):
   return pamh.PAM_SUCCESS
 
+
+if __name__ == '__main__':
+    pass
