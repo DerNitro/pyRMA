@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 # encoding: utf-8
+import random
 
-from acs import schema, utils
+from acs import schema, utils, email
 import hashlib
 import sqlalchemy
 import datetime
+import string
 
 
 def check_access(request, engine):
@@ -46,6 +48,30 @@ def login_access(username, password, ip, engine):
     return True
 
 
+def restore_password(username, engine):
+    with schema.db_select(engine) as db:
+        user_id = db.query(schema.User.login).join(schema.AAAUser, schema.User.login == schema.AAAUser.uid).\
+            filter(sqlalchemy.or_(schema.AAAUser.username == username, schema.User.email == username)).all()
+
+    if len(user_id) !=1:
+        return False
+
+    # TODO: добавить отключение старых запросов.
+
+    key = ''.join(random.choice(string.ascii_letters + string.punctuation + string.digits) for _ in range(256))
+    key = hashlib.md5(key.encode()).hexdigest()
+    user_id = user_id[0][0]
+
+    with schema.db_edit(engine) as db:
+        db.add(schema.RestorePassword(user=user_id,
+                                      status=1,
+                                      date=datetime.datetime.now(),
+                                      key=key))
+
+    email.send_mail()
+    return True
+
+
 def set_cookie(response, username, remote_addr, engine):
-    response.set_
+    pass
 

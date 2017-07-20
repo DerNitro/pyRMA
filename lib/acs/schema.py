@@ -1,4 +1,5 @@
 import sqlalchemy
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 import datetime
@@ -42,7 +43,8 @@ def install(engine):
     AAAGroupList.__table__.create(bind=engine)
     Action.__table__.create(bind=engine)
     Parameter.__table__.create(bind=engine)
-    WebAccess.__table_.create(bind=engine)
+    WebAccess.__table__.create(bind=engine)
+    RestorePassword.__table__.create(bind=engine)
 
     # Добавляем необходимые данные в таблицу
     cl_session = sessionmaker(bind=engine)
@@ -154,6 +156,7 @@ class Action(Base):
         20 - Создание хоста
         21 - Редактирование хоста
         22 - Удаление хоста
+        50 - Восстановление пароля.
     """
     __tablename__ = 'action'
 
@@ -219,3 +222,33 @@ class WebAccess(Base):
     ip = sqlalchemy.Column(sqlalchemy.String, nullable=False)
     expires = sqlalchemy.Column(sqlalchemy.DateTime, nullable=False)
     key = sqlalchemy.Column(sqlalchemy.String, nullable=False)
+
+
+class RestorePassword(Base):
+    """
+    Таблица запросов восстановления паролей.
+    status:
+    0 - Отклонен
+    1 - Запрос смены пароля
+    2 - Запрос выполнен
+    """
+    # TODO: в демон добавить контроль активных запросов.
+
+    __tablename__ = 'restore_password'
+    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
+    user = sqlalchemy.Column(sqlalchemy.Integer, nullable=False, primary_key=True)
+    status = sqlalchemy.Column(sqlalchemy.Integer)
+    date = sqlalchemy.Column(sqlalchemy.DateTime)
+    date_complete = sqlalchemy.Column(sqlalchemy.DateTime)
+    key = sqlalchemy.Column(sqlalchemy.String)
+
+
+if __name__ == '__main__':
+    engine = create_engine('{0}://{1}:{2}@{3}:{4}/{5}'.format('postgresql',
+                                                              'acs',
+                                                              'acs',
+                                                              'localhost',
+                                                              '5432',
+                                                              'acs'
+                                                              ))
+    # RestorePassword.__table__.create(bind=engine)

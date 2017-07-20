@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # encoding: utf-8
 
-from bottle import Bottle, template, response, request, static_file, redirect
+from bottle import Bottle, template, response, request, static_file, redirect, TEMPLATE_PATH
 from acs import parameters, weblib, schema
 import logging
 from logging import handlers, Formatter
@@ -12,6 +12,7 @@ import sys
 
 
 webParameters = parameters.WebParameters()
+TEMPLATE_PATH.insert(0, webParameters.template)
 engine = create_engine('{0}://{1}:{2}@{3}:{4}/{5}'.format(webParameters.dbase,
                                                           webParameters.dbase_param[2],
                                                           webParameters.dbase_param[3],
@@ -31,7 +32,8 @@ h.setFormatter(log_format)
 logger.addHandler(h)
 
 siteMap = {'index': 'index.html',
-           'login': 'login.html'}
+           'login': 'login.html',
+           'restore': 'restore.html'}
 
 
 def log_access(req, resp):
@@ -50,13 +52,13 @@ def root():
 @app.route('/index.html')
 def index():
     logger.info(log_access(request, response))
-    return template(os.path.join(webParameters.template, siteMap['index']), path=webParameters.template, menu=True)
+    return template(os.path.join(webParameters.template, siteMap['index']), menu=True)
 
 
 @app.route('/login.html')
 def login():
     logger.info(log_access(request, response))
-    return template(os.path.join(webParameters.template, siteMap['login']), path=webParameters.template, menu=False)
+    return template(os.path.join(webParameters.template, siteMap['login']), menu=False)
 
 
 @app.post('/login.html')
@@ -69,7 +71,24 @@ def post_login():
         weblib.set_cookie(response, username, request.remote_addr, engine)
         redirect('/')
     else:
-        return template(os.path.join(webParameters.template, siteMap['login']), path=webParameters.template, menu=False, status='Не верный пароль')
+        return template(os.path.join(webParameters.template, siteMap['login']),
+                        menu=False, status='Не верный пароль')
+
+
+@app.route('/restore.html')
+def restore():
+    return template(os.path.join(webParameters.template, siteMap['restore']))
+
+
+@app.post('/restore.html')
+def generation_restore_password():
+    username = request.forms.get('username')
+    if weblib.restore_password(username, engine):
+        return template(os.path.join(webParameters.template, siteMap['restore']),
+                        status='Инструкции отправлены на email')
+    else:
+        return template(os.path.join(webParameters.template, siteMap['restore']),
+                        status='Пользователь не найден, обратитесь к администратору.')
 
 
 # Статические страницы
@@ -81,7 +100,7 @@ def error404(error):
 
 @app.get('/<filename:re:.*\.css>')
 def stylesheets(filename):
-    return static_file(filename, root=webParameters.template)
+    return static_file(filename)
 
 
 if webParameters.template is not None:
