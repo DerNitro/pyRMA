@@ -6,10 +6,10 @@ from logging import handlers, Formatter
 
 
 class Log:
-    def __init__(self, logfile, log_level, backup_count, max_bytes):
-        self.logger = logging.getLogger('mainLog')
-        self.logger.setLevel(log_level)
-        h = handlers.RotatingFileHandler(logfile, backupCount=backup_count, maxBytes=max_bytes)
+    def __init__(self, name, level='INFO', facility='local0'):
+        self.logger = logging.getLogger(name)
+        self.logger.setLevel(level)
+        h = handlers.SysLogHandler(address='/dev/log', facility=facility)
         log_format = Formatter('[%(asctime)s] [%(levelname)-8s] - %(message)s')
         h.setFormatter(log_format)
         self.logger.addHandler(h)

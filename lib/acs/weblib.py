@@ -2,7 +2,7 @@
 # encoding: utf-8
 import random
 
-from acs import schema, utils, email
+from acs import schema, utils, email, template
 import hashlib
 import sqlalchemy
 import datetime
@@ -48,12 +48,12 @@ def login_access(username, password, ip, engine):
     return True
 
 
-def restore_password(username, engine):
+def restore_password(username, engine, request):
     with schema.db_select(engine) as db:
-        user_id = db.query(schema.User.login).join(schema.AAAUser, schema.User.login == schema.AAAUser.uid).\
+        user_id = db.query(schema.User.login).join(schema.AAAUser, schema.User.login == schema.AAAUser.uid). \
             filter(sqlalchemy.or_(schema.AAAUser.username == username, schema.User.email == username)).all()
 
-    if len(user_id) !=1:
+    if len(user_id) != 1:
         return False
 
     # TODO: добавить отключение старых запросов.
@@ -67,11 +67,21 @@ def restore_password(username, engine):
                                       status=1,
                                       date=datetime.datetime.now(),
                                       key=key))
+        db.add(schema.Action(user=user_id,
+                             action_type=50,
+                             date=datetime.datetime.now()))
+    host = request.get_header('host')
+    email.send_mail(engine,
+                    template.restore_password(),
+                    {
+                        'username': 'Test User',
+                        'url_recovery': 'http://{0}/{1}'.format(host, "recovery/" + key),
+                        'url_deny': 'http://{0}/{1}'.format(host, "recovery/deny/" + key),
+                        'user': user_id
+                    })
 
-    email.send_mail()
     return True
 
 
 def set_cookie(response, username, remote_addr, engine):
     pass
-

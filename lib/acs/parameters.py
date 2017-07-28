@@ -46,14 +46,10 @@ class Parameters:
         self.rec_file = conf.get('Main', 'file_env',fallback='filerec')
         self.rec_folder = conf.get('Main', 'path_env', fallback='filerecord')
         self.license = conf.get('Main', 'license', fallback=None)
-        log_path = conf.get('Main', 'log_path', fallback='/var/log/ACS/')
-        self.log_param = [log_path + '/' + 'GardaSA_' + self.user_name + '.log',
-                          conf.get('Main', 'log_level', fallback='INFO'),
-                          conf.getint('Main', 'log_rotate_count', fallback=5),
-                          conf.getint('Main', 'log_rotate_size', fallback=500000)]
-        if not os.path.isdir(log_path):
-            os.makedirs(log_path)
-        self.log = log.Log(*self.log_param)
+        self.log_param = {'level': conf.get('Main', 'log_level', fallback='INFO'),
+                          'facility': conf.get('Main', 'log_facility', fallback='local0')}
+
+        self.log = log.Log('{}_syslog'.format(self.user_name))
 
         self.dbase = conf.get('DataBase', 'provider',fallback='postgresql')
         self.dbase_param = [conf.get('DataBase', 'dbhost', fallback='localhost'),
@@ -69,10 +65,7 @@ class Parameters:
 class WebParameters:
     ip = 'localhost'
     port = 8080
-    log_file = None
     log_level = None
-    log_rotate_count = None
-    log_rotate_size = None
     template = None
     engine = None
     dbase = ''
@@ -87,13 +80,8 @@ class WebParameters:
 
         self.ip = conf.get('Web', 'ip')
         self.port = conf.get('Web', 'port')
-        log_path = conf.get('Main', 'log_path', fallback='/var/log/ACS/')
-        self.log_file = log_path + '/' + 'GardaSA_WEB.log'
+        self.log_facility = conf.get('Web', 'log_facility', fallback='local0')
         self.log_level = conf.get('Main', 'log_level', fallback='INFO')
-        self.log_rotate_count = conf.getint('Main', 'log_rotate_count', fallback=5)
-        self.log_rotate_size = conf.getint('Main', 'log_rotate_size', fallback=500000)
-        if not os.path.isdir(log_path):
-            os.makedirs(log_path)
         self.template = conf.get('Web', 'template')
         self.dbase = conf.get('DataBase', 'provider', fallback='postgresql')
         self.dbase_param = [conf.get('DataBase', 'dbhost', fallback='localhost'),

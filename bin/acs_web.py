@@ -3,12 +3,9 @@
 # encoding: utf-8
 
 from bottle import Bottle, template, response, request, static_file, redirect, TEMPLATE_PATH
-from acs import parameters, weblib, schema
-import logging
-from logging import handlers, Formatter
+from acs import parameters, weblib, log
 import os.path
 from sqlalchemy import create_engine
-import sys
 
 
 webParameters = parameters.WebParameters()
@@ -22,14 +19,7 @@ engine = create_engine('{0}://{1}:{2}@{3}:{4}/{5}'.format(webParameters.dbase,
                                                           ))
 app = Bottle()
 # schema.install(engine)
-logger = logging.getLogger('WebLog')
-logger.setLevel(webParameters.log_level)
-h = handlers.RotatingFileHandler(webParameters.log_file,
-                                 backupCount=webParameters.log_rotate_count,
-                                 maxBytes=webParameters.log_rotate_size)
-log_format = Formatter('[%(asctime)s] [%(levelname)-8s] - %(message)s')
-h.setFormatter(log_format)
-logger.addHandler(h)
+logger = log.Log("Web_syslog", level=webParameters.log_level, facility=webParameters.log_facility)
 
 siteMap = {'index': 'index.html',
            'login': 'login.html',
@@ -68,7 +58,8 @@ def post_login():
     remember = request.forms.get('remember_me')
     logger.info(log_access(request, response))
     if weblib.login_access(username, password, request.remote_addr, engine):
-        weblib.set_cookie(response, username, request.remote_addr, engine)
+        if remember:
+            weblib.set_cookie(response, username, request.remote_addr, engine)
         redirect('/')
     else:
         return template(os.path.join(webParameters.template, siteMap['login']),
@@ -77,13 +68,15 @@ def post_login():
 
 @app.route('/restore.html')
 def restore():
+    logger.info(log_access(request, response))
     return template(os.path.join(webParameters.template, siteMap['restore']))
 
 
 @app.post('/restore.html')
 def generation_restore_password():
+    logger.info(log_access(request, response))
     username = request.forms.get('username')
-    if weblib.restore_password(username, engine):
+    if weblib.restore_password(username, engine, request):
         return template(os.path.join(webParameters.template, siteMap['restore']),
                         status='Инструкции отправлены на email')
     else:
@@ -93,14 +86,15 @@ def generation_restore_password():
 
 # Статические страницы
 @app.error(404)
-def error404(error):
+def error404():
     logger.info(log_access(request, response))
     return '<b>"Nothing here, sorry"</b>!'
 
 
 @app.get('/<filename:re:.*\.css>')
 def stylesheets(filename):
-    return static_file(filename)
+    logger.info(log_access(request, response))
+    return static_file(filename, root=os.path.join(webParameters.template))
 
 
 if webParameters.template is not None:
