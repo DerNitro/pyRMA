@@ -32,7 +32,7 @@ def login_access(username, password, ip, engine):
         try:
             aaa = db.query(schema.AAAUser).filter(schema.AAAUser.username == username).one()
             user = db.query(schema.User).filter(schema.User.login == aaa.uid).one()
-            param = db.query(schema.Parameter).filter(schema.Parameter.name == 'CHECK_IP').one()
+            check_ip = db.query(schema.Parameter).filter(schema.Parameter.name == 'CHECK_IP').one()
         except sqlalchemy.orm.exc.NoResultFound:
             return False
 
@@ -42,7 +42,7 @@ def login_access(username, password, ip, engine):
     if aaa.password != hashlib.md5(password.encode()).hexdigest():
         return False
 
-    if not utils.check_ip(ip, user.ip) and param.value == '1':
+    if not utils.check_ip(ip, user.ip) and check_ip.value == '1':
         return False
 
     return True

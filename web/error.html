@@ -1,0 +1,12 @@
+{% extends "main.html" %}
+
+{% block content %}
+
+{%- if error == 'NotAuthenticate' -%}
+<div id="NotAuthenticate">
+    <p>Не верный логин и пароль!!!</p>
+    <a href="/restore">Восстановить пароль</a>
+</div>
+{% endif %}
+
+{% endblock %}

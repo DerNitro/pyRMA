@@ -1,18 +1,19 @@
-% rebase('main.html')
+{% extends "main.html" %}
 
-%setdefault('status',None)
-%if status == None:
+{% block content %}
+{%- if not status -%}
 <center>
-    <form action="/restore.html" method="POST" name="register">
+    <form action="/restore" method="POST" name="register">
         <span>Логин или email:</span><br>
         <input name="username" type="text" size="45"/><br/>
         <input class="submit_login" type="submit" value="Восстановить пароль"/><br>
     </form>
 </center>
-%else:
+{% else %}
 <center>
     <h3>{{status}}</h3>
     <br>
     <a href="/">назад</a>
 </center>
-%end
+{% endif %}
+{% endblock %}
