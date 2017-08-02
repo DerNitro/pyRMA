@@ -42,9 +42,9 @@ class Mail:
         return "{0}".format(self.__dict__)
 
 
-def send_mail(engine, template, data):
+def send_mail(engine, template, user_id, data):
     mail = Mail(engine)
-    user_id = data['user']
+    user_id = user_id
     with schema.db_select(engine) as db:
         mail.mail_to = db.query(schema.User.email).filter(schema.User.login == user_id).one()[0]
     mail.send(template, **data)

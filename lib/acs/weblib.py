@@ -7,6 +7,7 @@ import hashlib
 import sqlalchemy
 import datetime
 import string
+from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
 
 def check_access(request, engine):
@@ -33,7 +34,9 @@ def login_access(username, password, ip, engine):
             aaa = db.query(schema.AAAUser).filter(schema.AAAUser.username == username).one()
             user = db.query(schema.User).filter(schema.User.login == aaa.uid).one()
             check_ip = db.query(schema.Parameter).filter(schema.Parameter.name == 'CHECK_IP').one()
-        except sqlalchemy.orm.exc.NoResultFound:
+        except NoResultFound:
+            return False
+        except MultipleResultsFound:
             return False
 
     if not aaa:
@@ -70,18 +73,45 @@ def restore_password(username, engine, request):
         db.add(schema.Action(user=user_id,
                              action_type=50,
                              date=datetime.datetime.now()))
-    host = request.get_header('host')
+    host = request.host_url
     email.send_mail(engine,
                     template.restore_password(),
+                    user_id,
                     {
                         'username': 'Test User',
-                        'url_recovery': 'http://{0}/{1}'.format(host, "recovery/" + key),
-                        'url_deny': 'http://{0}/{1}'.format(host, "recovery/deny/" + key),
+                        'url_recovery': '{0}{1}'.format(host, "restore/" + key),
+                        'url_deny': '{0}{1}'.format(host, "restore/deny/" + key),
                         'user': user_id
                     })
 
     return True
 
 
-def set_cookie(response, username, remote_addr, engine):
-    pass
+def reset_password(key, engine, password=False, check=False):
+    with schema.db_select(engine) as db:
+        try:
+            restore = db.query(schema.RestorePassword).filter(sqlalchemy.and_(schema.RestorePassword.key == key,
+                                                                              schema.RestorePassword.status == 1)).one()
+        except sqlalchemy.orm.exc.NoResultFound:
+            return False
+
+    if check and restore:
+        return True
+
+    with schema.db_select(engine) as db:
+        try:
+            aaa_user = db.query(schema.AAAUser).filter(schema.AAAUser.uid == restore.user).one()
+        except sqlalchemy.orm.exc.NoResultFound:
+            return False
+
+    with schema.db_edit(engine) as db:
+        db.query(schema.RestorePassword).\
+            filter(sqlalchemy.and_(schema.RestorePassword.key == key,
+                   schema.RestorePassword.status == 1)).\
+            update({schema.RestorePassword.status: 2,
+                   schema.RestorePassword.date_complete:  datetime.datetime.now()})
+        db.query(schema.AAAUser).\
+            filter(schema.AAAUser.uid == restore.user).\
+            update({schema.AAAUser.password: hashlib.md5(str(password).encode()).hexdigest()})
+    email.send_mail(engine, template.restore_password_access(), aaa_user.uid, {'login': aaa_user.username})
+    return True

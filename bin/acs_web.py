@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # encoding: utf-8
 
-from flask import Flask, render_template, redirect, request, Response
+from flask import Flask, render_template, redirect, request, Response, url_for
 from functools import wraps
 from acs import parameters, weblib, log
 import os.path
@@ -25,7 +25,8 @@ logger = log.Log("Web_syslog", level=webParameters.log_level, facility=webParame
 
 siteMap = {'index': 'index.html',
            'error': 'error.html',
-           'restore': 'restore.html'}
+           'restore': 'restore.html',
+           'reset password': 'reset_password.html'}
 
 
 def log_access(req, resp):
@@ -56,15 +57,40 @@ def requires_auth(f):
 @app.route('/')
 @requires_auth
 def root():
-    return "Hi"
+    return render_template(siteMap['index'])
 
 
 @app.route('/restore', methods=['GET', 'POST'])
-def restore():
+def get_restore():
     if request.method == 'GET':
         return render_template(siteMap['restore'])
     elif request.method == 'POST':
-        return 'POST'
+        if weblib.restore_password(request.form['username'], engine, request):
+            status = "Инструкции отправлены"
+            return render_template(siteMap['restore'], status=status)
+        else:
+            status = "Error!!!"
+            return render_template(siteMap['restore'], status=status)
+
+
+@app.route('/restore/<key>', methods=['GET', 'POST'])
+def restore(key):
+    if request.method == 'GET':
+        if weblib.reset_password(key, engine, check=True):
+            return render_template(siteMap['reset password'], key=key)
+        else:
+            render_template(siteMap['error'], error='404')
+    elif request.method == 'POST':
+        if request.form['password_check'] == request.form['password']:
+            if weblib.reset_password(key, engine, password=request.form['password']):
+                status = 'Password reset'
+                return render_template(siteMap['reset password'], status=status)
+            else:
+                status = 'Error reset'
+                return render_template(siteMap['reset password'], status=status)
+        else:
+            return render_template(siteMap['reset password'])
+
 
 if webParameters.template is not None:
     app.run(host=webParameters.ip, port=webParameters.port)
