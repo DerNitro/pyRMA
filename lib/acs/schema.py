@@ -80,7 +80,7 @@ class User(Base):
 
     login = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, unique=True)
     full_name = sqlalchemy.Column(sqlalchemy.String(256))
-    permissions = sqlalchemy.Column(sqlalchemy.String(10))
+    permissions = sqlalchemy.Column(sqlalchemy.Integer, default=0)
     date_create = sqlalchemy.Column(sqlalchemy.DateTime, default=datetime.datetime.now)
     disable = sqlalchemy.Column(sqlalchemy.BOOLEAN(), default=False)
     date_disable = sqlalchemy.Column(sqlalchemy.DateTime)
@@ -209,19 +209,6 @@ class Group(Base):
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
     name = sqlalchemy.Column(sqlalchemy.String, nullable=False, unique=True)
     note = sqlalchemy.Column(sqlalchemy.String)
-
-
-class WebAccess(Base):
-    """
-    Таблица веб доступов пользоватлей
-    """
-    __tablename__ = 'web_access'
-    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
-    user = sqlalchemy.Column(sqlalchemy.Integer, nullable=False, primary_key=True)
-    session = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
-    ip = sqlalchemy.Column(sqlalchemy.String, nullable=False)
-    expires = sqlalchemy.Column(sqlalchemy.DateTime, nullable=False)
-    key = sqlalchemy.Column(sqlalchemy.String, nullable=False)
 
 
 class RestorePassword(Base):
