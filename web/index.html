@@ -1,9 +1,12 @@
 {% extends "main.html" %}
+{% from "menu.html" import show_menu %}
 
 {% block header %}
+{{ super() }}
 {% endblock %}
 
 {% block content %}
+{{ show_menu(True) }}
 <div class="dashboard">
     dashboard
 </div>

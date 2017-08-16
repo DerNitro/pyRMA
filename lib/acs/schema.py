@@ -43,7 +43,6 @@ def install(engine):
     AAAGroupList.__table__.create(bind=engine)
     Action.__table__.create(bind=engine)
     Parameter.__table__.create(bind=engine)
-    WebAccess.__table__.create(bind=engine)
     RestorePassword.__table__.create(bind=engine)
 
     # Добавляем необходимые данные в таблицу
@@ -157,6 +156,7 @@ class Action(Base):
         21 - Редактирование хоста
         22 - Удаление хоста
         50 - Восстановление пароля.
+        51 - Изменение правил доступа.
     """
     __tablename__ = 'action'
 

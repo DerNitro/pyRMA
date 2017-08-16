@@ -1,3 +1,14 @@
-{% macro show_menu() %}
+{% macro show_menu(Admin) %}
+
+<div class="menu">
+    <ul>
+        <li><a class="active" href="#home">Dashboard</a></li>
+        <li><a href="#home">Карта</a></li>
+        <li><a href="#contact">Настройки</a></li>
+        {% if Admin == True %}
+            <li style="float:right"><a href="#about">Администрирование</a></li>
+        {% endif %}
+    </ul>
+</div>
 
 {% endmacro %}

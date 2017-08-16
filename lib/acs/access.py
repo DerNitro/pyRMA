@@ -4,18 +4,18 @@
 from acs import schema
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
-access_map = {'ShowHostInformation': 0,
-              'EditHostInformation': 1,
-              'EditDirectory': 2,
-              'EditPrefixHost': 3,
-              'DisableShowLoginPassword': 4,
-              'FileTransfer': 5,
-              'UsableService': 6,
-              'UsableOnlyService': 7,
-              'ShowAllSession': 8,
-              'ShowAllGroupSession': 9,
-              'ShowUserSession': 10,
-              'Administrate': 11}
+user_access_map = {'ShowHostInformation': 0,
+                   'EditHostInformation': 1,
+                   'EditDirectory': 2,
+                   'EditPrefixHost': 3,
+                   'DisableShowLoginPassword': 4,
+                   'FileTransfer': 5,
+                   'UsableService': 6,
+                   'UsableOnlyService': 7,
+                   'ShowAllSession': 8,
+                   'ShowAllGroupSession': 9,
+                   'ShowUserSession': 10,
+                   'Administrate': 11}
 
 
 class Access:
@@ -26,8 +26,8 @@ class Access:
         Формируем мапинг правил доступа
         :param n_access: текущее значение доступа int
         """
-        bin_str = '{0:b}'.format(n_access)[::-1].zfill(len(access_map))
-        for access, n in access_map.items():
+        bin_str = '{0:b}'.format(n_access)[::-1].zfill(len(user_access_map))
+        for access, n in user_access_map.items():
             self.map[access] = bin_str[n]
 
     def change(self, access, set_access=False):
@@ -52,7 +52,7 @@ class Access:
         :return: int
         """
         bin_str = []
-        for i in sorted(access_map, key=access_map.get):
+        for i in sorted(user_access_map, key=user_access_map.get):
             bin_str.append(self.map[i])
         s = ''.join(bin_str)
         return int(s.lstrip('0')[::-1], 2)
