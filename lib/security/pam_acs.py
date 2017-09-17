@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # encoding: utf-8
 
-from acs import schema, parameters
+from acs import schema, parameters, log
 import sqlalchemy
 import hashlib
 
@@ -24,7 +24,7 @@ def get_user(login):
     :return: Возвращает информацию user, group, group_list
     """
     try:
-        pam_parameters = parameters.PamParametrs()
+        pam_parameters = parameters.PamParameters()
     except FileNotFoundError:
         return None
 
@@ -45,6 +45,8 @@ def get_user(login):
 
 
 def pam_sm_authenticate(pamh, flags, argv):
+    logger = log.Log('auth_log', facility='auth')
+    logger.debug('start pam_sm_authenticate, pamh: {}'.format(pamh))
     try:
         p_user = pamh.get_user(None)
     except pamh.exception as e:
@@ -70,23 +72,24 @@ def pam_sm_authenticate(pamh, flags, argv):
 
 
 def pam_sm_setcred(pamh, flags, argv):
-  return pamh.PAM_SUCCESS
+    # Получение идентификатора группы
+    return pamh.PAM_SUCCESS
 
 
 def pam_sm_acct_mgmt(pamh, flags, argv):
-  return pamh.PAM_SUCCESS
+    return pamh.PAM_SUCCESS
 
 
 def pam_sm_open_session(pamh, flags, argv):
-  return pamh.PAM_SUCCESS
+    return pamh.PAM_SUCCESS
 
 
 def pam_sm_close_session(pamh, flags, argv):
-  return pamh.PAM_SUCCESS
+    return pamh.PAM_SUCCESS
 
 
 def pam_sm_chauthtok(pamh, flags, argv):
-  return pamh.PAM_SUCCESS
+    return pamh.PAM_SUCCESS
 
 
 if __name__ == '__main__':

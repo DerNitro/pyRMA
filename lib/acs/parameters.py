@@ -94,7 +94,7 @@ class WebParameters:
         return "{0}".format(self.__dict__)
 
 
-class PamParametrs:
+class PamParameters:
     def __init__(self):
         if not os.path.isfile(pathConfigFile):
             raise FileNotFoundError('Отсутствует кофигурационный файл: {0}'.format(pathConfigFile))
