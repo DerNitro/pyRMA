@@ -109,7 +109,7 @@ class AAAUser(Base):
     max = sqlalchemy.Column(sqlalchemy.BIGINT, default=99999)
     warn = sqlalchemy.Column(sqlalchemy.BIGINT, default=0)
     inact = sqlalchemy.Column(sqlalchemy.BIGINT, default=0)
-    expire = sqlalchemy.Column(sqlalchemy.BIGINT, default=-1)
+    expire = sqlalchemy.Column(sqlalchemy.Boolean, default=True)
     flag = sqlalchemy.Column(sqlalchemy.BIGINT)
 
     def __repr__(self):
