@@ -6,7 +6,7 @@ from acs import log
 import configparser
 import os
 
-pathConfigFile = './etc/acs.conf'
+pathConfigFile = './etc/acs/acs.conf'
 
 
 def check_config(config):
@@ -49,7 +49,7 @@ class Parameters:
         self.log_param = {'level': conf.get('Main', 'log_level', fallback='INFO'),
                           'facility': conf.get('Main', 'log_facility', fallback='local0')}
 
-        self.log = log.Log('{}_syslog'.format(self.user_name))
+        self.log = log.Log(self.user_name, **self.log_param)
 
         self.dbase = conf.get('DataBase', 'provider',fallback='postgresql')
         self.dbase_param = [conf.get('DataBase', 'dbhost', fallback='localhost'),

@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # encoding: utf-8
+# PYTHONPATH=./lib/ ./bin/acs_shell.py
 
 import sys
 import traceback
-from acs import parameters, interface, schema
+from acs import parameters, interface, schema, access
 import sqlalchemy.orm
 from sqlalchemy import create_engine
 from acs.utils import *
@@ -74,9 +75,10 @@ try:
             filter(schema.AAAUser.uid == schema.User.login). \
             filter(schema.AAAUser.username == appParameters.user_name).one()
         appParameters.log.debug(aaa_user)
+        appParameters.log.debug(user_info)
         appParameters.aaa_user = aaa_user
         appParameters.user_info = user_info
-        appParameters.log.debug(user_info)
+        appParameters.user_info.permissions = access.Access(appParameters.user_info.permissions)
 except sqlalchemy.orm.exc.NoResultFound:
     appParameters.log.error("Пользователь не существует.", pr=True)
     sys.exit(13)
@@ -114,7 +116,6 @@ with schema.db_edit(engine) as db:
                          date=datetime.datetime.now(),
                          message="Успешное подключение к системе."))
 
-# schema.Group.__table__.create(bind=engine)
 # Запуск интерфейса.
 appParameters.log.debug("Запуск графического интерфейса.")
 App = interface.Interface()

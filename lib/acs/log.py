@@ -10,7 +10,7 @@ class Log:
         self.logger = logging.getLogger(name)
         self.logger.setLevel(level)
         h = handlers.SysLogHandler(address='/dev/log', facility=facility)
-        log_format = Formatter('[%(asctime)s] [%(levelname)-8s] - %(message)s')
+        log_format = Formatter('[{0:<10}] [%(levelname)-8s] - %(message)s'.format(name))
         h.setFormatter(log_format)
         self.logger.addHandler(h)
 

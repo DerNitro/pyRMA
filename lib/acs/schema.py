@@ -33,44 +33,6 @@ def db_edit(engine):
         session.close()
 
 
-def install(engine):
-    """
-    Создаем таблицы
-    """
-    User.__table__.create(bind=engine)
-    AAAUser.__table__.create(bind=engine)
-    AAAGroup.__table__.create(bind=engine)
-    AAAGroupList.__table__.create(bind=engine)
-    Action.__table__.create(bind=engine)
-    Parameter.__table__.create(bind=engine)
-    RestorePassword.__table__.create(bind=engine)
-
-    # Добавляем необходимые данные в таблицу
-    cl_session = sessionmaker(bind=engine)
-    session = cl_session()
-    session.add(AAAUser(username='administrator',
-                        uid=5000,
-                        homedir='/home/acs/',
-                        shell='/acs.sh',
-                        password='admin'))
-
-    session.add(User(login=5000,
-                     full_name='Super Administrator',
-                     permissions='all',
-                     ip='0.0.0.0/0',
-                     prefix='JANUARY'))
-
-    session.add(AAAGroup(gid=5000, name='acs'))
-
-    session.add(AAAGroupList(gid=5000, username='administrator'))
-
-    session.add(Parameter(name='PASSWORD', value='0'))
-    session.add(Parameter(name='CHECK_IP', value='0'))
-
-    session.commit()
-    session.close()
-
-
 class User(Base):
     """
     Таблица пользователй системой доступа.
@@ -166,6 +128,9 @@ class Action(Base):
     date = sqlalchemy.Column(sqlalchemy.DateTime, nullable=False)
     message = sqlalchemy.Column(sqlalchemy.String(256))
 
+    def __repr__(self):
+        return "{0}".format(self.__dict__)
+
 
 class Parameter(Base):
     """
@@ -175,6 +140,9 @@ class Parameter(Base):
     name = sqlalchemy.Column(sqlalchemy.String, primary_key=True, unique=True)
     value = sqlalchemy.Column(sqlalchemy.String)
     description = sqlalchemy.Column(sqlalchemy.String)
+
+    def __repr__(self):
+        return "{0}".format(self.__dict__)
 
 
 class Host(Base):
@@ -200,6 +168,9 @@ class Host(Base):
     tcp_port = sqlalchemy.Column(sqlalchemy.Integer)
     group = sqlalchemy.Column(sqlalchemy.String)
 
+    def __repr__(self):
+        return "{0}".format(self.__dict__)
+
 
 class Group(Base):
     """
@@ -209,6 +180,9 @@ class Group(Base):
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
     name = sqlalchemy.Column(sqlalchemy.String, nullable=False, unique=True)
     note = sqlalchemy.Column(sqlalchemy.String)
+
+    def __repr__(self):
+        return "{0}".format(self.__dict__)
 
 
 class RestorePassword(Base):
@@ -229,6 +203,9 @@ class RestorePassword(Base):
     date_complete = sqlalchemy.Column(sqlalchemy.DateTime)
     key = sqlalchemy.Column(sqlalchemy.String)
 
+    def __repr__(self):
+        return "{0}".format(self.__dict__)
+
 
 if __name__ == '__main__':
     engine = create_engine('{0}://{1}:{2}@{3}:{4}/{5}'.format('postgresql',
@@ -238,4 +215,4 @@ if __name__ == '__main__':
                                                               '5432',
                                                               'acs'
                                                               ))
-    # RestorePassword.__table__.create(bind=engine)
+    # Host.__table__.create(bind=engine)
