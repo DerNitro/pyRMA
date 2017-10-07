@@ -40,14 +40,27 @@ class RecordList(npyscreen.MultiLineAction):
         else:
             return '\t{0:<20}'.format('..')
 
-    def actionHighlighted(self, act_on_this, key_press):
-        pass
+    def actionHighlighted(self, act_on_this: schema.Host, key_press):
+        if type(act_on_this) is schema.Host:
+            if act_on_this.type == 2:
+                self.parent.Level.append(act_on_this.id)
+                self.parent.Filter = ''
+                self.parent.History.append(self.cursor_line)
+                self.cursor_line = 0
+                self.parent.update_list()
+        else:
+            self.parent.Filter = ''
+            self.parent.Level.pop()
+            self.cursor_line = self.parent.History.pop()
+            self.parent.update_list()
 
 
 class HostListDisplay(npyscreen.FormMutt):
     MAIN_WIDGET_CLASS = RecordList
     COMMAND_WIDGET_CLASS = ButtonLine
-    level = [0]
+    Level = [0]
+    History = []
+    Filter = ''
 
     def beforeEditing(self):
         self.wStatus1.value = ' {0} - {1} '.format(appParameters.program,
@@ -58,7 +71,8 @@ class HostListDisplay(npyscreen.FormMutt):
 
         self.add_handlers({'q': self.app_exit,
                            'c': self.connect,
-                           'f': self.file_transfer})
+                           'f': self.file_transfer,
+                           '+': self.filter})
 
         if appParameters.user_info.permissions.get('EditDirectory') or \
                 appParameters.user_info.permissions.get('Administrate'):
@@ -67,17 +81,20 @@ class HostListDisplay(npyscreen.FormMutt):
     def update_list(self):
         if appParameters.user_info.permissions.get('Administrate'):
             with schema.db_select(appParameters.engine) as db:
-                host = db.query(schema.Host).filter(schema.Host.parent == self.level[-1]). \
+                host = db.query(schema.Host).filter(schema.Host.parent == self.Level[-1]). \
+                    filter(schema.Host.name.like('%{0}%'.format(self.Filter))). \
                     order_by(schema.Host.type.desc()).order_by(schema.Host.name).all()
         else:
             with schema.db_select(appParameters.engine) as db:
                 host = db.query(schema.Host). \
-                    filter(schema.Host.group.in_(appParameters.user_info.prefix)). \
-                    filter(schema.Host.parent == self.level[-1]). \
+                    filter(schema.Host.prefix.in_(appParameters.user_info.prefix)). \
+                    filter(schema.Host.parent == self.Level[-1]). \
+                    filter(schema.Host.name.like('%{0}%'.format(self.Filter))). \
                     order_by(schema.Host.type.desc()).order_by(schema.Host.name.desc()).all()
 
         appParameters.log.debug(host)
-        if len(self.level) == 1:
+
+        if len(self.Level) == 1:
             self.wMain.values = host
         else:
             self.wMain.values = ['back'] + host
@@ -87,6 +104,10 @@ class HostListDisplay(npyscreen.FormMutt):
     def app_exit(self, *args, **keywords):
         appParameters.log.debug('Выход из интерфейса.')
         self.parentApp.switchForm(None)
+
+    def filter(self, *args, **keywords):
+        self.parentApp.addForm('FILTER', Filter)
+        self.parentApp.switchForm('FILTER')
 
     def connect(self, *args, **keywords):
         pass
@@ -110,6 +131,32 @@ class HostListDisplay(npyscreen.FormMutt):
         pass
 
 
+class MyPopup(npyscreen.FormBaseNew):
+    DEFAULT_LINES = 5
+    DEFAULT_COLUMNS = 52
+    SHOW_ATX = 20
+    SHOW_ATY = 6
+
+
+class Filter(MyPopup):
+    def __init__(self, *args, **keywords):
+        super().__init__(*args, **keywords)
+        self.cycle_widgets = True
+        self.FilterText = self.add(npyscreen.TitleText, name='Фильтр', max_width=40)
+        self.ButtonOk = self.add(npyscreen.MiniButtonPress, name='OK',
+                                 when_pressed_function=self.on_ok,
+                                 relx=self.FilterText.relx + self.FilterText.max_width,
+                                 rely=self.FilterText.rely)
+
+    def create(self):
+        self.name = 'Применить фильтр'
+
+    def on_ok(self):
+        appParameters.log.debug('set filter: {}'.format(self.FilterText.value))
+        self.parentApp.getForm('MAIN').Filter = self.FilterText.value
+        self.parentApp.switchFormPrevious()
+
+
 class AddFolder(npyscreen.ActionPopup):
     Parent = 0
     Edit = 0
@@ -127,7 +174,7 @@ class AddFolder(npyscreen.ActionPopup):
         self.GroupList.clear()
         if appParameters.user_info.permissions.get('Administrate'):
             with schema.db_select(appParameters.engine) as db:
-                groups = db.query(schema.Group).all()
+                groups = db.query(schema.Prefix).all()
             for group in groups:
                 self.GroupList.append(group.name)
         else:
@@ -156,7 +203,7 @@ class AddFolder(npyscreen.ActionPopup):
             with schema.db_select(appParameters.engine) as db:
                 count = db.query(schema.Host).filter(schema.Host.name == self.DirName.value). \
                     filter(schema.Host.type == 2). \
-                    filter(schema.Host.group == self.Group.values[self.Group.value[0]]).count()
+                    filter(schema.Host.prefix == self.Group.values[self.Group.value[0]]).count()
             if self.DirName.value != '' and count == 0:
                 new_dir = schema.Host(name='{0}'.format(self.DirName.value),
                                       type=2,
@@ -165,7 +212,7 @@ class AddFolder(npyscreen.ActionPopup):
                                       transit=False,
                                       remote=False,
                                       remove=False,
-                                      group=self.Group.values[self.Group.value[0]])
+                                      prefix=self.Group.values[self.Group.value[0]])
                 with schema.db_edit(appParameters.engine) as db:
                     db.add(new_dir)
                     db.flush()
@@ -186,7 +233,7 @@ class AddFolder(npyscreen.ActionPopup):
                 db.query(schema.Host).filter(schema.Host.id == self.Edit). \
                     update({schema.Host.name: self.DirName.value,
                             schema.Host.note: self.Note.value,
-                            schema.Host.group: self.Group.values[self.Group.value[0]]})
+                            schema.Host.prefix: self.Group.values[self.Group.value[0]]})
                 db.add(schema.Action(action_type=11,
                                      user=appParameters.aaa_user.uid,
                                      date=datetime.datetime.now(),

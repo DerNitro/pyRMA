@@ -154,8 +154,8 @@ class Host(Base):
     name = sqlalchemy.Column(sqlalchemy.String(50))
     ip = sqlalchemy.Column(sqlalchemy.String())
     # type:
-    # 1 - Директория
-    # 2 - Хост
+    # 1 - Хост
+    # 2 - Директория
     type = sqlalchemy.Column(sqlalchemy.Integer)
     note = sqlalchemy.Column(sqlalchemy.String)
     ilo = sqlalchemy.Column(sqlalchemy.String)
@@ -166,17 +166,17 @@ class Host(Base):
     default_login = sqlalchemy.Column(sqlalchemy.String)
     default_password = sqlalchemy.Column(sqlalchemy.String)
     tcp_port = sqlalchemy.Column(sqlalchemy.Integer)
-    group = sqlalchemy.Column(sqlalchemy.String)
+    prefix = sqlalchemy.Column(sqlalchemy.String)
 
     def __repr__(self):
         return "{0}".format(self.__dict__)
 
 
-class Group(Base):
+class Prefix(Base):
     """
     Список групп пользователей.
     """
-    __tablename__ = 'group'
+    __tablename__ = 'prefix'
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
     name = sqlalchemy.Column(sqlalchemy.String, nullable=False, unique=True)
     note = sqlalchemy.Column(sqlalchemy.String)
