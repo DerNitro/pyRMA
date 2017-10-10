@@ -157,16 +157,15 @@ class Host(Base):
     # 1 - Хост
     # 2 - Директория
     type = sqlalchemy.Column(sqlalchemy.Integer)
-    note = sqlalchemy.Column(sqlalchemy.String)
+    describe = sqlalchemy.Column(sqlalchemy.String(256))
     ilo = sqlalchemy.Column(sqlalchemy.String)
     parent = sqlalchemy.Column(sqlalchemy.Integer)
-    transit = sqlalchemy.Column(sqlalchemy.Boolean)
-    remote = sqlalchemy.Column(sqlalchemy.Boolean)
     remove = sqlalchemy.Column(sqlalchemy.Boolean)
     default_login = sqlalchemy.Column(sqlalchemy.String)
     default_password = sqlalchemy.Column(sqlalchemy.String)
     tcp_port = sqlalchemy.Column(sqlalchemy.Integer)
     prefix = sqlalchemy.Column(sqlalchemy.String)
+    note = sqlalchemy.Column(sqlalchemy.Text)
 
     def __repr__(self):
         return "{0}".format(self.__dict__)
@@ -215,4 +214,4 @@ if __name__ == '__main__':
                                                               '5432',
                                                               'acs'
                                                               ))
-    # Host.__table__.create(bind=engine)
+    Host.__table__.create(bind=engine)

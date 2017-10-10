@@ -1,3 +1,4 @@
+import weakref
 import datetime
 import npyscreen
 from acs import schema
@@ -31,12 +32,12 @@ class ButtonLine(npyscreen.FixedText):
 
 
 class RecordList(npyscreen.MultiLineAction):
-    def display_value(self, vl):
+    def display_value(self, vl: schema.Host):
         if type(vl) is schema.Host:
             if vl.type == 2:
-                return '\t[{0:<20}]\t\t{1}'.format(vl.name, vl.note.split(';')[0] if vl.note else '')
+                return '\t[{0:<20}]\t\t{1}'.format(vl.name, vl.describe if vl.describe else '')
             elif vl.type == 1:
-                return '\t{0:<20}\t\t{1}'.format(vl.name, vl.note.split(';')[0] if vl.note else '')
+                return '\t{0:<20}\t\t{1}'.format(vl.name, vl.describe[0] if vl.describe else '')
         else:
             return '\t{0:<20}'.format('..')
 
@@ -54,6 +55,46 @@ class RecordList(npyscreen.MultiLineAction):
             self.cursor_line = self.parent.History.pop()
             self.parent.update_list()
 
+    def h_cursor_beginning(self, ch):
+        super().h_cursor_beginning(ch)
+        self.parent.SelectHost = self.values[self.cursor_line]
+
+    def h_cursor_end(self, ch):
+        super().h_cursor_end(ch)
+        self.parent.SelectHost = self.values[self.cursor_line]
+
+    def h_cursor_page_down(self, ch):
+        super().h_cursor_page_down(ch)
+        self.parent.SelectHost = self.values[self.cursor_line]
+
+    def h_cursor_page_up(self, ch):
+        super().h_cursor_page_up(ch)
+        self.parent.SelectHost = self.values[self.cursor_line]
+
+    def h_cursor_line_up(self, ch):
+        super().h_cursor_line_up(ch)
+        self.parent.SelectHost = self.values[self.cursor_line]
+
+    def h_cursor_line_down(self, ch):
+        super().h_cursor_line_down(ch)
+        self.parent.SelectHost = self.values[self.cursor_line]
+
+    def handle_mouse_event(self, mouse_event):
+        super().handle_mouse_event(mouse_event)
+        self.parent.SelectHost = self.values[self.cursor_line]
+
+    def update(self, clear=True):
+        super().update(clear)
+        self.parent.SelectHost = self.values[self.cursor_line]
+
+    def move_next_filtered(self, include_this_line=False, *args):
+        super().move_next_filtered(include_this_line, *args)
+        self.parent.SelectHost = self.values[self.cursor_line]
+
+    def move_previous_filtered(self, *args):
+        super().move_previous_filtered(*args)
+        self.parent.SelectHost = self.values[self.cursor_line]
+
 
 class HostListDisplay(npyscreen.FormMutt):
     MAIN_WIDGET_CLASS = RecordList
@@ -61,6 +102,8 @@ class HostListDisplay(npyscreen.FormMutt):
     Level = [0]
     History = []
     Filter = ''
+    SelectHost = None
+    Host = None
 
     def beforeEditing(self):
         self.wStatus1.value = ' {0} - {1} '.format(appParameters.program,
@@ -76,28 +119,29 @@ class HostListDisplay(npyscreen.FormMutt):
 
         if appParameters.user_info.permissions.get('EditDirectory') or \
                 appParameters.user_info.permissions.get('Administrate'):
-            self.add_handlers({'d': self.add_folder})
+            self.add_handlers({'d': self.add_folder,
+                              'e': self.edit_element})
 
     def update_list(self):
         if appParameters.user_info.permissions.get('Administrate'):
             with schema.db_select(appParameters.engine) as db:
-                host = db.query(schema.Host).filter(schema.Host.parent == self.Level[-1]). \
+                self.Host = db.query(schema.Host).filter(schema.Host.parent == self.Level[-1]). \
                     filter(schema.Host.name.like('%{0}%'.format(self.Filter))). \
                     order_by(schema.Host.type.desc()).order_by(schema.Host.name).all()
         else:
             with schema.db_select(appParameters.engine) as db:
-                host = db.query(schema.Host). \
+                self.Host = db.query(schema.Host). \
                     filter(schema.Host.prefix.in_(appParameters.user_info.prefix)). \
                     filter(schema.Host.parent == self.Level[-1]). \
                     filter(schema.Host.name.like('%{0}%'.format(self.Filter))). \
                     order_by(schema.Host.type.desc()).order_by(schema.Host.name.desc()).all()
 
-        appParameters.log.debug(host)
+        appParameters.log.debug(self.Host)
 
         if len(self.Level) == 1:
-            self.wMain.values = host
+            self.wMain.values = self.Host
         else:
-            self.wMain.values = ['back'] + host
+            self.wMain.values = ['back'] + self.Host
         self.wMain.display()
         self.wCommand.display()
 
@@ -106,8 +150,11 @@ class HostListDisplay(npyscreen.FormMutt):
         self.parentApp.switchForm(None)
 
     def filter(self, *args, **keywords):
-        self.parentApp.addForm('FILTER', Filter)
-        self.parentApp.switchForm('FILTER')
+        filter_form = Filter()
+        filter_form.owner_widget = weakref.proxy(self)
+        filter_form.display()
+        filter_form.FilterText.edit()
+        self.update_list()
 
     def connect(self, *args, **keywords):
         pass
@@ -119,42 +166,52 @@ class HostListDisplay(npyscreen.FormMutt):
         pass
 
     def add_folder(self, *args, **keywords):
-        appParameters.log.debug('def add_folder: self.level[-1] = {0}'.format(self.level[-1]))
+        appParameters.log.debug('def add_folder: self.level[-1] = {0}'.format(self.Level[-1]))
         self.parentApp.addForm('ADD_FOLDER', AddFolder)
-        self.parentApp.getForm('ADD_FOLDER').Parent = self.level[-1]
+        self.parentApp.getForm('ADD_FOLDER').Parent = self.Level[-1]
         self.parentApp.switchForm('ADD_FOLDER')
 
     def edit_element(self, *args, **keywords):
+        if self.SelectHost.type == 2:
+            appParameters.log.debug('def add_folder: self.level[-1] = {0}'.format(self.Level[-1]))
+            self.parentApp.addForm('ADD_FOLDER', AddFolder)
+            self.parentApp.getForm('ADD_FOLDER').Parent = self.Level[-1]
+            self.parentApp.getForm('ADD_FOLDER').Edit = self.SelectHost.id
+            self.parentApp.switchForm('ADD_FOLDER')
         pass
 
     def delete_element(self, *args, **keywords):
         pass
 
 
-class MyPopup(npyscreen.FormBaseNew):
-    DEFAULT_LINES = 5
-    DEFAULT_COLUMNS = 52
-    SHOW_ATX = 20
-    SHOW_ATY = 6
-
-
-class Filter(MyPopup):
+class Filter(npyscreen.Popup):
     def __init__(self, *args, **keywords):
         super().__init__(*args, **keywords)
-        self.cycle_widgets = True
-        self.FilterText = self.add(npyscreen.TitleText, name='Фильтр', max_width=40)
-        self.ButtonOk = self.add(npyscreen.MiniButtonPress, name='OK',
-                                 when_pressed_function=self.on_ok,
-                                 relx=self.FilterText.relx + self.FilterText.max_width,
-                                 rely=self.FilterText.rely)
+        self.owner_widget = None
+        self.FilterText = self.add(npyscreen.TitleText, name='Фильтр:', )
+        self.nextrely += 1
+        self.Status_Line = self.add(npyscreen.Textfield, color='LABEL', editable=False)
+
+    def update_status(self):
+        host = self.owner_widget.Host
+        count = 0
+        for iter in host:
+            if self.FilterText.value in iter.name:
+                count += 1
+        if count == 0:
+            self.Status_Line.value = '(Нет совпадений)'
+        elif count == 1:
+            self.Status_Line.value = '(1 совпадение)'
+        else:
+            self.Status_Line.value = '(%s совпадений)' % count
 
     def create(self):
-        self.name = 'Применить фильтр'
+        super(Filter, self).create()
 
-    def on_ok(self):
-        appParameters.log.debug('set filter: {}'.format(self.FilterText.value))
-        self.parentApp.getForm('MAIN').Filter = self.FilterText.value
-        self.parentApp.switchFormPrevious()
+    def adjust_widgets(self):
+        self.update_status()
+        self.Status_Line.display()
+        self.owner_widget.Filter = self.FilterText.value
 
 
 class AddFolder(npyscreen.ActionPopup):
@@ -165,7 +222,7 @@ class AddFolder(npyscreen.ActionPopup):
     def __init__(self, *args, **keywords):
         super().__init__(*args, **keywords)
         self.DirName = self.add(npyscreen.TitleText, name='Имя')
-        self.Note = self.add(npyscreen.TitleText, name='Описание')
+        self.Desc = self.add(npyscreen.TitleText, name='Описание')
         self.Group = self.add(npyscreen.TitleSelectOne, name='Группа', hidden=True,
                               values=self.GroupList, value=self.GroupList[0])
 
@@ -181,7 +238,7 @@ class AddFolder(npyscreen.ActionPopup):
             self.GroupList.append(appParameters.user_info.prefix)
 
     def beforeEditing(self):
-        if appParameters.user_info.permissions.get('EditDirectory'):
+        if appParameters.user_info.permissions.get('Administrate'):
             self.Group.hidden = False
             self.Group.value = 0
         else:
@@ -193,7 +250,7 @@ class AddFolder(npyscreen.ActionPopup):
             with schema.db_select(appParameters.engine) as db:
                 host = db.query(schema.Host).filter(schema.Host.id == self.Edit).one()
             self.DirName.value = host.name
-            self.Note.value = host.note
+            self.Desc.value = host.describe
 
     def on_cancel(self):
         self.parentApp.switchFormPrevious()
@@ -207,10 +264,8 @@ class AddFolder(npyscreen.ActionPopup):
             if self.DirName.value != '' and count == 0:
                 new_dir = schema.Host(name='{0}'.format(self.DirName.value),
                                       type=2,
-                                      note='{0}'.format(self.Note.value),
+                                      describe='{0}'.format(self.Desc.value),
                                       parent=self.Parent,
-                                      transit=False,
-                                      remote=False,
                                       remove=False,
                                       prefix=self.Group.values[self.Group.value[0]])
                 with schema.db_edit(appParameters.engine) as db:
@@ -229,10 +284,10 @@ class AddFolder(npyscreen.ActionPopup):
                 npyscreen.notify_confirm('Имя не может быть пустым!', title='Error',
                                          form_color='CRITICAL', wrap=True, wide=True, editw=0)
         else:
-            with schema.db_select(appParameters.engine) as db:
+            with schema.db_edit(appParameters.engine) as db:
                 db.query(schema.Host).filter(schema.Host.id == self.Edit). \
                     update({schema.Host.name: self.DirName.value,
-                            schema.Host.note: self.Note.value,
+                            schema.Host.describe: self.Desc.value,
                             schema.Host.prefix: self.Group.values[self.Group.value[0]]})
                 db.add(schema.Action(action_type=11,
                                      user=appParameters.aaa_user.uid,
