@@ -1,4 +1,6 @@
-footer = '\nACS'
+import textwrap
+
+footer = '\nACS\nCopyright 2016, Sergey Utkin'
 
 
 def restore_password():
@@ -11,4 +13,20 @@ def restore_password():
 
 def restore_password_access():
     msg = "Пароль для учетной записи: {login} успешно сброшен.\n"
+    return msg + footer
+
+
+def help_main_form():
+    msg = '{program} version: {version}\n\n' \
+          'Руководсво пользователя\n' \
+          '1. Горячиие клавиши\n' \
+          '\tq   - выход\n' \
+          '\t+   - фильтрация\n' \
+          '\te   - редактировать\n' \
+          '\tl   - Подсветка\n' \
+          '\tL   - Откллючить подсветку\n' \
+          '\tn|p - Переходы по подсвеченным элементам\n'
+
+    msg = textwrap.dedent(msg)
+
     return msg + footer

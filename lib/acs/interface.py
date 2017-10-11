@@ -1,7 +1,7 @@
 import weakref
 import datetime
 import npyscreen
-from acs import schema
+from acs import schema, template
 
 
 class ButtonLine(npyscreen.FixedText):
@@ -120,7 +120,10 @@ class HostListDisplay(npyscreen.FormMutt):
         if appParameters.user_info.permissions.get('EditDirectory') or \
                 appParameters.user_info.permissions.get('Administrate'):
             self.add_handlers({'d': self.add_folder,
-                              'e': self.edit_element})
+                               'e': self.edit_element})
+
+        self.help = template.help_main_form().format(program=appParameters.program,
+                                                     version=appParameters.version)
 
     def update_list(self):
         if appParameters.user_info.permissions.get('Administrate'):
