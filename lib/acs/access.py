@@ -4,18 +4,18 @@
 from acs import schema
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
-user_access_map = {'ShowHostInformation': 0,
-                   'EditHostInformation': 1,
-                   'EditDirectory': 2,
-                   'EditPrefixHost': 3,
-                   'DisableShowLoginPassword': 4,
-                   'FileTransfer': 5,
-                   'UsableService': 6,
-                   'UsableOnlyService': 7,
-                   'ShowAllSession': 8,
-                   'ShowAllGroupSession': 9,
-                   'ShowUserSession': 10,
-                   'Administrate': 11}
+user_access_map = {'ShowHostInformation': 0,            # Просмотр информации об узле
+                   'EditHostInformation': 1,            # Редактировать хосты
+                   'EditDirectory': 2,                  # Создание|Редактирование директорий
+                   'EditPrefixHost': 3,                 # Смена родителя для узлов
+                   'DisableShowLoginPassword': 4,       # Отключение видимости логина и пароля
+                   'FileTransfer': 5,                   # Возможность передачи файлов
+                   'UsableService': 6,                  # Использование сервисов
+                   'UsableOnlyService': 7,              # Использование только сервисов
+                   'ShowAllSession': 8,                 # Просмотр сессии пользователя
+                   'ShowAllGroupSession': 9,            # Просмотр сессии своей группы
+                   'ShowUserSession': 10,               # Просмотр сессии отдельных пользователей
+                   'Administrate': 11}                  # Режим бога.
 
 
 class Access:

@@ -68,7 +68,6 @@ except sqlalchemy.orm.exc.NoResultFound:
     # TODO: Заполнить таблицу дефолтными значениями.
     pass
 
-
 try:
     with schema.db_select(engine) as db:
         aaa_user, user_info = db.query(schema.AAAUser, schema.User). \
@@ -120,6 +119,6 @@ with schema.db_edit(engine) as db:
 appParameters.log.debug("Запуск графического интерфейса.")
 App = interface.Interface()
 App.appParameters = appParameters
-App.run()
+result = App.run()
 appParameters.log.info('Выход из приложения.')
 sys.exit(0)

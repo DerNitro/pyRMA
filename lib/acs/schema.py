@@ -157,6 +157,7 @@ class Host(Base):
     # 1 - Хост
     # 2 - Директория
     type = sqlalchemy.Column(sqlalchemy.Integer)
+    connection_type = sqlalchemy.Column(sqlalchemy.Integer)
     describe = sqlalchemy.Column(sqlalchemy.String(256))
     ilo = sqlalchemy.Column(sqlalchemy.String)
     parent = sqlalchemy.Column(sqlalchemy.Integer)
@@ -166,6 +167,64 @@ class Host(Base):
     tcp_port = sqlalchemy.Column(sqlalchemy.Integer)
     prefix = sqlalchemy.Column(sqlalchemy.String)
     note = sqlalchemy.Column(sqlalchemy.Text)
+
+    def __repr__(self):
+        return "{0}".format(self.__dict__)
+
+
+class Service(Base):
+    """
+    Дополнительные подключения к сервисам
+    """
+    __tablename__ = 'service'
+    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
+    type = sqlalchemy.Column(sqlalchemy.Integer)
+    host = sqlalchemy.Column(sqlalchemy.Integer)
+    local_port = sqlalchemy.Column(sqlalchemy.Integer)
+    remote_port = sqlalchemy.Column(sqlalchemy.Integer)
+    remote_ip = sqlalchemy.Column(sqlalchemy.String)
+    describe = sqlalchemy.Column(sqlalchemy.String)
+
+    def __repr__(self):
+        return "{0}".format(self.__dict__)
+
+
+class ServiceType(Base):
+    """
+    Список доступных подключений к сервисов
+    """
+    __tablename__ = 'service_type'
+    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
+    name = sqlalchemy.Column(sqlalchemy.String(20))
+    default_port = sqlalchemy.Column(sqlalchemy.Integer)
+    plugin = sqlalchemy.Column(sqlalchemy.String)
+
+    def __repr__(self):
+        return "{0}".format(self.__dict__)
+
+
+class RouteMap(Base):
+    """
+    Дополнительный маршрут до узлов
+    """
+    __tablename__ = 'route'
+    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
+    sequence = sqlalchemy.Column(sqlalchemy.Integer)
+    host = sqlalchemy.Column(sqlalchemy.Integer)
+
+    def __repr__(self):
+        return "{0}".format(self.__dict__)
+
+
+class ConnectionType(Base):
+    """
+    Информация о способах подключения
+    """
+    __tablename__ = 'connection_type'
+    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
+    name = sqlalchemy.Column(sqlalchemy.String(20))
+    default_port = sqlalchemy.Column(sqlalchemy.Integer)
+    plugin = sqlalchemy.Column(sqlalchemy.String)
 
     def __repr__(self):
         return "{0}".format(self.__dict__)
@@ -214,4 +273,4 @@ if __name__ == '__main__':
                                                               '5432',
                                                               'acs'
                                                               ))
-    Host.__table__.create(bind=engine)
+    Service.__table__.create(bind=engine)

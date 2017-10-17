@@ -43,7 +43,7 @@ class Parameters:
         conf = configparser.ConfigParser()
         conf.read(pathConfigFile)
         check_config(conf)
-        self.rec_file = conf.get('Main', 'file_env',fallback='filerec')
+        self.rec_file = conf.get('Main', 'file_env', fallback='filerec')
         self.rec_folder = conf.get('Main', 'path_env', fallback='filerecord')
         self.license = conf.get('Main', 'license', fallback=None)
         self.log_param = {'level': conf.get('Main', 'log_level', fallback='INFO'),
@@ -51,7 +51,7 @@ class Parameters:
 
         self.log = log.Log(self.user_name, **self.log_param)
 
-        self.dbase = conf.get('DataBase', 'provider',fallback='postgresql')
+        self.dbase = conf.get('DataBase', 'provider', fallback='postgresql')
         self.dbase_param = [conf.get('DataBase', 'dbhost', fallback='localhost'),
                             conf.get('DataBase', 'dbport', fallback=5432),
                             conf.get('DataBase', 'dbuser', fallback='acs'),

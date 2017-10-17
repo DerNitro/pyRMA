@@ -1,34 +1,20 @@
 import weakref
 import datetime
 import npyscreen
+import curses.ascii
+
+import sys
+
 from acs import schema, template
+
+
+class MultiLineEditableBoxed(npyscreen.BoxTitle):
+    _contained_widget = npyscreen.MultiLineEditable
 
 
 class ButtonLine(npyscreen.FixedText):
     def display(self, *args, **keywords):
-        self.value = ' '
-        button = ['q - Выход',
-                  'c - Подключится',
-                  'f - Передача данных']
-
-        if appParameters.user_info.permissions.get('EditDirectory') or \
-                appParameters.user_info.permissions.get('Administrate'):
-            button.append('d - Создать директорию')
-
-        if appParameters.user_info.permissions.get('EditHostInformation') or \
-                appParameters.user_info.permissions.get('Administrate'):
-            button.append('a - Добавить Узел')
-
-        if appParameters.user_info.permissions.get('EditHostInformation') or \
-                appParameters.user_info.permissions.get('EditDirectory') or \
-                appParameters.user_info.permissions.get('Administrate'):
-            button.append('e - Редактировать')
-
-        if appParameters.user_info.permissions.get('Administrate'):
-            button.append('^A - Administrate')
-
-        for value in button:
-            self.value += '[{0}] '.format(value)
+        self.value = 'Используйте F1 для просмотра списка команд.'
 
 
 class RecordList(npyscreen.MultiLineAction):
@@ -120,7 +106,8 @@ class HostListDisplay(npyscreen.FormMutt):
         if appParameters.user_info.permissions.get('EditDirectory') or \
                 appParameters.user_info.permissions.get('Administrate'):
             self.add_handlers({'d': self.add_folder,
-                               'e': self.edit_element})
+                               'e': self.edit_element,
+                               'a': self.add_host})
 
         self.help = template.help_main_form().format(program=appParameters.program,
                                                      version=appParameters.version)
@@ -154,7 +141,7 @@ class HostListDisplay(npyscreen.FormMutt):
 
     def filter(self, *args, **keywords):
         filter_form = Filter()
-        filter_form.owner_widget = weakref.proxy(self)
+        filter_form.owner = weakref.proxy(self)
         filter_form.display()
         filter_form.FilterText.edit()
         self.update_list()
@@ -166,40 +153,97 @@ class HostListDisplay(npyscreen.FormMutt):
         pass
 
     def add_host(self, *args, **keywords):
-        pass
+        appParameters.log.debug('def add_host: self.level[-1] = {0}'.format(self.Level[-1]))
+        self.parentApp.addForm('HOST', HostForm)
+        self.parentApp.getForm('HOST').Parent = self.Level[-1]
+        self.parentApp.switchForm('HOST')
 
     def add_folder(self, *args, **keywords):
         appParameters.log.debug('def add_folder: self.level[-1] = {0}'.format(self.Level[-1]))
-        self.parentApp.addForm('ADD_FOLDER', AddFolder)
-        self.parentApp.getForm('ADD_FOLDER').Parent = self.Level[-1]
-        self.parentApp.switchForm('ADD_FOLDER')
+        self.parentApp.addForm('FOLDER', FolderForm)
+        self.parentApp.getForm('FOLDER').Parent = self.Level[-1]
+        self.parentApp.switchForm('FOLDER')
 
     def edit_element(self, *args, **keywords):
         if self.SelectHost.type == 2:
             appParameters.log.debug('def add_folder: self.level[-1] = {0}'.format(self.Level[-1]))
-            self.parentApp.addForm('ADD_FOLDER', AddFolder)
-            self.parentApp.getForm('ADD_FOLDER').Parent = self.Level[-1]
-            self.parentApp.getForm('ADD_FOLDER').Edit = self.SelectHost.id
-            self.parentApp.switchForm('ADD_FOLDER')
+            self.parentApp.addForm('FOLDER', FolderForm)
+            self.parentApp.getForm('FOLDER').Parent = self.Level[-1]
+            self.parentApp.getForm('FOLDER').Edit = self.SelectHost.id
+            self.parentApp.switchForm('FOLDER')
         pass
 
     def delete_element(self, *args, **keywords):
         pass
 
 
+class HostForm(npyscreen.ActionFormV2):
+    Parent = 0
+    Edit = 0
+
+    def __init__(self, *args, **keywords):
+        super().__init__(*args, **keywords)
+        self.HostName = self.add(npyscreen.TitleText, name='Имя хоста')
+        self.Description = self.add(npyscreen.TitleText, name='Description')
+        self.HostIP = self.add(npyscreen.TitleText, name='IP адрес')
+        self.HostILO = self.add(npyscreen.TitleText, name='IP адрес iLo')
+        self.Login = self.add(npyscreen.TitleText, name='Логин')
+        self.Password = self.add(npyscreen.TitleText, name='Пароль')
+
+        self.ConnectionTypeButton = self.add(npyscreen.TitleFixedText,
+                                             name='Тип подключения',
+                                             use_two_lines=False)
+
+        self.ConnectionTypeButton.add_handlers({curses.ascii.NL: self.select_ctype,
+                                                curses.ascii.CR: self.select_ctype})
+        self.ConnectionTypeButton.labelColor = 'CONTROL'
+        self.nextrely += 1
+
+        self.ServiceList = self.add(npyscreen.ButtonPress,
+                                    name='Сервисы',
+                                    when_pressed_function=self.service_list)
+        if list(filter(lambda x: x.name == 'ENABLE_ROUTE_MAP', appParameters.table_parameter))[0].value == '1':
+            self.RouteMapButton = self.add(npyscreen.ButtonPress,
+                                           name='Маршрут',
+                                           when_pressed_function=self.route_map,
+                                           rely=self.ServiceList.rely,
+                                           relx=self.ServiceList.relx + self.ServiceList.label_width + 2)
+        self.nextrely += 1
+        self.Note = self.add(MultiLineEditableBoxed, name='Описание узла', scroll_exit=True, editable=True)
+
+    def select_ctype(self, *args, **keywords):
+        pass
+
+    def route_map(self, *args, **keywords):
+        pass
+
+    def service_list(self, *args, **keywords):
+        pass
+
+    def create(self):
+        super(HostForm, self).create()
+        self.cycle_widgets = True
+
+    def on_cancel(self):
+        self.parentApp.switchFormPrevious()
+
+    def on_ok(self):
+        self.parentApp.switchFormPrevious()
+
+
 class Filter(npyscreen.Popup):
     def __init__(self, *args, **keywords):
         super().__init__(*args, **keywords)
-        self.owner_widget = None
+        self.owner = None
         self.FilterText = self.add(npyscreen.TitleText, name='Фильтр:', )
         self.nextrely += 1
         self.Status_Line = self.add(npyscreen.Textfield, color='LABEL', editable=False)
 
     def update_status(self):
-        host = self.owner_widget.Host
+        host = self.owner.Host
         count = 0
-        for iter in host:
-            if self.FilterText.value in iter.name:
+        for ITER in host:
+            if self.FilterText.value in ITER.name:
                 count += 1
         if count == 0:
             self.Status_Line.value = '(Нет совпадений)'
@@ -214,10 +258,10 @@ class Filter(npyscreen.Popup):
     def adjust_widgets(self):
         self.update_status()
         self.Status_Line.display()
-        self.owner_widget.Filter = self.FilterText.value
+        self.owner.Filter = self.FilterText.value
 
 
-class AddFolder(npyscreen.ActionPopup):
+class FolderForm(npyscreen.ActionPopup):
     Parent = 0
     Edit = 0
     GroupList = []
@@ -278,7 +322,7 @@ class AddFolder(npyscreen.ActionPopup):
                                          user=appParameters.aaa_user.uid,
                                          date=datetime.datetime.now(),
                                          message='Добавлена директория в host - id={0}'.format(new_dir.id)))
-                    self.parentApp.appParameters.log.debug('add directory id={0}'.format(new_dir.id))
+                    appParameters.log.debug('add directory id={0}'.format(new_dir.id))
                 self.parentApp.switchFormPrevious()
             elif count > 0:
                 npyscreen.notify_confirm('Данное имя уже существует!', title='Error', form_color='CRITICAL',
@@ -300,6 +344,25 @@ class AddFolder(npyscreen.ActionPopup):
             self.parentApp.switchFormPrevious()
 
 
+class ErrorForm(npyscreen.FormBaseNew):
+    error_text = ''
+    text_error = None
+
+    def __init__(self, *args, **keywords):
+        super().__init__(*args, **keywords)
+        self.framed = None
+        self.text_error = self.add(npyscreen.FixedText)
+        self.nextrely += 1
+        self.add(npyscreen.ButtonPress, name='EXIT', when_pressed_function=self.exit)
+
+    def while_editing(self, *args, **keywords):
+        self.text_error.value = self.error_text
+        self.text_error.highlight_color = 'DANGER'
+
+    def exit(self):
+        self.parentApp.switchForm(None)
+
+
 class Interface(npyscreen.NPSAppManaged):
     appParameters = None
     keypress_timeout_default = 1
@@ -307,5 +370,27 @@ class Interface(npyscreen.NPSAppManaged):
     def onStart(self):
         global appParameters
         appParameters = self.appParameters
+        y, x = self.xy()
+        appParameters.screen_size = {'y': y,
+                                     'x': x}
         appParameters.log.debug('Запуск формы MAIN.')
-        self.addForm("MAIN", HostListDisplay)
+        appParameters.log.debug('screen size: x = {0}, y = {1}'.format(x, y))
+        if (x > 120 and y > 40) and appParameters.user_info.permissions.get('ShowHostInformation'):
+            appParameters.log.info('Запуск в обычном режиме')
+            self.addForm("MAIN", HostListDisplay)
+
+        elif x >= 79 and y >= 24:
+            appParameters.log.info('Запуск в упрощенном режиме')
+            self.addForm("MAIN", HostListDisplay)
+        else:
+            appParameters.log.error('Размер терминала не поддерживется!')
+            self.addForm("MAIN", ErrorForm)
+            self.getForm("MAIN").error_text = 'Размер терминала не поддерживется!'
+            return False
+
+    @staticmethod
+    def xy():
+        max_y, max_x = curses.newwin(0, 0).getmaxyx()
+        max_y -= 1
+        max_x -= 1
+        return max_y, max_x
