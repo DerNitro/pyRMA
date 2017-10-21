@@ -222,7 +222,7 @@ class ConnectionType(Base):
     """
     __tablename__ = 'connection_type'
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
-    name = sqlalchemy.Column(sqlalchemy.String(20))
+    name = sqlalchemy.Column(sqlalchemy.String(20), unique=True)
     default_port = sqlalchemy.Column(sqlalchemy.Integer)
     plugin = sqlalchemy.Column(sqlalchemy.String)
 

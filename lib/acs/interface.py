@@ -2,10 +2,7 @@ import weakref
 import datetime
 import npyscreen
 import curses.ascii
-
-import sys
-
-from acs import schema, template
+from acs import schema, template, utils
 
 
 class MultiLineEditableBoxed(npyscreen.BoxTitle):
@@ -23,7 +20,7 @@ class RecordList(npyscreen.MultiLineAction):
             if vl.type == 2:
                 return '\t[{0:<20}]\t\t{1}'.format(vl.name, vl.describe if vl.describe else '')
             elif vl.type == 1:
-                return '\t{0:<20}\t\t{1}'.format(vl.name, vl.describe[0] if vl.describe else '')
+                return '\t {0:<20} \t\t{1}'.format(vl.name, vl.describe if vl.describe else '')
         else:
             return '\t{0:<20}'.format('..')
 
@@ -180,12 +177,25 @@ class HostListDisplay(npyscreen.FormMutt):
 class HostForm(npyscreen.ActionFormV2):
     Parent = 0
     Edit = 0
+    Route = None
+    Service = None
 
     def __init__(self, *args, **keywords):
         super().__init__(*args, **keywords)
-        self.HostName = self.add(npyscreen.TitleText, name='Имя хоста')
+
+        with schema.db_select(appParameters.engine) as db:
+            self.ctype = db.query(schema.ConnectionType).all()
+        self.ctype_name = []
+        if len(self.ctype) > 0:
+            for i in self.ctype:
+                self.ctype_name.append(i.name)
+        else:
+            # Защита от пустого списка.
+            self.ctype_name.append('None')
+
+        self.HostName = self.add(npyscreen.TitleText, name='Имя хоста', labelColor='VERYGOOD')
         self.Description = self.add(npyscreen.TitleText, name='Description')
-        self.HostIP = self.add(npyscreen.TitleText, name='IP адрес')
+        self.HostIP = self.add(npyscreen.TitleText, name='IP адрес', labelColor='VERYGOOD')
         self.HostILO = self.add(npyscreen.TitleText, name='IP адрес iLo')
         self.Login = self.add(npyscreen.TitleText, name='Логин')
         self.Password = self.add(npyscreen.TitleText, name='Пароль')
@@ -196,6 +206,7 @@ class HostForm(npyscreen.ActionFormV2):
 
         self.ConnectionTypeButton.add_handlers({curses.ascii.NL: self.select_ctype,
                                                 curses.ascii.CR: self.select_ctype})
+        self.ConnectionTypeButton.value = self.ctype_name[0]
         self.ConnectionTypeButton.labelColor = 'CONTROL'
         self.nextrely += 1
 
@@ -212,7 +223,11 @@ class HostForm(npyscreen.ActionFormV2):
         self.Note = self.add(MultiLineEditableBoxed, name='Описание узла', scroll_exit=True, editable=True)
 
     def select_ctype(self, *args, **keywords):
-        pass
+        ctype_form = npyscreen.Popup(name="Тип подключения")
+        select_one = ctype_form.add(npyscreen.SelectOne, values=self.ctype_name)
+        ctype_form.display()
+        ctype_form.edit()
+        self.ConnectionTypeButton.value = self.ctype_name[select_one.value.pop()]
 
     def route_map(self, *args, **keywords):
         pass
@@ -224,11 +239,75 @@ class HostForm(npyscreen.ActionFormV2):
         super(HostForm, self).create()
         self.cycle_widgets = True
 
+    def check_host_name(self):
+        with schema.db_select(appParameters.engine) as db:
+            count = db.query(schema.Host).filter(schema.Host.name == self.HostName.value). \
+                filter(schema.Host.parent == self.Parent). \
+                filter(schema.Host.prefix == appParameters.user_info.prefix). \
+                filter(schema.Host.type == 1). \
+                filter(schema.Host.remove == False).count()
+        if count == 0:
+            return True
+        else:
+            return False
+
     def on_cancel(self):
         self.parentApp.switchFormPrevious()
 
     def on_ok(self):
-        self.parentApp.switchFormPrevious()
+        error_list = []
+
+        # проверка на незаполненные поля.
+        if self.HostName.value == '':
+            error_list.append('Отсутствует значение "Имя хоста"')
+        if self.HostIP.value == '':
+            error_list.append('Отсутствует значение "IP адрес"')
+
+        # Проверка на корректность введеных данных.
+        if not self.check_host_name():
+            error_list.append('Имя узла {name} - уже существует'.format(name=self.HostName.value))
+
+        if not utils.valid_ip(str(self.HostIP.value).strip()):
+            error_list.append('Не корректное значение "IP адрес"')
+        if not utils.valid_ip(str(self.HostILO.value).strip()) and len(self.HostILO.value) > 0:
+            error_list.append('Не корректное значение "IP адрес iLo"')
+
+        if len(error_list) == 0:
+            ctype = 1
+            for i in self.ctype:
+                if i.name == self.ConnectionTypeButton.value:
+                    ctype = i.id
+            try:
+                ip, port = str(self.HostIP.value).strip().join(':')
+            except ValueError:
+                ip = str(self.HostIP.value).strip()
+                port = None
+            host = schema.Host(
+                name=str(self.HostName.value).strip(),
+                ip=ip,
+                type=1,
+                connection_type=ctype,
+                describe=str(self.Description.value).strip(),
+                ilo=str(self.HostILO.value).strip(),
+                parent=self.Parent,
+                default_login=str(self.Login.value).strip(),
+                default_password=str(self.Password.value).strip(),
+                tcp_port=port,
+                prefix=appParameters.user_info.prefix,
+                note=self.Note.values,
+                remove=False
+            )
+            with schema.db_edit(appParameters.engine) as db:
+                db.add(host)
+                db.flush()
+                db.add(schema.Action(action_type=20,
+                                     user=appParameters.aaa_user.uid,
+                                     date=datetime.datetime.now(),
+                                     message='Добавлен узел в host - id={0}'.format(host.id)))
+                appParameters.log.info('add host id={0}'.format(host.id))
+            self.parentApp.switchFormPrevious()
+        else:
+            npyscreen.notify_confirm(error_list, title='Ошибка', form_color='DANGER')
 
 
 class Filter(npyscreen.Popup):
@@ -270,26 +349,11 @@ class FolderForm(npyscreen.ActionPopup):
         super().__init__(*args, **keywords)
         self.DirName = self.add(npyscreen.TitleText, name='Имя')
         self.Desc = self.add(npyscreen.TitleText, name='Описание')
-        self.Group = self.add(npyscreen.TitleSelectOne, name='Группа', hidden=True,
-                              values=self.GroupList, value=self.GroupList[0])
 
     def create(self):
         self.cycle_widgets = True
-        self.GroupList.clear()
-        if appParameters.user_info.permissions.get('Administrate'):
-            with schema.db_select(appParameters.engine) as db:
-                groups = db.query(schema.Prefix).all()
-            for group in groups:
-                self.GroupList.append(group.name)
-        else:
-            self.GroupList.append(appParameters.user_info.prefix)
 
     def beforeEditing(self):
-        if appParameters.user_info.permissions.get('Administrate'):
-            self.Group.hidden = False
-            self.Group.value = 0
-        else:
-            self.Group.value = 0
         if self.Edit == 0:
             self.name = 'Создать новую директорию'
         else:
@@ -306,15 +370,17 @@ class FolderForm(npyscreen.ActionPopup):
         if self.Edit == 0:
             with schema.db_select(appParameters.engine) as db:
                 count = db.query(schema.Host).filter(schema.Host.name == self.DirName.value). \
+                    filter(schema.Host.parent == self.Parent). \
+                    filter(schema.Host.prefix == appParameters.user_info.prefix). \
                     filter(schema.Host.type == 2). \
-                    filter(schema.Host.prefix == self.Group.values[self.Group.value[0]]).count()
+                    filter(schema.Host.remove == False).count()
             if self.DirName.value != '' and count == 0:
                 new_dir = schema.Host(name='{0}'.format(self.DirName.value),
                                       type=2,
                                       describe='{0}'.format(self.Desc.value),
                                       parent=self.Parent,
                                       remove=False,
-                                      prefix=self.Group.values[self.Group.value[0]])
+                                      prefix=appParameters.user_info.prefix)
                 with schema.db_edit(appParameters.engine) as db:
                     db.add(new_dir)
                     db.flush()
@@ -326,16 +392,16 @@ class FolderForm(npyscreen.ActionPopup):
                 self.parentApp.switchFormPrevious()
             elif count > 0:
                 npyscreen.notify_confirm('Данное имя уже существует!', title='Error', form_color='CRITICAL',
-                                         wrap=True, wide=True, editw=0)
+                                         wrap=True, wide=False, editw=0)
             else:
                 npyscreen.notify_confirm('Имя не может быть пустым!', title='Error',
-                                         form_color='CRITICAL', wrap=True, wide=True, editw=0)
+                                         form_color='CRITICAL', wrap=True, wide=False, editw=0)
         else:
             with schema.db_edit(appParameters.engine) as db:
                 db.query(schema.Host).filter(schema.Host.id == self.Edit). \
                     update({schema.Host.name: self.DirName.value,
                             schema.Host.describe: self.Desc.value,
-                            schema.Host.prefix: self.Group.values[self.Group.value[0]]})
+                            })
                 db.add(schema.Action(action_type=11,
                                      user=appParameters.aaa_user.uid,
                                      date=datetime.datetime.now(),

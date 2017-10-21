@@ -37,7 +37,7 @@ def check_license(lic):
 
 def check_ip(user_ip, ip_address):
     """
-    Проверка корректности IP адреса
+    Проверка вхождения IP адреса в разрешенную сеть.
 
     :param user_ip: IP адрес клиента
     :type user_ip: str
@@ -63,6 +63,31 @@ def check_ip(user_ip, ip_address):
             return False
 
     return False
+
+
+def valid_ip(ip_addr):
+    """
+    Проверка корректности IP адреса
+    :param ip: str
+    :return: true|false
+    """
+    try:
+        ip, port = str(ip_addr).split(':')
+    except ValueError:
+        ip = ip_addr
+        port = 0
+
+    try:
+        ipaddress.ip_address(ip)
+    except ValueError:
+        return False
+
+    try:
+        int(port)
+    except ValueError:
+        return False
+
+    return True
 
 
 def password(passwd, magic, action):
