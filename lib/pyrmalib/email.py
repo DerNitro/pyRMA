@@ -1,7 +1,23 @@
 """
+       Copyright 2016 Sergey Utkin utkins01@gmail.com
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+"""
+
+"""
 Модуль отправки почтовыйх сообщений.
 """
-from acs import schema, log
+from pyrmalib import schema, log
 import sqlalchemy.orm
 import smtplib
 from email.mime.text import MIMEText
@@ -31,7 +47,7 @@ class Mail:
             try:
                 self.mail_from = db.query(schema.Parameter.value).filter(schema.Parameter.name == 'EMAIL_FROM').one()[0]
             except sqlalchemy.orm.exc.NoResultFound:
-                self.mail_from = 'acs@localhost'
+                self.mail_from = 'pyrmalib@localhost'
 
     def send(self, template, **data):
         if self.host:

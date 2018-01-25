@@ -1,3 +1,19 @@
+"""
+       Copyright 2016 Sergey Utkin utkins01@gmail.com
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+"""
+
 import sqlalchemy
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -160,6 +176,7 @@ class Host(Base):
     connection_type = sqlalchemy.Column(sqlalchemy.Integer)
     describe = sqlalchemy.Column(sqlalchemy.String(256))
     ilo = sqlalchemy.Column(sqlalchemy.String)
+    ilo_type = sqlalchemy.Column(sqlalchemy.Integer)
     parent = sqlalchemy.Column(sqlalchemy.Integer)
     remove = sqlalchemy.Column(sqlalchemy.Boolean)
     default_login = sqlalchemy.Column(sqlalchemy.String)
@@ -167,6 +184,23 @@ class Host(Base):
     tcp_port = sqlalchemy.Column(sqlalchemy.Integer)
     prefix = sqlalchemy.Column(sqlalchemy.String)
     note = sqlalchemy.Column(sqlalchemy.Text)
+
+    def __repr__(self):
+        return "{0}".format(self.__dict__)
+
+
+class IloType(Base):
+    """
+    Типы подключений удаленного управления серверами
+    Например:
+        HP ILO
+        Microsystem IPMI
+    """
+    __tablename__ = 'ilo_type'
+    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
+    name = sqlalchemy.Column(sqlalchemy.String(10))
+    vendor = sqlalchemy.Column(sqlalchemy.String(256))
+    ports = sqlalchemy.Column(sqlalchemy.String(256))
 
     def __repr__(self):
         return "{0}".format(self.__dict__)
@@ -273,4 +307,4 @@ if __name__ == '__main__':
                                                               '5432',
                                                               'acs'
                                                               ))
-    Service.__table__.create(bind=engine)
+    IloType.__table__.create(bind=engine)

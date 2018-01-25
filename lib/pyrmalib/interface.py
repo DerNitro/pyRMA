@@ -1,8 +1,24 @@
+"""
+       Copyright 2016 Sergey Utkin utkins01@gmail.com
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+"""
+
 import weakref
 import datetime
 import npyscreen
 import curses.ascii
-from acs import schema, template, utils
+from pyrmalib import schema, template, utils
 
 
 class MultiLineEditableBoxed(npyscreen.BoxTitle):
@@ -85,8 +101,8 @@ class HostListDisplay(npyscreen.FormMutt):
     Level = [0]
     History = []
     Filter = ''
-    SelectHost = None
-    Host = None
+    SelectHost = None  # scheme.Host
+    HostList = None
 
     def beforeEditing(self):
         self.wStatus1.value = ' {0} - {1} '.format(appParameters.program,
@@ -98,13 +114,12 @@ class HostListDisplay(npyscreen.FormMutt):
         self.add_handlers({'q': self.app_exit,
                            'c': self.connect,
                            'f': self.file_transfer,
-                           '+': self.filter})
-
-        if appParameters.user_info.permissions.get('EditDirectory') or \
-                appParameters.user_info.permissions.get('Administrate'):
-            self.add_handlers({'d': self.add_folder,
-                               'e': self.edit_element,
-                               'a': self.add_host})
+                           '+': self.filter,
+                           'i': self.show_host_information,
+                           'd': self.add_folder,
+                           'e': self.edit_element,
+                           'a': self.add_host
+                           })
 
         self.help = template.help_main_form().format(program=appParameters.program,
                                                      version=appParameters.version)
@@ -112,23 +127,23 @@ class HostListDisplay(npyscreen.FormMutt):
     def update_list(self):
         if appParameters.user_info.permissions.get('Administrate'):
             with schema.db_select(appParameters.engine) as db:
-                self.Host = db.query(schema.Host).filter(schema.Host.parent == self.Level[-1]). \
+                self.HostList = db.query(schema.Host).filter(schema.Host.parent == self.Level[-1]). \
                     filter(schema.Host.name.like('%{0}%'.format(self.Filter))). \
                     order_by(schema.Host.type.desc()).order_by(schema.Host.name).all()
         else:
             with schema.db_select(appParameters.engine) as db:
-                self.Host = db.query(schema.Host). \
+                self.HostList = db.query(schema.Host). \
                     filter(schema.Host.prefix.in_(appParameters.user_info.prefix)). \
                     filter(schema.Host.parent == self.Level[-1]). \
                     filter(schema.Host.name.like('%{0}%'.format(self.Filter))). \
                     order_by(schema.Host.type.desc()).order_by(schema.Host.name.desc()).all()
 
-        appParameters.log.debug(self.Host)
+        appParameters.log.debug(self.HostList)
 
         if len(self.Level) == 1:
-            self.wMain.values = self.Host
+            self.wMain.values = self.HostList
         else:
-            self.wMain.values = ['back'] + self.Host
+            self.wMain.values = ['back'] + self.HostList
         self.wMain.display()
         self.wCommand.display()
 
@@ -150,33 +165,65 @@ class HostListDisplay(npyscreen.FormMutt):
         pass
 
     def add_host(self, *args, **keywords):
-        appParameters.log.debug('def add_host: self.level[-1] = {0}'.format(self.Level[-1]))
-        self.parentApp.addForm('HOST', HostForm)
-        self.parentApp.getForm('HOST').Parent = self.Level[-1]
-        self.parentApp.switchForm('HOST')
+        if appParameters.user_info.permissions.get('EditHostInformation') or \
+                appParameters.user_info.permissions.get('Administrate'):
+            appParameters.log.debug('def add_host: self.level[-1] = {0}'.format(self.Level[-1]))
+            self.parentApp.addForm('HOST', HostFormEdit)
+            self.parentApp.getForm('HOST').Parent = self.Level[-1]
+            self.parentApp.switchForm('HOST')
+        else:
+            npyscreen.notify_confirm('Нет прав доступа для операции', title='Ошибка', form_color='DANGER')
 
     def add_folder(self, *args, **keywords):
-        appParameters.log.debug('def add_folder: self.level[-1] = {0}'.format(self.Level[-1]))
-        self.parentApp.addForm('FOLDER', FolderForm)
-        self.parentApp.getForm('FOLDER').Parent = self.Level[-1]
-        self.parentApp.switchForm('FOLDER')
-
-    def edit_element(self, *args, **keywords):
-        if self.SelectHost.type == 2:
+        if appParameters.user_info.permissions.get('EditDirectory') or \
+                appParameters.user_info.permissions.get('Administrate'):
             appParameters.log.debug('def add_folder: self.level[-1] = {0}'.format(self.Level[-1]))
             self.parentApp.addForm('FOLDER', FolderForm)
             self.parentApp.getForm('FOLDER').Parent = self.Level[-1]
-            self.parentApp.getForm('FOLDER').Edit = self.SelectHost.id
             self.parentApp.switchForm('FOLDER')
-        pass
+        else:
+            npyscreen.notify_confirm('Нет прав доступа для операции', title='Ошибка', form_color='DANGER')
+
+    def edit_element(self, *args, **keywords):
+        if self.SelectHost.type == 2:
+            if appParameters.user_info.permissions.get('EditDirectory') or \
+                    appParameters.user_info.permissions.get('Administrate'):
+                appParameters.log.debug('def edit_element: SelectHost = {0}'.format(self.SelectHost.id))
+                self.parentApp.addForm('FOLDER', FolderForm)
+                self.parentApp.getForm('FOLDER').Parent = self.Level[-1]
+                self.parentApp.getForm('FOLDER').Edit = self.SelectHost.id
+                self.parentApp.switchForm('FOLDER')
+            else:
+                npyscreen.notify_confirm('Нет прав доступа для операции', title='Ошибка', form_color='DANGER')
+        elif self.SelectHost.type == 1:
+            if appParameters.user_info.permissions.get('EditHostInformation') or \
+                    appParameters.user_info.permissions.get('Administrate'):
+                appParameters.log.debug('def edit_element: SelectHost = {0}'.format(self.SelectHost.id))
+                self.parentApp.addForm('HOST', HostFormEdit)
+                self.parentApp.getForm('HOST').SelectHost = self.SelectHost
+                self.parentApp.getForm('HOST').fill_values()
+                self.parentApp.switchForm('HOST')
 
     def delete_element(self, *args, **keywords):
         pass
 
+    def show_host_information(self, *args, **keywords):
+        if appParameters.user_info.permissions.get('ShowHostInformation') or \
+                appParameters.user_info.permissions.get('Administrate'):
+            host_form_information = npyscreen.Form(self.SelectHost.name)
+            host_form_information.add(npyscreen.TitleFixedText, name='Имя хоста:', value=self.SelectHost.name)
+            host_form_information.add(npyscreen.TitleFixedText, name="IP адрес:", value=self.SelectHost.ip)
+            host_form_information.add(npyscreen.TitleFixedText, name="Описание:", value=self.SelectHost.describe)
+            host_form_information.how_exited_handers[
+                npyscreen.wgwidget.EXITED_ESCAPE] = host_form_information.exit_editing
+            host_form_information.display()
+            host_form_information.edit()
+        pass
 
-class HostForm(npyscreen.ActionFormV2):
+
+class HostFormEdit(npyscreen.ActionFormV2):
     Parent = 0
-    Edit = 0
+    SelectHost = None
     Route = None
     Service = None
 
@@ -185,18 +232,39 @@ class HostForm(npyscreen.ActionFormV2):
 
         with schema.db_select(appParameters.engine) as db:
             self.ctype = db.query(schema.ConnectionType).all()
-        self.ctype_name = []
+            self.itype = db.query(schema.IloType).all()
+        self.ctype_names = []
         if len(self.ctype) > 0:
             for i in self.ctype:
-                self.ctype_name.append(i.name)
+                self.ctype_names.append(i.name)
         else:
             # Защита от пустого списка.
-            self.ctype_name.append('None')
+            self.ctype_names.append('None')
+
+        self.itype_names = []
+
+        if len(self.itype) > 0:
+            for i in self.itype:
+                self.itype_names.append(i.name)
+            self.itype_name = self.itype_names[0]
+        else:
+            # Защита от пустого списка.
+            self.itype_name = None
+            self.itype_names.append('None')
 
         self.HostName = self.add(npyscreen.TitleText, name='Имя хоста', labelColor='VERYGOOD')
         self.Description = self.add(npyscreen.TitleText, name='Description')
         self.HostIP = self.add(npyscreen.TitleText, name='IP адрес', labelColor='VERYGOOD')
-        self.HostILO = self.add(npyscreen.TitleText, name='IP адрес iLo')
+        if self.itype_names[0] == 'None':
+            self.HostILO = self.add(npyscreen.TitleText, name='IP адрес ILO')
+            self.HostILO.value = 'Не поддерживается'
+            self.HostILO.editable = False
+        else:
+            self.HostILO = self.add(npyscreen.TitleText, name='IP адрес {}'.format(self.itype_names[0]))
+            self.HostILO.add_handlers({curses.ascii.NL: self.select_itype,
+                                       curses.ascii.CR: self.select_itype})
+            self.HostILO.labelColor = 'CONTROL'
+
         self.Login = self.add(npyscreen.TitleText, name='Логин')
         self.Password = self.add(npyscreen.TitleText, name='Пароль')
 
@@ -206,7 +274,7 @@ class HostForm(npyscreen.ActionFormV2):
 
         self.ConnectionTypeButton.add_handlers({curses.ascii.NL: self.select_ctype,
                                                 curses.ascii.CR: self.select_ctype})
-        self.ConnectionTypeButton.value = self.ctype_name[0]
+        self.ConnectionTypeButton.value = self.ctype_names[0]
         self.ConnectionTypeButton.labelColor = 'CONTROL'
         self.nextrely += 1
 
@@ -222,12 +290,38 @@ class HostForm(npyscreen.ActionFormV2):
         self.nextrely += 1
         self.Note = self.add(MultiLineEditableBoxed, name='Описание узла', scroll_exit=True, editable=True)
 
+    def fill_values(self, *args, **keywords):
+        self.HostName.value = self.SelectHost.name
+        self.Description.value = self.SelectHost.describe
+        if self.SelectHost.tcp_port is not None:
+            self.HostIP.value = str("{}:{}".format(self.SelectHost.ip, self.SelectHost.tcp_port)).lstrip(':')
+        else:
+            self.HostIP.value = self.SelectHost.ip
+        self.HostILO.value = self.SelectHost.ilo
+        self.Login.value = self.SelectHost.default_login
+        self.Password.value = self.SelectHost.default_password
+        self.Note.values = self.SelectHost.note
+        self.ConnectionTypeButton.value = self.ctype_names[self.SelectHost.connection_type -1]
+        self.itype_name = self.itype_names[self.SelectHost.ilo_type -1]
+        self.HostILO.label_widget.value = 'IP адрес {0}'.format(self.itype_name)
+        self.display()
+
     def select_ctype(self, *args, **keywords):
         ctype_form = npyscreen.Popup(name="Тип подключения")
-        select_one = ctype_form.add(npyscreen.SelectOne, values=self.ctype_name)
+        select_one = ctype_form.add(npyscreen.SelectOne, values=self.ctype_names, value=[0, ])
         ctype_form.display()
         ctype_form.edit()
-        self.ConnectionTypeButton.value = self.ctype_name[select_one.value.pop()]
+        self.ConnectionTypeButton.value = self.ctype_names[select_one.value.pop()]
+        self.display()
+
+    def select_itype(self, *args, **keywords):
+        ctype_form = npyscreen.Popup(name="Тип подключения")
+        select_one = ctype_form.add(npyscreen.SelectOne, values=self.itype_names, value=[0, ])
+        ctype_form.display()
+        ctype_form.edit()
+        self.itype_name = self.itype_names[select_one.value.pop()]
+        self.HostILO.label_widget.value = 'IP адрес {0}'.format(self.itype_name)
+        self.display()
 
     def route_map(self, *args, **keywords):
         pass
@@ -236,7 +330,7 @@ class HostForm(npyscreen.ActionFormV2):
         pass
 
     def create(self):
-        super(HostForm, self).create()
+        super(HostFormEdit, self).create()
         self.cycle_widgets = True
 
     def check_host_name(self):
@@ -246,7 +340,7 @@ class HostForm(npyscreen.ActionFormV2):
                 filter(schema.Host.prefix == appParameters.user_info.prefix). \
                 filter(schema.Host.type == 1). \
                 filter(schema.Host.remove == False).count()
-        if count == 0:
+        if count == 0 or (self.SelectHost is not None and self.SelectHost.name == self.HostName.value):
             return True
         else:
             return False
@@ -277,34 +371,66 @@ class HostForm(npyscreen.ActionFormV2):
             for i in self.ctype:
                 if i.name == self.ConnectionTypeButton.value:
                     ctype = i.id
+            itype = None
+            for i in self.itype:
+                if i.name == self.itype_name:
+                    itype = i.id
+
             try:
                 ip, port = str(self.HostIP.value).strip().join(':')
             except ValueError:
+                appParameters.log.warning("except ValueError str(self.HostIP.value).strip().join(':') - {}"
+                                          .format(self.HostIP.value))
                 ip = str(self.HostIP.value).strip()
                 port = None
-            host = schema.Host(
-                name=str(self.HostName.value).strip(),
-                ip=ip,
-                type=1,
-                connection_type=ctype,
-                describe=str(self.Description.value).strip(),
-                ilo=str(self.HostILO.value).strip(),
-                parent=self.Parent,
-                default_login=str(self.Login.value).strip(),
-                default_password=str(self.Password.value).strip(),
-                tcp_port=port,
-                prefix=appParameters.user_info.prefix,
-                note=self.Note.values,
-                remove=False
-            )
-            with schema.db_edit(appParameters.engine) as db:
-                db.add(host)
-                db.flush()
-                db.add(schema.Action(action_type=20,
-                                     user=appParameters.aaa_user.uid,
-                                     date=datetime.datetime.now(),
-                                     message='Добавлен узел в host - id={0}'.format(host.id)))
-                appParameters.log.info('add host id={0}'.format(host.id))
+
+            if self.SelectHost is None:
+                host = schema.Host(
+                    name=str(self.HostName.value).strip(),
+                    ip=ip,
+                    type=1,
+                    connection_type=ctype,
+                    ilo_type=itype,
+                    describe=str(self.Description.value).strip(),
+                    ilo=str(self.HostILO.value).strip(),
+                    parent=self.Parent,
+                    default_login=str(self.Login.value).strip(),
+                    default_password=str(self.Password.value).strip(),
+                    tcp_port=port,
+                    prefix=appParameters.user_info.prefix,
+                    note=self.Note.values,
+                    remove=False
+                )
+                with schema.db_edit(appParameters.engine) as db:
+                    db.add(host)
+                    db.flush()
+                    db.add(schema.Action(action_type=20,
+                                         user=appParameters.aaa_user.uid,
+                                         date=datetime.datetime.now(),
+                                         message='Добавлен узел host - id={0}'.format(host.id)))
+                    appParameters.log.info('add host id={0}'.format(host.id))
+            else:
+                self.SelectHost.name = str(self.HostName.value).strip()
+                self.SelectHost.ip = ip
+                self.SelectHost.connection_type = ctype
+                self.SelectHost.ilo_type = itype
+                self.SelectHost.describe = str(self.Description.value).strip()
+                self.SelectHost.ilo = str(self.HostILO.value).strip()
+                self.SelectHost.default_login = str(self.Login.value).strip()
+                self.SelectHost.default_password = str(self.Password.value).strip()
+                self.SelectHost.tcp_port=port
+                self.SelectHost.note = self.Note.values
+
+                appParameters.log.info('edit host id={0}'.format(self.SelectHost.id))
+
+                with schema.db_edit(appParameters.engine) as db:
+                    db.add(self.SelectHost)
+                    db.flush()
+                    db.add(schema.Action(action_type=20,
+                                         user=appParameters.aaa_user.uid,
+                                         date=datetime.datetime.now(),
+                                         message='Изменен узел host - id={0}'.format(self.SelectHost.id)))
+
             self.parentApp.switchFormPrevious()
         else:
             npyscreen.notify_confirm(error_list, title='Ошибка', form_color='DANGER')
@@ -319,7 +445,7 @@ class Filter(npyscreen.Popup):
         self.Status_Line = self.add(npyscreen.Textfield, color='LABEL', editable=False)
 
     def update_status(self):
-        host = self.owner.Host
+        host = self.owner.HostList
         count = 0
         for ITER in host:
             if self.FilterText.value in ITER.name:

@@ -1,23 +1,39 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # encoding: utf-8
-# PYTHONPATH=./lib/ ./bin/acs_shell.py
+# PYTHONPATH=./lib/ ./bin/pyrma.py
+
+"""
+       Copyright 2016, Sergey Utkin mailto:utkins01@gmail.com
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+"""
 
 import sys
 import traceback
-from acs import parameters, interface, schema, access
+from pyrmalib import parameters, interface, schema, access
 import sqlalchemy.orm
 from sqlalchemy import create_engine
-from acs.utils import *
+from pyrmalib.utils import *
 import datetime
 
 __author__ = 'Sergey Utkin'
 __email__ = 'utkins01@gmail.com'
 __version__ = "0.0.1"
-__status__ = "Testing"
+__status__ = "Development"
 __maintainer__ = "Sergey Utkin"
 __copyright__ = "Copyright 2016, Sergey Utkin"
-__program__ = 'Access Control System'
+__program__ = 'pyRMA'
 
 try:
     appParameters = parameters.Parameters()
