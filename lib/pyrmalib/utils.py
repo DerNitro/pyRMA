@@ -18,6 +18,16 @@ import os
 import ipaddress
 
 
+def get_app_parameters(table_parameter, param):
+    """
+    Возвращает параметры из таблицы.
+    :param table_parameter: Таблица schema.Parameter
+    :param param: Параметр
+    :return: Значение
+    """
+    return list(filter(lambda x: x.name == param, table_parameter))[0].value
+
+
 def check_license(lic):
     """
     Проверка валидности файла лицензии

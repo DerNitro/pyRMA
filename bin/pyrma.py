@@ -80,6 +80,7 @@ appParameters.engine = engine
 try:
     with schema.db_select(engine) as db:
         appParameters.table_parameter = db.query(schema.Parameter).all()
+        appParameters.log.debug(appParameters.table_parameter)
 except sqlalchemy.orm.exc.NoResultFound:
     # TODO: Заполнить таблицу дефолтными значениями.
     pass
@@ -109,7 +110,7 @@ else:
         appParameters.log.info("Подключение пользователя {0} с IP: {1}.". \
                                format(aaa_user.username, os.environ.get('SSH_CLIENT').split()[0]))
 
-# Проверка блокироваки уч. записи, с автоматическим проблением даты блокировки.
+# Проверка блокироваки уч. записи, с автоматическим продлением даты блокировки.
 if user_info.date_disable < datetime.datetime.now() or user_info.disable:
     appParameters.log.error("Учетная запись заблокирована.", pr=True)
     sys.exit(15)

@@ -33,7 +33,7 @@ engine = create_engine('{0}://{1}:{2}@{3}:{4}/{5}'.format(webParameters.dbase,
                                                           webParameters.dbase_param[1],
                                                           webParameters.dbase_param[4]
                                                           ))
-app = Flask('ACS_WEB',
+app = Flask('pyRMA',
             template_folder=webParameters.template,
             static_folder=os.path.join(webParameters.template, 'static'))
 # schema.install(engine)

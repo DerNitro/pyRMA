@@ -1,3 +1,4 @@
+# coding=utf-8
 """
        Copyright 2016 Sergey Utkin utkins01@gmail.com
 
@@ -48,6 +49,10 @@ class RecordList(npyscreen.MultiLineAction):
                 self.parent.History.append(self.cursor_line)
                 self.cursor_line = 0
                 self.parent.update_list()
+            elif act_on_this.type == 1:
+                connection_form = ConnectionForm(host=act_on_this, color='GOOD')
+                connection_form.edit()
+                pass
         else:
             self.parent.Filter = ''
             self.parent.Level.pop()
@@ -111,14 +116,12 @@ class HostListDisplay(npyscreen.FormMutt):
         self.keypress_timeout = 30
         self.update_list()
 
-        self.add_handlers({'q': self.app_exit,
-                           'c': self.connect,
-                           'f': self.file_transfer,
+        self.add_handlers({'^Q': self.app_exit,
                            '+': self.filter,
                            'i': self.show_host_information,
-                           'd': self.add_folder,
-                           'e': self.edit_element,
-                           'a': self.add_host
+                           # 'd': self.add_folder,
+                           # 'e': self.edit_element,
+                           # 'a': self.add_host
                            })
 
         self.help = template.help_main_form().format(program=appParameters.program,
@@ -156,13 +159,8 @@ class HostListDisplay(npyscreen.FormMutt):
         filter_form.owner = weakref.proxy(self)
         filter_form.display()
         filter_form.FilterText.edit()
+        del filter_form
         self.update_list()
-
-    def connect(self, *args, **keywords):
-        pass
-
-    def file_transfer(self, *args, **keywords):
-        pass
 
     def add_host(self, *args, **keywords):
         if appParameters.user_info.permissions.get('EditHostInformation') or \
@@ -224,11 +222,12 @@ class HostListDisplay(npyscreen.FormMutt):
 class HostFormEdit(npyscreen.ActionFormV2):
     Parent = 0
     SelectHost = None
-    Route = None
-    Service = None
+    Route = []
+    Service = []
 
     def __init__(self, *args, **keywords):
         super().__init__(*args, **keywords)
+        self.add_handlers({'^Q': self.on_cancel})
 
         with schema.db_select(appParameters.engine) as db:
             self.ctype = db.query(schema.ConnectionType).all()
@@ -301,24 +300,22 @@ class HostFormEdit(npyscreen.ActionFormV2):
         self.Login.value = self.SelectHost.default_login
         self.Password.value = self.SelectHost.default_password
         self.Note.values = self.SelectHost.note
-        self.ConnectionTypeButton.value = self.ctype_names[self.SelectHost.connection_type -1]
-        self.itype_name = self.itype_names[self.SelectHost.ilo_type -1]
+        self.ConnectionTypeButton.value = self.ctype_names[self.SelectHost.connection_type - 1]
+        self.itype_name = self.itype_names[self.SelectHost.ilo_type - 1]
         self.HostILO.label_widget.value = 'IP адрес {0}'.format(self.itype_name)
         self.display()
 
     def select_ctype(self, *args, **keywords):
         ctype_form = npyscreen.Popup(name="Тип подключения")
         select_one = ctype_form.add(npyscreen.SelectOne, values=self.ctype_names, value=[0, ])
-        ctype_form.display()
         ctype_form.edit()
         self.ConnectionTypeButton.value = self.ctype_names[select_one.value.pop()]
         self.display()
 
     def select_itype(self, *args, **keywords):
-        ctype_form = npyscreen.Popup(name="Тип подключения")
-        select_one = ctype_form.add(npyscreen.SelectOne, values=self.itype_names, value=[0, ])
-        ctype_form.display()
-        ctype_form.edit()
+        itype_form = npyscreen.Popup(name="Тип подключения")
+        select_one = itype_form.add(npyscreen.SelectOne, values=self.itype_names, value=[0, ])
+        itype_form.edit()
         self.itype_name = self.itype_names[select_one.value.pop()]
         self.HostILO.label_widget.value = 'IP адрес {0}'.format(self.itype_name)
         self.display()
@@ -327,7 +324,9 @@ class HostFormEdit(npyscreen.ActionFormV2):
         pass
 
     def service_list(self, *args, **keywords):
-        pass
+        service_form = ServiceForm(name='Подключенные сервисы', lines=len(self.Service)+10, services=self.Service)
+        service_form.owner = weakref.proxy(self)
+        service_form.edit()
 
     def create(self):
         super(HostFormEdit, self).create()
@@ -339,13 +338,13 @@ class HostFormEdit(npyscreen.ActionFormV2):
                 filter(schema.Host.parent == self.Parent). \
                 filter(schema.Host.prefix == appParameters.user_info.prefix). \
                 filter(schema.Host.type == 1). \
-                filter(schema.Host.remove == False).count()
+                filter(schema.Host.remove is False).count()
         if count == 0 or (self.SelectHost is not None and self.SelectHost.name == self.HostName.value):
             return True
         else:
             return False
 
-    def on_cancel(self):
+    def on_cancel(self, *args, **keyword):
         self.parentApp.switchFormPrevious()
 
     def on_ok(self):
@@ -377,7 +376,7 @@ class HostFormEdit(npyscreen.ActionFormV2):
                     itype = i.id
 
             try:
-                ip, port = str(self.HostIP.value).strip().join(':')
+                ip, port = str(self.HostIP.value).strip().split(':')
             except ValueError:
                 appParameters.log.warning("except ValueError str(self.HostIP.value).strip().join(':') - {}"
                                           .format(self.HostIP.value))
@@ -418,7 +417,7 @@ class HostFormEdit(npyscreen.ActionFormV2):
                 self.SelectHost.ilo = str(self.HostILO.value).strip()
                 self.SelectHost.default_login = str(self.Login.value).strip()
                 self.SelectHost.default_password = str(self.Password.value).strip()
-                self.SelectHost.tcp_port=port
+                self.SelectHost.tcp_port = port
                 self.SelectHost.note = self.Note.values
 
                 appParameters.log.info('edit host id={0}'.format(self.SelectHost.id))
@@ -426,7 +425,7 @@ class HostFormEdit(npyscreen.ActionFormV2):
                 with schema.db_edit(appParameters.engine) as db:
                     db.add(self.SelectHost)
                     db.flush()
-                    db.add(schema.Action(action_type=20,
+                    db.add(schema.Action(action_type=21,
                                          user=appParameters.aaa_user.uid,
                                          date=datetime.datetime.now(),
                                          message='Изменен узел host - id={0}'.format(self.SelectHost.id)))
@@ -434,6 +433,117 @@ class HostFormEdit(npyscreen.ActionFormV2):
             self.parentApp.switchFormPrevious()
         else:
             npyscreen.notify_confirm(error_list, title='Ошибка', form_color='DANGER')
+
+
+class ServiceForm(npyscreen.Popup):
+    OK_BUTTON_TEXT = 'Выход'
+
+    def __init__(self, *args, **keywords):
+        super().__init__(*args, **keywords)
+        self.owner = None
+        self.Service = []
+        self.add_handlers({'^Q': self.exit})
+
+        self.Service.extend(keywords['services'])
+        self.service_list = self.add(npyscreen.MultiSelect, max_height=len(self.Service)+2)
+        self.add_button = self.add(npyscreen.ButtonPress,
+                                   name='Добавить',
+                                   when_pressed_function=self.add_service,
+                                   rely=self.lines - self.OK_BUTTON_BR_OFFSET[0] - 1)
+        self.del_button = self.add(npyscreen.ButtonPress,
+                                   name='Удалить',
+                                   when_pressed_function=self.del_service,
+                                   rely=self.add_button.rely,
+                                   relx=self.add_button.relx + self.add_button.label_width + 2)
+
+    def create(self):
+        super(ServiceForm, self).create()
+        # self.show_service()
+
+    def add_service(self):
+        with schema.db_select(appParameters.engine) as db:
+            service_type = db.query(schema.ServiceType)
+
+        add_service_form = AddService(name='Добавить сервис',
+                                      service_type=service_type,
+                                      cycle_widgets=True,
+                                      lines=service_type.count()+10)
+        add_service_form.owner = weakref.proxy(self)
+        add_service_form.edit()
+        appParameters.log.debug('ServiceForm.add_service(); self.Service = {0}'.format(self.Service))
+        self.show_service()
+
+    def show_service(self):
+        self.service_list.value = ["{0}:{1} - {2}".format(s.remote_ip, s.remote_port, s. describe) for s in self.Service]
+        self.refresh()
+        pass
+
+    def del_service(self):
+        self.show_service()
+        pass
+
+    def exit(self, *args, **keywords):
+        self.editing = False
+        pass
+
+
+class AddService(npyscreen.ActionPopup):
+    OK_BUTTON_TEXT = "Добавить"
+    CANCEL_BUTTON_TEXT = "Отмена"
+    CANCEL_BUTTON_BR_OFFSET = (2, len(OK_BUTTON_TEXT.encode('utf-8')) + 2)
+    FIX_MINIMUM_SIZE_WHEN_CREATED = False
+
+    def __init__(self, *args, **keywords):
+        super().__init__(*args, **keywords)
+        self.owner = None
+        self.add_handlers({'^Q': self.exit})
+        self.service_type = keywords['service_type']
+        self.DestinationIP = self.add(npyscreen.TitleText, name='IP адрес')
+        self.DestinationPort = self.add(npyscreen.TitleText, name='TCP порт')
+        self.Description = self.add(npyscreen.TitleText, name='Describe')
+        self.add(npyscreen.Textfield)
+        self.Type = self.add(npyscreen.SelectOne, values=[x.name for x in self.service_type])
+        pass
+
+    def create(self):
+        super(AddService, self).create()
+
+    def exit(self, *args, **keywords):
+        self.editing = False
+        pass
+
+    def on_ok(self):
+        if not utils.valid_ip(self.DestinationIP.value):
+            npyscreen.notify_confirm("Не корректно введен IP адрес.", title='Ошибка', form_color='DANGER')
+            return 0
+
+        forward_tcp_port_disable = utils.get_app_parameters(appParameters.table_parameter,
+                                                            'FORWARD_TCP_PORT_DISABLE').split(';')
+
+        forward_tcp_port_disable = list(map(int, forward_tcp_port_disable))
+        appParameters.log.debug('AddService.on_ok(); forward_tcp_port_disable = {0}'.format(forward_tcp_port_disable))
+
+        try:
+            int(self.DestinationPort.value)
+        except ValueError:
+            npyscreen.notify_confirm("Порт назначения должен быть числовым", title='Ошибка', form_color='DANGER')
+            return 0
+
+        if int(self.DestinationPort.value) in forward_tcp_port_disable \
+                or 0 > int(self.DestinationPort.value) > 65535:
+            npyscreen.notify_confirm("Порт назначения не корректен, либо заблокирован администратором",
+                                     title='Ошибка', form_color='DANGER')
+            return 0
+
+        service = schema.Service(
+            type=self.service_type[self.Type.value.pop()].id,
+            remote_port=self.DestinationPort.value,
+            remote_ip=self.DestinationIP.value,
+            describe=self.Description.value
+        )
+        appParameters.log.debug('AddService.on_ok(); service = {0}'.format(service))
+        self.owner.Service.append(service)
+        pass
 
 
 class Filter(npyscreen.Popup):
@@ -464,6 +574,19 @@ class Filter(npyscreen.Popup):
         self.update_status()
         self.Status_Line.display()
         self.owner.Filter = self.FilterText.value
+
+
+class ConnectionForm(npyscreen.Popup):
+    OK_BUTTON_TEXT = 'Закрыть'
+
+    def __init__(self, *args, **keywords):
+        super().__init__(*args, **keywords)
+        self.host = keywords['host']
+        self.name = 'Подключение к узлу: {0}'.format(self.host.name)
+
+    def create(self):
+        super(ConnectionForm, self).create()
+        self.cycle_widgets = True
 
 
 class FolderForm(npyscreen.ActionPopup):
@@ -499,7 +622,7 @@ class FolderForm(npyscreen.ActionPopup):
                     filter(schema.Host.parent == self.Parent). \
                     filter(schema.Host.prefix == appParameters.user_info.prefix). \
                     filter(schema.Host.type == 2). \
-                    filter(schema.Host.remove == False).count()
+                    filter(schema.Host.remove is False).count()
             if self.DirName.value != '' and count == 0:
                 new_dir = schema.Host(name='{0}'.format(self.DirName.value),
                                       type=2,

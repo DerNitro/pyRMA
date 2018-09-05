@@ -214,6 +214,7 @@ class Service(Base):
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
     type = sqlalchemy.Column(sqlalchemy.Integer)
     host = sqlalchemy.Column(sqlalchemy.Integer)
+    internal = sqlalchemy.Column(sqlalchemy.Boolean, server_default='f', default=False)
     local_port = sqlalchemy.Column(sqlalchemy.Integer)
     remote_port = sqlalchemy.Column(sqlalchemy.Integer)
     remote_ip = sqlalchemy.Column(sqlalchemy.String)
@@ -307,4 +308,4 @@ if __name__ == '__main__':
                                                               '5432',
                                                               'acs'
                                                               ))
-    IloType.__table__.create(bind=engine)
+    Service.__table__.create(bind=engine)

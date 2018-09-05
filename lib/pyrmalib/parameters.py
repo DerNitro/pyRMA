@@ -22,7 +22,7 @@ from pyrmalib import log
 import configparser
 import os
 
-pathConfigFile = './etc/pyrma/pyrma.conf'
+pathConfigFile = '/home/sergey/PycharmProjects/pyRMA/etc/pyrma/pyrma.conf'
 
 
 def check_config(config):
