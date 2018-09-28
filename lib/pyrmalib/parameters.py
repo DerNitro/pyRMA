@@ -50,6 +50,7 @@ class Parameters:
     dbase = ''
     dbase_param = []
     table_parameter = {}
+    modules = ''
 
     def __init__(self):
         if not os.path.isfile(pathConfigFile):
@@ -62,6 +63,7 @@ class Parameters:
         self.rec_file = conf.get('Main', 'file_env', fallback='filerec')
         self.rec_folder = conf.get('Main', 'path_env', fallback='filerecord')
         self.license = conf.get('Main', 'license', fallback=None)
+        self.modules = conf.get('Main', 'modules', fallback='/etc/pyrma/mod.d')
         self.log_param = {'level': conf.get('Main', 'log_level', fallback='INFO'),
                           'facility': conf.get('Main', 'log_facility', fallback='local0')}
 

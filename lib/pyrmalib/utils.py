@@ -158,3 +158,8 @@ def password(passwd, magic, action):
         result += c_h[abs(c_h.find(i) - len(c_h)) - 1]
 
     return result
+
+
+def load_modules(path, log):
+    log.debug('load_modules: {0}'.format(path))
+    pass

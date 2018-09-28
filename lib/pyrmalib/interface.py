@@ -113,12 +113,12 @@ class HostListDisplay(npyscreen.FormMutt):
         self.wStatus1.value = ' {0} - {1} '.format(appParameters.program,
                                                    appParameters.version)
         self.wStatus2.value = ' Управление: '
-        self.keypress_timeout = 30
+        self.keypress_timeout = 1
         self.update_list()
 
         self.add_handlers({'^Q': self.app_exit,
                            '+': self.filter,
-                           'i': self.show_host_information,
+                           'i': self.show_host_information
                            # 'd': self.add_folder,
                            # 'e': self.edit_element,
                            # 'a': self.add_host

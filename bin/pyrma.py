@@ -132,6 +132,8 @@ with schema.db_edit(engine) as db:
                          date=datetime.datetime.now(),
                          message="Успешное подключение к системе."))
 
+load_modules(appParameters.modules, appParameters.log)
+
 # Запуск интерфейса.
 appParameters.log.debug("Запуск графического интерфейса.")
 App = interface.Interface()
