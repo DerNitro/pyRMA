@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 """
-    Filename : Modules
-    Date: 28.09.2018 06:43
+    Filename : telnet
+    Date: 01.10.2018 07:36
     Project: pyRMA
     AUTHOR : Sergey Utkin
     
@@ -22,32 +22,16 @@
    limitations under the License.
 """
 
-
-class Modules:
-    NAME = ''
-    DESCRIPTION = ''
-    AUTHOR = ''
-    DATE_CREATE = ''
-
-    def __init__(self):
-        pass
-
-    def initialize(self):
-        """
-        Иннициализация плагина в системе
-        :return: Возвращает код завершения
-        """
-        pass
+from pyrmalib import Modules
 
 
-class ConnectionModules(Modules):
+class TELNET(Modules.ConnectionModules):
+    """
+    Модуль подключения к удаленному узлу по telnet
+    """
     def __init__(self):
         super().__init__()
-
-    def connection(self):
-        """
-        Инициирует логику подключения к удаленному хосту.
-        :return: Возвращает код завершения
-        """
-        pass
-
+        self.NAME = 'Telnet'
+        self.DESCRIPTION = 'Модуль подключения по протоколу Telnet'
+        self.AUTHOR = 'Sergey Utkin'
+        self.DATE_CREATE = '01/10/2018'

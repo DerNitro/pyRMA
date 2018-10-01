@@ -22,3 +22,28 @@
    limitations under the License.
 """
 
+from pyrmalib import Modules
+
+
+class SSH(Modules.ConnectionModules):
+    """
+    Модуль подключения к удаленному узлу по SSH.
+    """
+    def __init__(self):
+        super().__init__()
+        self.NAME = 'SSH'
+        self.DESCRIPTION = 'Модуль подключения по протоколу SSH'
+        self.AUTHOR = 'Sergey Utkin'
+        self.DATE_CREATE = '01/10/2018'
+
+
+class SFTP(Modules.ConnectionModules):
+    """
+    Модуль подключения к удаленному узлу по SSH.
+    """
+    def __init__(self):
+        super().__init__()
+        self.NAME = 'SFTP'
+        self.DESCRIPTION = 'Модуль передачи файлов по SFTP'
+        self.AUTHOR = 'Sergey Utkin'
+        self.DATE_CREATE = '01/10/2018'
