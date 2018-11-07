@@ -22,10 +22,10 @@
    limitations under the License.
 """
 
-from pyrmalib import Modules
+from pyrmalib import modules
 
 
-class SSH(Modules.ConnectionModules):
+class SSH(modules.ConnectionModules):
     """
     Модуль подключения к удаленному узлу по SSH.
     """
@@ -37,13 +37,37 @@ class SSH(Modules.ConnectionModules):
         self.DATE_CREATE = '01/10/2018'
 
 
-class SFTP(Modules.ConnectionModules):
+class SFTP(modules.ConnectionModules):
     """
-    Модуль подключения к удаленному узлу по SSH.
+    Модуль передачи файлов по SSH.
     """
     def __init__(self):
         super().__init__()
         self.NAME = 'SFTP'
         self.DESCRIPTION = 'Модуль передачи файлов по SFTP'
+        self.AUTHOR = 'Sergey Utkin'
+        self.DATE_CREATE = '01/10/2018'
+
+
+class TELNET(modules.ConnectionModules):
+    """
+    Модуль подключения к удаленному узлу по telnet
+    """
+    def __init__(self):
+        super().__init__()
+        self.NAME = 'Telnet'
+        self.DESCRIPTION = 'Модуль подключения по протоколу Telnet'
+        self.AUTHOR = 'Sergey Utkin'
+        self.DATE_CREATE = '01/10/2018'
+
+
+class SERVICE(modules.ConnectionModules):
+    """
+    Модуль формирования подключения только сервисов.
+    """
+    def __init__(self):
+        super().__init__()
+        self.NAME = 'OnlyServices'
+        self.DESCRIPTION = 'Модуль подключниея только сервисов'
         self.AUTHOR = 'Sergey Utkin'
         self.DATE_CREATE = '01/10/2018'

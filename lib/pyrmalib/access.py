@@ -21,22 +21,31 @@
 from pyrmalib import schema
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
-user_access_map = {'ShowHostInformation': 0,            # Просмотр информации об узле
+user_access_map = {'ShowHostInformation': 0,            # Просмотр информации об узле, автоматом отключает
+                                                        # DisableShowLoginPassword и DisableShowPassword
                    'EditHostInformation': 1,            # Редактировать хосты
                    'EditDirectory': 2,                  # Создание|Редактирование директорий
                    'EditPrefixHost': 3,                 # Смена родителя для узлов
                    'DisableShowLoginPassword': 4,       # Отключение видимости логина и пароля
-                   'FileTransfer': 5,                   # Возможность передачи файлов
-                   'UsableService': 6,                  # Использование сервисов
-                   'UsableOnlyService': 7,              # Использование только сервисов
-                   'ShowAllSession': 8,                 # Просмотр сессии пользователя
-                   'ShowAllGroupSession': 9,            # Просмотр сессии своей группы
-                   'ShowUserSession': 10,               # Просмотр сессии отдельных пользователей
-                   'Administrate': 11}                  # Режим бога.
+                   'DisableShowPassword': 5,            # Отключение видимости пароля
+                   'ShowAllSession': 6,                 # Просмотр сессии пользователя
+                   'ShowAllGroupSession': 7,            # Просмотр сессии своей группы
+                   'ShowUserSession': 8,                # Просмотр сессии отдельных пользователей
+                   'Administrate': 9}                   # Режим "бога"
+
+
+connection_access_map = {
+    'Connection': 1,                # Подключение к узлу
+    'FileTransfer': 2,              # Передача файлов
+    'ConnectionService': 3,         # Подключение сервисов
+    'ConnectionOnlyService': 4,     # Подключение толькол сервисов
+    'ConnectionIlo': 5              # Подключение к интерфейсу управления сервером.
+}
 
 
 class Access:
     map = {}
+    access_map = None
 
     def __init__(self, n_access):
         """
@@ -44,7 +53,7 @@ class Access:
         :param n_access: текущее значение доступа int
         """
         bin_str = '{0:b}'.format(n_access)[::-1].zfill(len(user_access_map))
-        for access, n in user_access_map.items():
+        for access, n in self.access_map.items():
             self.map[access] = bin_str[n]
 
     def change(self, access, set_access=False):
@@ -75,7 +84,15 @@ class Access:
         return int(s.lstrip('0')[::-1], 2)
 
 
-def check_access(engine, user_id, access):
+class UserAccess(Access):
+    access_map = user_access_map
+
+
+class ConnectionAccess(Access):
+    access_map = connection_access_map
+
+
+def user_check_access(engine, user_id, access):
     """
     Возвращает True|False по разрещенному доступу
     :param engine: Подключение к BD в формате sqlalchemy create_engine
@@ -91,7 +108,7 @@ def check_access(engine, user_id, access):
         except MultipleResultsFound:
             return False
 
-    return Access(user.permissions).get(access)
+    return UserAccess(user.permissions).get(access)
 
 
 def change_access(engine, user_id, access, set_access=False):
@@ -110,7 +127,7 @@ def change_access(engine, user_id, access, set_access=False):
     except MultipleResultsFound:
         return False
 
-    change = Access(user.permissions)
+    change = UserAccess(user.permissions)
     change.change(access, set_access=set_access)
     with schema.db_edit(engine) as db:
         db.query(schema.User).filter(schema.User.login == user_id).update({schema.User.permissions: change.get_int()})

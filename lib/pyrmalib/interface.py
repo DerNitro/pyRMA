@@ -50,8 +50,9 @@ class RecordList(npyscreen.MultiLineAction):
                 self.cursor_line = 0
                 self.parent.update_list()
             elif act_on_this.type == 1:
-                connection_form = ConnectionForm(host=act_on_this, color='GOOD')
-                connection_form.edit()
+                if True:
+                    connection_form = ConnectionForm(host=act_on_this, color='GOOD')
+                    connection_form.edit()
                 pass
         else:
             self.parent.Filter = ''
@@ -118,7 +119,8 @@ class HostListDisplay(npyscreen.FormMutt):
 
         self.add_handlers({'^Q': self.app_exit,
                            '+': self.filter,
-                           'i': self.show_host_information
+                           'i': self.show_host_information,
+                           'f': self.find
                            # 'd': self.add_folder,
                            # 'e': self.edit_element,
                            # 'a': self.add_host
@@ -136,7 +138,7 @@ class HostListDisplay(npyscreen.FormMutt):
         else:
             with schema.db_select(appParameters.engine) as db:
                 self.HostList = db.query(schema.Host). \
-                    filter(schema.Host.prefix.in_(appParameters.user_info.prefix)). \
+                    filter(schema.Host.prefix == appParameters.user_info.prefix). \
                     filter(schema.Host.parent == self.Level[-1]). \
                     filter(schema.Host.name.like('%{0}%'.format(self.Filter))). \
                     order_by(schema.Host.type.desc()).order_by(schema.Host.name.desc()).all()
@@ -147,6 +149,9 @@ class HostListDisplay(npyscreen.FormMutt):
             self.wMain.values = self.HostList
         else:
             self.wMain.values = ['back'] + self.HostList
+
+        if len(self.HostList) == 0:
+            self.wMain.values = ['empty']
         self.wMain.display()
         self.wCommand.display()
 
@@ -216,6 +221,9 @@ class HostListDisplay(npyscreen.FormMutt):
                 npyscreen.wgwidget.EXITED_ESCAPE] = host_form_information.exit_editing
             host_form_information.display()
             host_form_information.edit()
+        pass
+
+    def find(self, *args, **keywords):
         pass
 
 
@@ -578,6 +586,7 @@ class Filter(npyscreen.Popup):
 
 class ConnectionForm(npyscreen.Popup):
     OK_BUTTON_TEXT = 'Закрыть'
+    DEFAULT_LINES = 20
 
     def __init__(self, *args, **keywords):
         super().__init__(*args, **keywords)
@@ -587,6 +596,24 @@ class ConnectionForm(npyscreen.Popup):
     def create(self):
         super(ConnectionForm, self).create()
         self.cycle_widgets = True
+        self.add(npyscreen.TitleFixedText, name='IP адрес')
+        self.add(npyscreen.TitleFixedText, name='Описание')
+        self.add(npyscreen.TitleText, name='Login')
+        self.add(npyscreen.TitlePassword, name='Password')
+        self.add(npyscreen.MultiSelectFixed, max_height=2, values=["Сохранить пароль?"])
+        self.add(npyscreen.ButtonPress, name='Подключние',
+                 when_pressed_function=self.connection)
+        pass
+
+    def fill_values(self):
+        pass
+
+    def while_editing(self, *args, **keywords):
+        self.fill_values()
+        pass
+
+    def connection(self):
+        pass
 
 
 class FolderForm(npyscreen.ActionPopup):
@@ -690,13 +717,13 @@ class Interface(npyscreen.NPSAppManaged):
                                      'x': x}
         appParameters.log.debug('Запуск формы MAIN.')
         appParameters.log.debug('screen size: x = {0}, y = {1}'.format(x, y))
-        if (x > 120 and y > 40) and appParameters.user_info.permissions.get('ShowHostInformation'):
+        if x > 120 and y > 40:
             appParameters.log.info('Запуск в обычном режиме')
             self.addForm("MAIN", HostListDisplay)
 
-        elif x >= 79 and y >= 24:
-            appParameters.log.info('Запуск в упрощенном режиме')
-            self.addForm("MAIN", HostListDisplay)
+        # elif x >= 79 and y >= 24:
+        #     appParameters.log.info('Запуск в упрощенном режиме')
+        #     self.addForm("MAIN", HostListDisplay)
         else:
             appParameters.log.error('Размер терминала не поддерживется!')
             self.addForm("MAIN", ErrorForm)

@@ -174,6 +174,7 @@ class Host(Base):
     # 2 - Директория
     type = sqlalchemy.Column(sqlalchemy.Integer)
     connection_type = sqlalchemy.Column(sqlalchemy.Integer)
+    file_transfer_type = sqlalchemy.Column(sqlalchemy.Integer)
     describe = sqlalchemy.Column(sqlalchemy.String(256))
     ilo = sqlalchemy.Column(sqlalchemy.String)
     ilo_type = sqlalchemy.Column(sqlalchemy.Integer)
@@ -265,6 +266,20 @@ class ConnectionType(Base):
         return "{0}".format(self.__dict__)
 
 
+class FileTransferType(Base):
+    """
+    Информация о способах подключения
+    """
+    __tablename__ = 'file_transfer_type'
+    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
+    name = sqlalchemy.Column(sqlalchemy.String(20), unique=True)
+    default_port = sqlalchemy.Column(sqlalchemy.Integer)
+    plugin = sqlalchemy.Column(sqlalchemy.String)
+
+    def __repr__(self):
+        return "{0}".format(self.__dict__)
+
+
 class Prefix(Base):
     """
     Список групп пользователей.
@@ -308,4 +323,4 @@ if __name__ == '__main__':
                                                               '5432',
                                                               'acs'
                                                               ))
-    Service.__table__.create(bind=engine)
+    FileTransferType.__table__.create(bind=engine)

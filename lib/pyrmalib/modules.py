@@ -51,3 +51,18 @@ class ConnectionModules(Modules):
         """
         pass
 
+    def firewall(self):
+        """
+        Формирует правила сетевого экрана.
+        :return: Возвращает код завершения
+        """
+        pass
+
+    def route(self):
+        """
+        формирует маршрут доступа до узла.
+        :return: Возвращает код завершения
+        """
+        pass
+
+

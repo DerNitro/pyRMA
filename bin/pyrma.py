@@ -94,7 +94,7 @@ try:
         appParameters.log.debug(user_info)
         appParameters.aaa_user = aaa_user
         appParameters.user_info = user_info
-        appParameters.user_info.permissions = access.Access(appParameters.user_info.permissions)
+        appParameters.user_info.permissions = access.UserAccess(appParameters.user_info.permissions)
 except sqlalchemy.orm.exc.NoResultFound:
     appParameters.log.error("Пользователь не существует.", pr=True)
     sys.exit(13)
