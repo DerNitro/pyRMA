@@ -137,6 +137,7 @@ class HostListDisplay(npyscreen.FormMutt):
                     order_by(schema.Host.type.desc()).order_by(schema.Host.name).all()
         else:
             with schema.db_select(appParameters.engine) as db:
+                # TODO. Разобратся с префиксами
                 self.HostList = db.query(schema.Host). \
                     filter(schema.Host.prefix == appParameters.user_info.prefix). \
                     filter(schema.Host.parent == self.Level[-1]). \
@@ -152,6 +153,7 @@ class HostListDisplay(npyscreen.FormMutt):
 
         if len(self.HostList) == 0:
             self.wMain.values = ['empty']
+
         self.wMain.display()
         self.wCommand.display()
 
@@ -221,6 +223,8 @@ class HostListDisplay(npyscreen.FormMutt):
                 npyscreen.wgwidget.EXITED_ESCAPE] = host_form_information.exit_editing
             host_form_information.display()
             host_form_information.edit()
+        else:
+            npyscreen.notify_confirm('Нет прав доступа для операции', title='Ошибка', form_color='DANGER')
         pass
 
     def find(self, *args, **keywords):

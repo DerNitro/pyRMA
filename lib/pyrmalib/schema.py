@@ -57,7 +57,7 @@ class User(Base):
 
     login = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, unique=True)
     full_name = sqlalchemy.Column(sqlalchemy.String(256))
-    permissions = sqlalchemy.Column(sqlalchemy.Integer, default=0)
+    # permissions = sqlalchemy.Column(sqlalchemy.Integer)
     date_create = sqlalchemy.Column(sqlalchemy.DateTime, default=datetime.datetime.now)
     disable = sqlalchemy.Column(sqlalchemy.BOOLEAN(), default=False)
     date_disable = sqlalchemy.Column(sqlalchemy.DateTime)
@@ -315,6 +315,36 @@ class RestorePassword(Base):
         return "{0}".format(self.__dict__)
 
 
+class Group(Base):
+    """
+    Таблица определения групп для пользователей, хостов, сервисов.
+    type:
+        0 - Users
+        1 - Hosts
+        2 - Services
+    """
+    __tablename__ = 'group'
+    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
+    name = sqlalchemy.Column(sqlalchemy.String)
+    type = sqlalchemy.Column(sqlalchemy.Integer)
+
+
+class Permission(Base):
+    """
+    Таблица разрешений для пользователей, групп, хостов...
+    type:
+        0 - User
+        1 - Group
+        2 - Host
+    """
+    __tablename__ = 'permission'
+    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
+    type = sqlalchemy.Column(sqlalchemy.Integer)
+    conn_access = sqlalchemy.Column(sqlalchemy.Integer)
+    user_access = sqlalchemy.Column(sqlalchemy.Integer)
+    object = sqlalchemy.Column(sqlalchemy.Integer)
+
+
 if __name__ == '__main__':
     engine = create_engine('{0}://{1}:{2}@{3}:{4}/{5}'.format('postgresql',
                                                               'acs',
@@ -323,4 +353,5 @@ if __name__ == '__main__':
                                                               '5432',
                                                               'acs'
                                                               ))
-    FileTransferType.__table__.create(bind=engine)
+    Permission.__table__.create(bind=engine)
+    Group.__table__.create(bind=engine)

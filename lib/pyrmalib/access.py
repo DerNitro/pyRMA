@@ -30,15 +30,14 @@ user_access_map = {'ShowHostInformation': 0,            # Просмотр ин�
                    'DisableShowPassword': 5,            # Отключение видимости пароля
                    'ShowAllSession': 6,                 # Просмотр сессии пользователя
                    'ShowAllGroupSession': 7,            # Просмотр сессии своей группы
-                   'ShowUserSession': 8,                # Просмотр сессии отдельных пользователей
-                   'Administrate': 9}                   # Режим "бога"
+                   'Administrate': 8}                   # Режим "бога"
 
 
 connection_access_map = {
     'Connection': 1,                # Подключение к узлу
     'FileTransfer': 2,              # Передача файлов
     'ConnectionService': 3,         # Подключение сервисов
-    'ConnectionOnlyService': 4,     # Подключение толькол сервисов
+    'ConnectionOnlyService': 4,     # Подключение только сервисов
     'ConnectionIlo': 5              # Подключение к интерфейсу управления сервером.
 }
 
@@ -52,7 +51,7 @@ class Access:
         Формируем мапинг правил доступа
         :param n_access: текущее значение доступа int
         """
-        bin_str = '{0:b}'.format(n_access)[::-1].zfill(len(user_access_map))
+        bin_str = '{0:b}'.format(n_access)[::-1].zfill(len(self.access_map))
         for access, n in self.access_map.items():
             self.map[access] = bin_str[n]
 
@@ -78,7 +77,7 @@ class Access:
         :return: int
         """
         bin_str = []
-        for i in sorted(user_access_map, key=user_access_map.get):
+        for i in sorted(self.access_map, key=self.access_map.get):
             bin_str.append(self.map[i])
         s = ''.join(bin_str)
         return int(s.lstrip('0')[::-1], 2)
@@ -92,26 +91,54 @@ class ConnectionAccess(Access):
     access_map = connection_access_map
 
 
-def user_check_access(engine, user_id, access):
+def user_check_access(engine, perm_type,  object_id, access):
     """
     Возвращает True|False по разрещенному доступу
     :param engine: Подключение к BD в формате sqlalchemy create_engine
-    :param user_id: ID пользователя в СУБД
+    :param perm_type: значение из schema.Permission.type
+    :param object_id: ID пользователя в СУБД
     :param access: Правило доступа из access_map
     :return: bool
     """
     with schema.db_select(engine) as db:
         try:
-            user = db.query(schema.User).filter(schema.User.login == user_id).one()
+            permission = db.query(schema.Permission)\
+                .filter(schema.Permission.object == object_id)\
+                .filter(schema.Permission.type == perm_type)\
+                .one()
         except NoResultFound:
             return False
         except MultipleResultsFound:
             return False
 
-    return UserAccess(user.permissions).get(access)
+    return UserAccess(permission.user_access).get(access)
+
+
+def connection_check_access(engine, perm_type,  object_id, access):
+    """
+    Возвращает True|False по разрещенному доступу
+    :param engine: Подключение к BD в формате sqlalchemy create_engine
+    :param perm_type: значение из schema.Permission.type
+    :param object_id: ID пользователя в СУБД
+    :param access: Правило доступа из access_map
+    :return: bool
+    """
+    with schema.db_select(engine) as db:
+        try:
+            permission = db.query(schema.Permission)\
+                .filter(schema.Permission.object == object_id)\
+                .filter(schema.Permission.type == perm_type)\
+                .one()
+        except NoResultFound:
+            return False
+        except MultipleResultsFound:
+            return False
+
+    return ConnectionAccess(permission.conn_access).get(access)
 
 
 def change_access(engine, user_id, access, set_access=False):
+    # TODO: Переписать
     """
     Установка правила доступа с записью в СУБД
     :param set_access: bool(), по умолчанию запретить
