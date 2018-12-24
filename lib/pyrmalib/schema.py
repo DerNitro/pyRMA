@@ -329,20 +329,42 @@ class Group(Base):
     type = sqlalchemy.Column(sqlalchemy.Integer)
 
 
+class GroupHost(Base):
+    """
+    Таблица соотношения хостов с группами
+    """
+    __tablename__ = 'group_host'
+    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
+    host = sqlalchemy.Column(sqlalchemy.Integer)
+    group = sqlalchemy.Column(sqlalchemy.Integer)
+
+
+class GroupUser(Base):
+    """
+    Таблица соотношения пользователей с группами
+    """
+    __tablename__ = 'group_user'
+    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
+    user = sqlalchemy.Column(sqlalchemy.Integer)
+    group = sqlalchemy.Column(sqlalchemy.Integer)
+
+
 class Permission(Base):
     """
     Таблица разрешений для пользователей, групп, хостов...
-    type:
+    t_*:
         0 - User
         1 - Group
         2 - Host
     """
     __tablename__ = 'permission'
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
-    type = sqlalchemy.Column(sqlalchemy.Integer)
+    t_subject = sqlalchemy.Column(sqlalchemy.Integer)
+    subject = sqlalchemy.Column(sqlalchemy.Integer)
+    t_object = sqlalchemy.Column(sqlalchemy.Integer)
+    object = sqlalchemy.Column(sqlalchemy.Integer)
     conn_access = sqlalchemy.Column(sqlalchemy.Integer)
     user_access = sqlalchemy.Column(sqlalchemy.Integer)
-    object = sqlalchemy.Column(sqlalchemy.Integer)
 
 
 if __name__ == '__main__':
@@ -353,5 +375,5 @@ if __name__ == '__main__':
                                                               '5432',
                                                               'acs'
                                                               ))
-    Permission.__table__.create(bind=engine)
-    Group.__table__.create(bind=engine)
+    GroupHost.__table__.create(bind=engine)
+    GroupUser.__table__.create(bind=engine)

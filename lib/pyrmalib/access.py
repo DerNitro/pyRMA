@@ -14,24 +14,32 @@
    limitations under the License.
 """
 
-
 """
 Модуль контроля и проверки правил доступа.
+Режимы(приоритет от наименьшего к наибольшему.):
+    1.  Общий режим группы пользователей 
+    2.  Общий режим группы хостов
+    3.  Общий режим пользователя
+    4.  Группа пользователей -> Група хостов
+    5.  Группа пользователей -> Хост
+    6.  Пользователь -> Группа хостов
+    7.  Пользователь -> Хост
 """
-from pyrmalib import schema
+from pyrmalib import schema, error
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
-user_access_map = {'ShowHostInformation': 0,            # Просмотр информации об узле, автоматом отключает
-                                                        # DisableShowLoginPassword и DisableShowPassword
-                   'EditHostInformation': 1,            # Редактировать хосты
-                   'EditDirectory': 2,                  # Создание|Редактирование директорий
-                   'EditPrefixHost': 3,                 # Смена родителя для узлов
-                   'DisableShowLoginPassword': 4,       # Отключение видимости логина и пароля
-                   'DisableShowPassword': 5,            # Отключение видимости пароля
-                   'ShowAllSession': 6,                 # Просмотр сессии пользователя
-                   'ShowAllGroupSession': 7,            # Просмотр сессии своей группы
-                   'Administrate': 8}                   # Режим "бога"
-
+user_access_map = {
+    'ShowHostInformation': 0,       # Просмотр информации об узле, автоматом отключает
+                                    # DisableShowLoginPassword и DisableShowPassword
+    'EditHostInformation': 1,       # Редактировать хосты
+    'EditDirectory': 2,             # Создание|Редактирование директорий
+    'EditPrefixHost': 3,            # Смена родителя для узлов
+    'DisableShowLoginPassword': 4,  # Отключение видимости логина и пароля
+    'DisableShowPassword': 5,       # Отключение видимости пароля
+    'ShowAllSession': 6,            # Просмотр сессии пользователя
+    'ShowAllGroupSession': 7,       # Просмотр сессии своей группы
+    'Administrate': 8               # Режим "бога"
+}
 
 connection_access_map = {
     'Connection': 1,                # Подключение к узлу
@@ -40,6 +48,51 @@ connection_access_map = {
     'ConnectionOnlyService': 4,     # Подключение только сервисов
     'ConnectionIlo': 5              # Подключение к интерфейсу управления сервером.
 }
+
+
+def get_permission(engine, subj, t_subj=0, obj=None, t_obj=None):
+    # Пользователь -> Хост
+    if t_subj == 0 and t_obj == 2:
+        with schema.db_select(engine) as db:
+            try:
+                permission = db.query(schema.Permission) \
+                    .filter(schema.Permission.subject == subj) \
+                    .filter(schema.Permission.t_subject == t_subj) \
+                    .filter(schema.Permission.object == obj) \
+                    .filter(schema.Permission.t_object == t_obj)\
+                    .one()
+                return permission
+            except NoResultFound:
+                pass
+            except MultipleResultsFound:
+                raise error.QueryError("Multiple Results Found schema.Permission: U: {0} H: {1}".format(subj, obj))
+    # Пользователь -> Группа хостов
+    if t_subj == 0 and (t_obj == 2 or t_obj == 1):
+
+        pass
+    # Группа пользователей -> Хост
+    if (t_subj == 0 or t_subj == 1) and t_obj == 2:
+        pass
+    # Группа пользователей -> Група хостов
+    if (t_subj == 0 or t_subj == 1) and (t_obj == 2 or t_obj == 1):
+        pass
+    # Общий режим пользователя
+    with schema.db_select(engine) as db:
+        try:
+            permission = db.query(schema.Permission) \
+                .filter(schema.Permission.subject == subj) \
+                .filter(schema.Permission.t_subject == t_subj) \
+                .one()
+            return permission
+        except NoResultFound:
+            pass
+        except MultipleResultsFound:
+            raise error.QueryError("Multiple Results Found schema.Permission: U: {0}".format(subj))
+
+    # Общий режим группы хостов
+    # Общий режим группы пользователей
+
+    return False
 
 
 class Access:
@@ -91,50 +144,21 @@ class ConnectionAccess(Access):
     access_map = connection_access_map
 
 
-def user_check_access(engine, perm_type,  object_id, access):
+def user_check_access(engine, t_subj, subj, access, t_obj=None, obj=None):
     """
     Возвращает True|False по разрещенному доступу
     :param engine: Подключение к BD в формате sqlalchemy create_engine
-    :param perm_type: значение из schema.Permission.type
-    :param object_id: ID пользователя в СУБД
+    :param t_subj: значение из schema.Permission.t_subject
+    :param subj: ID пользователя/группы в СУБД
     :param access: Правило доступа из access_map
+    :param t_obj: значение из schema.Permission.t_object
+    :param obj: ID пользователя/группы/хоста в СУБД
     :return: bool
     """
-    with schema.db_select(engine) as db:
-        try:
-            permission = db.query(schema.Permission)\
-                .filter(schema.Permission.object == object_id)\
-                .filter(schema.Permission.type == perm_type)\
-                .one()
-        except NoResultFound:
-            return False
-        except MultipleResultsFound:
-            return False
+
+    permission = get_permission(engine, subj, t_subj=t_subj, obj=obj, t_obj=t_obj)
 
     return UserAccess(permission.user_access).get(access)
-
-
-def connection_check_access(engine, perm_type,  object_id, access):
-    """
-    Возвращает True|False по разрещенному доступу
-    :param engine: Подключение к BD в формате sqlalchemy create_engine
-    :param perm_type: значение из schema.Permission.type
-    :param object_id: ID пользователя в СУБД
-    :param access: Правило доступа из access_map
-    :return: bool
-    """
-    with schema.db_select(engine) as db:
-        try:
-            permission = db.query(schema.Permission)\
-                .filter(schema.Permission.object == object_id)\
-                .filter(schema.Permission.type == perm_type)\
-                .one()
-        except NoResultFound:
-            return False
-        except MultipleResultsFound:
-            return False
-
-    return ConnectionAccess(permission.conn_access).get(access)
 
 
 def change_access(engine, user_id, access, set_access=False):
