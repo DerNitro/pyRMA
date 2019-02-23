@@ -15,6 +15,7 @@
 """
 
 import textwrap
+import json
 
 footer = '\npyRMA\nCopyright 2016, Sergey Utkin'
 
@@ -46,3 +47,30 @@ def help_main_form():
     msg = textwrap.dedent(msg)
 
     return msg + footer
+
+
+def information_host(note):
+    msg = ''
+    if not isinstance(note, dict):
+        note = json.loads(note)
+    for key in sorted(note):
+        msg += "{key}\n".format(key=key)
+        msg += "{header}\n".format(header="=" * len(key))
+        value = note[key]
+        if len(value) > 100:
+            line = ''
+            for word in value.split():
+                line += "{} ".format(word)
+                if len(line) > 100:
+                    msg += "{}\n".format(line)
+                    line = ''
+            msg += "{}\n\n".format(line)
+        else:
+            msg += "{value}\n\n".format(value=value)
+        pass
+
+    return msg
+
+
+if __name__ == '__main__':
+    pass

@@ -14,15 +14,40 @@
    limitations under the License.
 -->
 
-{% macro show_menu(Admin) %}
+{% macro show_menu(Admin=False, Active='home') %}
 
 <div class="menu">
     <ul>
-        <li><a class="active" href="#home">Dashboard</a></li>
-        <li><a href="#home">Карта</a></li>
-        <li><a href="#contact">Настройки</a></li>
-        {% if Admin == True %}
-            <li style="float:right"><a href="#about">Администрирование</a></li>
+        <li>
+            {% if Active == "home" %}
+            <a class="active" href="/">
+                <img
+                        src="{{ url_for('static', filename='icon/home_black.png') }}"
+                        alt="Home"
+                        height="15px"
+                >
+            </a>
+            {% else %}
+            <a href="/">
+                <img
+                        src="{{ url_for('static', filename='icon/home_white.png') }}"
+                        alt="Home"
+                        height="15px"
+                >
+            </a>
+            {% endif %}
+        </li>
+        {% if Active == "settings" %}
+        <li><a class="active" href="settings">Настройки</a></li>
+        {% else %}
+        <li><a href="settings">Настройки</a></li>
+        {% endif %}
+        {% if Admin %}
+            {% if Active == "administrate" %}
+                <li style="float:right"><a class="active" href="administrate">Администрирование</a></li>
+            {% else %}
+                <li style="float:right"><a href="administrate">Администрирование</a></li>
+            {% endif %}
         {% endif %}
     </ul>
 </div>

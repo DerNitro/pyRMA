@@ -18,12 +18,18 @@
 {% from "menu.html" import show_menu %}
 
 {% block header %}
+{{ show_menu(Admin=admin) }}
 {{ super() }}
 {% endblock %}
 
 {% block content %}
-{{ show_menu(True) }}
 <div class="dashboard">
-    dashboard
+    {% if admin %}
+        {% from "dashboard.html" import admin_dashboard %}
+        {{ admin_dashboard() }}
+    {% else %}
+        {% from "dashboard.html" import user_dashboard %}
+        {{ user_dashboard() }}
+    {% endif %}
 </div>
 {% endblock %}

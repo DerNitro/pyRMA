@@ -215,10 +215,10 @@ class Service(Base):
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
     type = sqlalchemy.Column(sqlalchemy.Integer)
     host = sqlalchemy.Column(sqlalchemy.Integer)
-    internal = sqlalchemy.Column(sqlalchemy.Boolean, server_default='f', default=False)
     local_port = sqlalchemy.Column(sqlalchemy.Integer)
     remote_port = sqlalchemy.Column(sqlalchemy.Integer)
     remote_ip = sqlalchemy.Column(sqlalchemy.String)
+    internal = sqlalchemy.Column(sqlalchemy.Boolean, server_default='f', default=False)
     describe = sqlalchemy.Column(sqlalchemy.String)
 
     def __repr__(self):
@@ -328,6 +328,9 @@ class Group(Base):
     name = sqlalchemy.Column(sqlalchemy.String)
     type = sqlalchemy.Column(sqlalchemy.Integer)
 
+    def __repr__(self):
+        return "{0}".format(self.__dict__)
+
 
 class GroupHost(Base):
     """
@@ -338,6 +341,9 @@ class GroupHost(Base):
     host = sqlalchemy.Column(sqlalchemy.Integer)
     group = sqlalchemy.Column(sqlalchemy.Integer)
 
+    def __repr__(self):
+        return "{0}".format(self.__dict__)
+
 
 class GroupUser(Base):
     """
@@ -347,6 +353,9 @@ class GroupUser(Base):
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
     user = sqlalchemy.Column(sqlalchemy.Integer)
     group = sqlalchemy.Column(sqlalchemy.Integer)
+
+    def __repr__(self):
+        return "{0}".format(self.__dict__)
 
 
 class Permission(Base):
@@ -366,6 +375,24 @@ class Permission(Base):
     conn_access = sqlalchemy.Column(sqlalchemy.Integer)
     user_access = sqlalchemy.Column(sqlalchemy.Integer)
 
+    def __repr__(self):
+        return "{0}".format(self.__dict__)
+
+
+class PasswordList(Base):
+    """
+    Таблица замаскированных паролей.
+    """
+    __tablename__ = 'password'
+    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
+    user = sqlalchemy.Column(sqlalchemy.Integer)
+    host = sqlalchemy.Column(sqlalchemy.Integer)
+    login = sqlalchemy.Column(sqlalchemy.String)
+    password = sqlalchemy.Column(sqlalchemy.String)
+
+    def __repr__(self):
+        return "{0}".format(self.__dict__)
+
 
 if __name__ == '__main__':
     engine = create_engine('{0}://{1}:{2}@{3}:{4}/{5}'.format('postgresql',
@@ -375,5 +402,5 @@ if __name__ == '__main__':
                                                               '5432',
                                                               'acs'
                                                               ))
-    GroupHost.__table__.create(bind=engine)
-    GroupUser.__table__.create(bind=engine)
+    Service.__table__.create(bind=engine)
+

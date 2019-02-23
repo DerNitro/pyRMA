@@ -54,9 +54,9 @@ def check_license(lic):
     if not datetime.datetime.now() < datetime.datetime.strptime(days, '%d/%m/%Y'):
         return False
     if not allhash == hashlib.md5(str(hashlib.md5(os.popen('hostid').read().strip().encode()).hexdigest()).encode() \
-                                          + str(gethostname()).encode() \
-                                          + str(system()).encode() \
-                                          + str(days).encode()).hexdigest():
+                                  + str(gethostname()).encode() \
+                                  + str(system()).encode() \
+                                  + str(days).encode()).hexdigest():
         return False
     return True
 
@@ -94,7 +94,7 @@ def check_ip(user_ip, ip_address):
 def valid_ip(ip_addr):
     """
     Проверка корректности IP адреса
-    :param ip: str
+    :param ip_addr: str
     :return: true|false
     """
     try:
@@ -116,7 +116,7 @@ def valid_ip(ip_addr):
     return True
 
 
-def password(passwd, magic, action):
+def password(passwd, magic, mask):
     """
     Функция маскировки/демаскировки пароля
 
@@ -124,15 +124,15 @@ def password(passwd, magic, action):
     :type passwd: str
     :param magic: Магическое число
     :type magic: int
-    :param action: кодирование/декодирование
-    :type action: bool
+    :param mask: маскировки/демаскировки
+    :type mask: bool
     :return: Возвращает преобразованый пароль
     """
     c_h = 'PQRabc=>?@[\]defghijkopqJKLrstuv&\'wxy234789!"#$%()*+z01,-./:;<}~ABCDlmnEFGHI56MNOST^_`{|UVWXYZ'
     result = ''
     magic = list(str(magic))
     if set(passwd).issubset(set(c_h)):
-        if action:
+        if mask:
             passwd = list(passwd)
             magic.reverse()
             for i in magic:
@@ -162,4 +162,9 @@ def password(passwd, magic, action):
 
 def load_modules(path, log):
     log.debug('load_modules: {0}'.format(path))
+    pass
+
+
+if __name__ == '__main__':
+    print(password(None, 1, True))
     pass

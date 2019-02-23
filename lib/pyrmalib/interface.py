@@ -18,7 +18,8 @@
 import weakref
 import npyscreen
 import curses.ascii
-from pyrmalib import schema, template, access
+from pyrmalib import schema, template, access, parameters, utils
+from sqlalchemy import or_
 
 
 class MultiLineEditableBoxed(npyscreen.BoxTitle):
@@ -126,7 +127,7 @@ class HostListDisplay(npyscreen.FormMutt):
                                                      version=appParameters.version)
 
     def update_list(self):
-        if access.user_check_access(appParameters.engine, 0, appParameters.user_info.login, 'Administrate'):
+        if access.check_access(appParameters, 'Administrate'):
             with schema.db_select(appParameters.engine) as db:
                 self.HostList = db.query(schema.Host).filter(schema.Host.parent == self.Level[-1]). \
                     filter(schema.Host.name.like('%{0}%'.format(self.Filter))). \
@@ -140,7 +141,7 @@ class HostListDisplay(npyscreen.FormMutt):
                     filter(schema.Host.name.like('%{0}%'.format(self.Filter))). \
                     order_by(schema.Host.type.desc()).order_by(schema.Host.name.desc()).all()
 
-        appParameters.log.debug(self.HostList)
+        appParameters.log.debug("HostListDisplay.update_list - {}".format(self.HostList))
 
         if len(self.Level) == 1:
             self.wMain.values = self.HostList
@@ -166,22 +167,41 @@ class HostListDisplay(npyscreen.FormMutt):
         self.update_list()
 
     def show_host_information(self, *args, **keywords):
-        if access.user_check_access(appParameters.engine, 0, appParameters.user_info.login, 'ShowHostInformation') or \
-                access.user_check_access(appParameters.engine, 0, appParameters.user_info.login, 'Administrate'):
-            host_form_information = npyscreen.Form(self.SelectHost.name)
-            host_form_information.add(npyscreen.TitleFixedText, name='Имя хоста:', value=self.SelectHost.name)
-            host_form_information.add(npyscreen.TitleFixedText, name="IP адрес:", value=self.SelectHost.ip)
-            host_form_information.add(npyscreen.TitleFixedText, name="Описание:", value=self.SelectHost.describe)
-            host_form_information.how_exited_handers[
-                npyscreen.wgwidget.EXITED_ESCAPE] = host_form_information.exit_editing
-            host_form_information.display()
+        if access.check_access(appParameters, 'ShowHostInformation', h_object=self.SelectHost) or \
+                access.check_access(appParameters, 'Administrate'):
+            host_form_information = InformationForm(host=self.SelectHost)
             host_form_information.edit()
         else:
             npyscreen.notify_confirm('Нет прав доступа для операции', title='Ошибка', form_color='DANGER')
         pass
 
     def find(self, *args, **keywords):
-        pass
+        find_form = Find()
+        find_form.owner = weakref.proxy(self)
+        find_form.display()
+        find_form.FindText.edit()
+        del find_form
+        self.DISPLAY()
+
+
+class Find(npyscreen.Popup):
+    def __init__(self, *args, **keywords):
+        super().__init__(*args, **keywords)
+        self.owner = None
+        self.FindText = self.add(npyscreen.TitleText, name='Поиск:')
+
+    def create(self):
+        super(Find, self).create()
+
+    # def on_ok(self):
+    #     with schema.db_select(appParameters.engine) as db:
+    #         host_list = db.query(schema.Host).filter(
+    #             or_(
+    #                 schema.Host.name.like('%{0}%'.format(self.FindText.value)),
+    #                 schema.Host.ip.like('%{0}%'.format(self.FindText.value))
+    #             )).order_by(schema.Host.type.desc()).order_by(schema.Host.name).all()
+    #     self.owner.HostList = [ None ] + host_list
+    #     self.owner.History.append('Find')
 
 
 class Filter(npyscreen.Popup):
@@ -216,17 +236,19 @@ class Filter(npyscreen.Popup):
 
 class ConnectionForm(npyscreen.Popup):
     OK_BUTTON_TEXT = 'Закрыть'
-    DEFAULT_LINES = 13
+    DEFAULT_LINES = 20
+    DEFAULT_COLUMNS = 80
     ip_address = None
     description = None
     login = None
     password = None
+    service = None
     save_pass = None
     button_line_relx = 0
 
     def __init__(self, *args, **keywords):
         super().__init__(*args, **keywords)
-        self.host = keywords['host']
+        self.host = keywords['host']  # type: schema.Host
         self.name = 'Подключение к узлу: {0}'.format(self.host.name)
 
     def create(self):
@@ -237,6 +259,7 @@ class ConnectionForm(npyscreen.Popup):
         self.login = self.add(npyscreen.TitleText, name='Login')
         self.password = self.add(npyscreen.TitlePassword, name='Password')
         self.save_pass = self.add(npyscreen.MultiSelectFixed, max_height=2, values=["Сохранить пароль?"])
+        self.service = self.add(npyscreen.BoxTitle, name='Service', max_height=7)
         self.add(npyscreen.FixedText)
         self.add(npyscreen.ButtonPress, name='Подключение',
                  when_pressed_function=self.connection)
@@ -253,9 +276,21 @@ class ConnectionForm(npyscreen.Popup):
         pass
 
     def fill_values(self):
+        self.ip_address.value = self.host.ip
+        self.description.value = self.host.describe
+        login_password = access.get_password(appParameters, appParameters.user_info.login, self.host.id)
+        if isinstance(login_password, schema.PasswordList):
+            self.login.value = login_password.login
+            self.password.value = '*' * len(login_password.password)
+        else:
+            self.login.value = self.host.default_login
+            if self.host.default_password is not None:
+                self.password.value = '*' * len(self.host.default_password)
+        self.DISPLAY()
         pass
 
     def while_editing(self, *args, **keywords):
+        self.add_handlers({'^Q': self.exit_editing})
         self.fill_values()
         pass
 
@@ -266,6 +301,60 @@ class ConnectionForm(npyscreen.Popup):
         pass
 
     def connection_ilo(self):
+        pass
+
+
+class InformationForm(npyscreen.Form):
+    ip_address = None
+    description = None
+    login = None
+    password = None
+    service = None
+    note = None
+
+    def __init__(self, *args, **keywords):
+        super().__init__(*args, **keywords)
+        self.host = keywords['host']  # type: schema.Host
+        self.name = 'Информация о узле {name}'.format(name=self.host.name)
+
+    def create(self):
+        self.cycle_widgets = True
+        self.ip_address = self.add(npyscreen.TitleFixedText, name='IP адрес')
+        self.description = self.add(npyscreen.TitleFixedText, name='Описание')
+        self.login = self.add(npyscreen.TitleFixedText, name='Login')
+        self.password = self.add(npyscreen.TitleFixedText, name='Password')
+        self.service = self.add(npyscreen.BoxTitle, name='Service', max_height=7)
+        self.note = self.add(npyscreen.BoxTitle, name='Note')
+        pass
+
+    def while_editing(self, *args, **keywords):
+        self.add_handlers({'^Q': self.exit_editing})
+        self.fill_values()
+        pass
+
+    def fill_values(self):
+        self.ip_address.value = self.host.ip
+        self.description.value = self.host.describe
+        login_password = access.get_password(appParameters, appParameters.user_info.login, self.host.id)
+        if access.check_access(appParameters, 'DisableShowLoginPassword', h_object=self.host):
+            if isinstance(login_password, schema.PasswordList):
+                self.login.value = login_password.login
+                if access.check_access(appParameters, 'DisableShowPassword', h_object=self.host):
+                    if self.host.default_password is not None:
+                        self.password.value = utils.password(login_password.password, self.host.id, False)
+                else:
+                    self.password.value = '*' * 10
+            else:
+                self.login.value = self.host.default_login
+                if access.check_access(appParameters, 'DisableShowPassword', h_object=self.host):
+                    self.password.value = utils.password(self.host.default_password, self.host.id, False)
+                else:
+                    self.password.value = '*' * 10
+        else:
+            self.login.value = '*' * 10
+            self.password.value = '*' * 10
+        self.note.values = template.information_host(self.host.note).split('\n')
+        self.DISPLAY()
         pass
 
 
@@ -289,8 +378,12 @@ class ErrorForm(npyscreen.FormBaseNew):
 
 
 class Interface(npyscreen.NPSAppManaged):
-    appParameters = None
+    appParameters = None  # type: parameters.AppParameters
     keypress_timeout_default = 1
+
+    def __init__(self, app_param: parameters.Parameters):
+        super().__init__()
+        self.appParameters = app_param
 
     def onStart(self):
         global appParameters

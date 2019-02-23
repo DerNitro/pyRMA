@@ -67,6 +67,19 @@ def login_access(username, password, ip, engine):
     return True
 
 
+def user_info(username, engine):
+    with schema.db_select(engine) as db:
+        try:
+            aaa = db.query(schema.AAAUser).filter(schema.AAAUser.username == username).one()
+            user = db.query(schema.User).filter(schema.User.login == aaa.uid).one()
+        except NoResultFound:
+            return False
+        except MultipleResultsFound:
+            return False
+
+    return aaa, user
+
+
 def restore_password(username, engine, request):
     with schema.db_select(engine) as db:
         user_id = db.query(schema.User.login).join(schema.AAAUser, schema.User.login == schema.AAAUser.uid). \

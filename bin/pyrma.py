@@ -21,7 +21,7 @@
 
 import sys
 import traceback
-from pyrmalib import parameters, interface, schema, access
+from pyrmalib import parameters, interface, schema
 import sqlalchemy.orm
 from sqlalchemy import create_engine
 from pyrmalib.utils import *
@@ -36,7 +36,7 @@ __copyright__ = "Copyright 2016, Sergey Utkin"
 __program__ = 'pyRMA'
 
 try:
-    appParameters = parameters.Parameters()
+    appParameters = parameters.AppParameters()
 except FileNotFoundError:
     print('Ошибка инициализации приложения!!!')
     print(traceback.print_exc(limit=1))
@@ -136,8 +136,7 @@ load_modules(appParameters.modules, appParameters.log)
 
 # Запуск интерфейса.
 appParameters.log.debug("Запуск графического интерфейса.")
-App = interface.Interface()
-App.appParameters = appParameters
+App = interface.Interface(appParameters)
 result = App.run()
 appParameters.log.info('Выход из приложения.')
 sys.exit(0)

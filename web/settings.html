@@ -1,13 +1,5 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-"""
-    Filename : error
-    Date: 21.12.2018 07:18
-    Project: pyRMA
-    AUTHOR : Sergey Utkin
-    
-    Copyright 2018 Sergey Utkin utkins01@gmail.com
+<!--
+       Copyright 2016 Sergey Utkin utkins01@gmail.com
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -20,20 +12,18 @@
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
-"""
+-->
 
+{% extends "main.html" %}
+{% from "menu.html" import show_menu %}
 
-class QueryError(Exception):
-    def __init__(self, desc):
-        self.desc = desc
+{% block header %}
+{{ show_menu(Admin=admin, Active='settings') }}
+{{ super() }}
+{% endblock %}
 
-    def __repr__(self):
-        return self.desc
-
-
-class WTF(Exception):
-    def __init__(self, desc):
-        self.desc = desc
-
-    def __repr__(self):
-        return self.desc
+{% block content %}
+<div class="settings">
+    settings
+</div>
+{% endblock %}
