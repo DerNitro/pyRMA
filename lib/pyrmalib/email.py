@@ -14,9 +14,6 @@
    limitations under the License.
 """
 
-"""
-Модуль отправки почтовыйх сообщений.
-"""
 from pyrmalib import schema, log
 import sqlalchemy.orm
 import smtplib

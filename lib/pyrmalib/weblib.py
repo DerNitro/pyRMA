@@ -17,31 +17,28 @@
 # -*- coding: utf-8 -*-
 # encoding: utf-8
 import random
-
-from pyrmalib import schema, utils, email, template
+from pyrmalib import schema, utils, email, template, parameters
+from functools import wraps
 import hashlib
 import sqlalchemy
 import datetime
 import string
+from flask import request, redirect, session
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
+from sqlalchemy import create_engine
 
 
-def check_access(request, engine):
-    user_id = request.get_cookie('id', default=None)
-    key = request.get_cookie('key', default=None)
-    if user_id and key:
-        with schema.db_select(engine) as db:
-            access = db.query(schema.WebAccess).filter(schema.WebAccess.user == int(user_id)).one
-        if not access:
-            return False
-
-        if key == access.key and request.remote_addr == access.ip and datetime.datetime.now() < access.expires:
-            return True
-        else:
-            return False
-
-    else:
-        return False
+def authorization(session: session, req: request, param: parameters.WebParameters):
+    def decorator(function):
+        @wraps(function)
+        def wrapper():
+            if 'username' in session:
+                param.aaa_user, param.user_info = user_info(session['username'], param.engine)
+                return function()
+            else:
+                return redirect('/login')
+        return wrapper
+    return decorator
 
 
 def login_access(username, password, ip, engine):
@@ -65,6 +62,27 @@ def login_access(username, password, ip, engine):
         return False
 
     return True
+
+
+def get_access_request(engine, user):
+    return []
+
+
+def get_connection(engine, user):
+    return []
+
+
+def get_content_dashboard(param: parameters.WebParameters):
+    """
+    content - dict включает:
+        access_request - список запросов доступа.
+        connection - список активных подключений
+    :param param: WebParameters
+    :return: dict
+    """
+    content = {'access_request': get_access_request(param.engine, param.user_info),
+               'connection': get_connection(param.engine, param.user_info)}
+    return content
 
 
 def user_info(username, engine):
@@ -134,13 +152,25 @@ def reset_password(key, engine, password=False, check=False):
             return False
 
     with schema.db_edit(engine) as db:
-        db.query(schema.RestorePassword).\
+        db.query(schema.RestorePassword). \
             filter(sqlalchemy.and_(schema.RestorePassword.key == key,
-                   schema.RestorePassword.status == 1)).\
+                                   schema.RestorePassword.status == 1)). \
             update({schema.RestorePassword.status: 2,
-                   schema.RestorePassword.date_complete:  datetime.datetime.now()})
-        db.query(schema.AAAUser).\
-            filter(schema.AAAUser.uid == restore.user).\
+                    schema.RestorePassword.date_complete: datetime.datetime.now()})
+        db.query(schema.AAAUser). \
+            filter(schema.AAAUser.uid == restore.user). \
             update({schema.AAAUser.password: hashlib.md5(str(password).encode()).hexdigest()})
     email.send_mail(engine, template.restore_password_access(), aaa_user.uid, {'login': aaa_user.username})
     return True
+
+
+if __name__ == '__main__':
+    e = create_engine('{0}://{1}:{2}@{3}:{4}/{5}'.format('postgresql',
+                                                         'acs',
+                                                         'acs',
+                                                         'localhost',
+                                                         '5432',
+                                                         'acs'
+                                                         ))
+
+    pass

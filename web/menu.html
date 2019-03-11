@@ -1,24 +1,8 @@
-<!--
-       Copyright 2016 Sergey Utkin utkins01@gmail.com
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
--->
-
 {% macro show_menu(Admin=False, Active='home') %}
 
 <div class="menu">
-    <ul>
-        <li>
+    <ul class="menu">
+        <li class="menu">
             {% if Active == "home" %}
             <a class="active" href="/">
                 <img
@@ -37,19 +21,29 @@
             </a>
             {% endif %}
         </li>
-        {% if Active == "settings" %}
-        <li><a class="active" href="settings">Настройки</a></li>
+        {% if Active == "host" %}
+        <li class="menu"><a class="active" href="hosts">Узлы</a></li>
         {% else %}
-        <li><a href="settings">Настройки</a></li>
+        <li class="menu"><a href="hosts">Узлы</a></li>
         {% endif %}
+        {% if Active == "statistic" %}
+        <li class="menu"><a class="active" href="statistic">Статистика</a></li>
+        {% else %}
+        <li class="menu"><a href="statistic">Статистика</a></li>
+        {% endif %}
+        {% if Active == "settings" %}
+        <li class="menu"><a class="active" href="settings">Настройки</a></li>
+        {% else %}
+        <li class="menu"><a href="settings">Настройки</a></li>
+        {% endif %}
+        <li class="menu" style="float:right"><a href="logout">Выход</a></li>
         {% if Admin %}
             {% if Active == "administrate" %}
-                <li style="float:right"><a class="active" href="administrate">Администрирование</a></li>
+                <li class="menu" style="float:right"><a class="active" href="administrate">Администрирование</a></li>
             {% else %}
-                <li style="float:right"><a href="administrate">Администрирование</a></li>
+                <li class="menu" style="float:right"><a href="administrate">Администрирование</a></li>
             {% endif %}
         {% endif %}
     </ul>
 </div>
-
 {% endmacro %}

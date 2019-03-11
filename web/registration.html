@@ -1,0 +1,32 @@
+{% extends "main.html" %}
+
+{% block content %}
+{% if status %}
+<div class="registrationStatus">
+    {{ status }}
+</div>
+{% else %}
+<div class="registrationForm">
+    <h3>Регистрация нового пользователя</h3>
+    <form action="/restore" method="POST" name="registration">
+        Логин:<br>
+        <input name="username" type="text" size="45"/><br/>
+        Пароль и подтверждение пароля:<br>
+        <input name="password" type="text" size="45"/><br/>
+        <input name="password_check" type="text" size="45"/><br/>
+        ФИО:<br>
+        <input name="full_name" type="text" size="45"/><br/>
+        E-Mail:<br>
+        <input name="email" type="text" size="45"/><br/>
+        IP-адрес или сеть:<br>
+        <input name="ip" type="text" size="45"/><br/>
+        <input class="submit_registration" type="submit" value="Регистрация"/><br>
+    </form>
+</div>
+{% endif %}
+{%- if error -%}
+<div class="registrationError">
+    <h3>{{error}}</h3>
+</div>
+{% endif %}
+{% endblock %}

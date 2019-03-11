@@ -1,13 +1,16 @@
 {% extends "main.html" %}
 {% from "menu.html" import show_menu %}
+{% from "search.html" import show_search %}
 
 {% block header %}
 {{ show_menu(Admin=admin, Active='settings') }}
+{{ show_search() }}
 {{ super() }}
 {% endblock %}
 
 {% block content %}
-<div class="settings">
-    settings
+<hr>
+<div class="hosts">
+    hosts
 </div>
 {% endblock %}

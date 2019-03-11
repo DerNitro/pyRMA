@@ -57,7 +57,6 @@ class User(Base):
 
     login = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, unique=True)
     full_name = sqlalchemy.Column(sqlalchemy.String(256))
-    # permissions = sqlalchemy.Column(sqlalchemy.Integer)
     date_create = sqlalchemy.Column(sqlalchemy.DateTime, default=datetime.datetime.now)
     disable = sqlalchemy.Column(sqlalchemy.BOOLEAN(), default=False)
     date_disable = sqlalchemy.Column(sqlalchemy.DateTime)
@@ -67,6 +66,9 @@ class User(Base):
 
     def __repr__(self):
         return "{0}".format(self.__dict__)
+
+    def get_id(self):
+        return int(self.login)
 
 
 class AAAUser(Base):
@@ -143,6 +145,28 @@ class Action(Base):
     action_type = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
     date = sqlalchemy.Column(sqlalchemy.DateTime, nullable=False)
     message = sqlalchemy.Column(sqlalchemy.String(256))
+
+    def __repr__(self):
+        return "{0}".format(self.__dict__)
+
+
+class RequestAccess(Base):
+    """
+    Табллица запросов доступа.
+    status:
+        0 - запрос доступа
+        1 - Запрос согласован
+        2 - запрос отменен
+    """
+    __tablename__ = 'request_access'
+    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
+    user = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
+    host = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
+    date_request = sqlalchemy.Column(sqlalchemy.DateTime, nullable=False)
+    date_access = sqlalchemy.Column(sqlalchemy.DateTime, nullable=False)
+    status = sqlalchemy.Column(sqlalchemy.Integer)
+    user_approve = sqlalchemy.Column(sqlalchemy.Integer)
+    date_approve = sqlalchemy.Column(sqlalchemy.DateTime)
 
     def __repr__(self):
         return "{0}".format(self.__dict__)
@@ -252,6 +276,33 @@ class RouteMap(Base):
         return "{0}".format(self.__dict__)
 
 
+class Connection(Base):
+    """
+    Список подключений
+    status:
+        0 - Создание подключения
+        1 - Подключен
+        2 - Отключен
+    termination:
+        0 - Нормальное завершение
+        1 - Принудительное завершение
+        2 - Ошибка
+    """
+    __tablename__ = 'connection'
+    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
+    status = sqlalchemy.Column(sqlalchemy.Integer)
+    user = sqlalchemy.Column(sqlalchemy.Integer)
+    host = sqlalchemy.Column(sqlalchemy.Integer)
+    connection_type = sqlalchemy.Column(sqlalchemy.Integer)
+    date_start = sqlalchemy.Column(sqlalchemy.DateTime, nullable=False)
+    date_end = sqlalchemy.Column(sqlalchemy.DateTime)
+    error = sqlalchemy.Column(sqlalchemy.String)
+    termination = sqlalchemy.Column(sqlalchemy.Integer)
+
+    def __repr__(self):
+        return "{0}".format(self.__dict__)
+
+
 class ConnectionType(Base):
     """
     Информация о способах подключения
@@ -282,7 +333,7 @@ class FileTransferType(Base):
 
 class Prefix(Base):
     """
-    Список групп пользователей.
+    Список префиксов
     """
     __tablename__ = 'prefix'
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
@@ -402,5 +453,5 @@ if __name__ == '__main__':
                                                               '5432',
                                                               'acs'
                                                               ))
-    Service.__table__.create(bind=engine)
+    RequestAccess.__table__.create(bind=engine)
 
