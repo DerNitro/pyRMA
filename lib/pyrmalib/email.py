@@ -14,12 +14,8 @@
    limitations under the License.
 """
 
-from pyrmalib import schema, log
 import sqlalchemy.orm
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from email.header import Header
+from pyrmalib import schema
 
 
 class Mail:

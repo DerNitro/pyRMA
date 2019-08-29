@@ -18,6 +18,7 @@ import sqlalchemy
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.schema import Sequence
 import datetime
 from contextlib import contextmanager
 
@@ -52,6 +53,9 @@ def db_edit(engine):
 class User(Base):
     """
     Таблица пользователй системой доступа.
+    check:
+        0 - Новый пользователь, требуется проверка
+        1 - Подтвержденный пользователь
     """
     __tablename__ = 'user'
 
@@ -63,6 +67,7 @@ class User(Base):
     ip = sqlalchemy.Column(sqlalchemy.String(256))
     email = sqlalchemy.Column(sqlalchemy.String(256), unique=True)
     prefix = sqlalchemy.Column(sqlalchemy.String(100))
+    check = sqlalchemy.Column(sqlalchemy.Integer)
 
     def __repr__(self):
         return "{0}".format(self.__dict__)
@@ -78,11 +83,11 @@ class AAAUser(Base):
     __tablename__ = 'aaa_user'
 
     username = sqlalchemy.Column(sqlalchemy.String(16), unique=True)
-    uid = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
+    uid = sqlalchemy.Column(sqlalchemy.Integer, Sequence('aaa_user_uid_seq', start=5000, increment=1), primary_key=True)
     gid = sqlalchemy.Column(sqlalchemy.Integer, default=5000)
     gecos = sqlalchemy.Column(sqlalchemy.String(128))
-    homedir = sqlalchemy.Column(sqlalchemy.String(255))
-    shell = sqlalchemy.Column(sqlalchemy.String(64))
+    homedir = sqlalchemy.Column(sqlalchemy.String(255), default='/home/acs/')
+    shell = sqlalchemy.Column(sqlalchemy.String(64), default='/bin/sh')
     password = sqlalchemy.Column(sqlalchemy.String(34))
     lstchg = sqlalchemy.Column(sqlalchemy.BIGINT)
     min = sqlalchemy.Column(sqlalchemy.BIGINT, default=0)
@@ -453,5 +458,7 @@ if __name__ == '__main__':
                                                               '5432',
                                                               'acs'
                                                               ))
-    RequestAccess.__table__.create(bind=engine)
-
+    # AAAUser.__table__.create(bind=engine)
+    # with db_edit(engine) as db:
+    #     db.add(AAAUser(username='administrator', password='e10adc3949ba59abbe56e057f20f883e'))
+    #     db.add(AAAUser(username='sergey', password='298b5acec4518ad08d53fee1d3f413e7'))

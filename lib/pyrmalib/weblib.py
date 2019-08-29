@@ -16,8 +16,11 @@
 
 # -*- coding: utf-8 -*-
 # encoding: utf-8
+import json
+import psutil
+import os
 import random
-from pyrmalib import schema, utils, email, template, parameters
+from pyrmalib import schema, utils, email, template, parameters, error, access
 from functools import wraps
 import hashlib
 import sqlalchemy
@@ -28,13 +31,13 @@ from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy import create_engine
 
 
-def authorization(session: session, req: request, param: parameters.WebParameters):
+def authorization(web_session: session, req: request, param: parameters.WebParameters, ):
     def decorator(function):
         @wraps(function)
-        def wrapper():
-            if 'username' in session:
-                param.aaa_user, param.user_info = user_info(session['username'], param.engine)
-                return function()
+        def wrapper(*args, **kwargs):
+            if 'username' in web_session:
+                param.aaa_user, param.user_info = user_info(web_session['username'], param.engine)
+                return function(*args, **kwargs)
             else:
                 return redirect('/login')
         return wrapper
@@ -61,6 +64,9 @@ def login_access(username, password, ip, engine):
     if not utils.check_ip(ip, user.ip) and check_ip.value == '1':
         return False
 
+    if user.date_disable < datetime.datetime.now() or user.disable:
+        return False
+
     return True
 
 
@@ -72,17 +78,152 @@ def get_connection(engine, user):
     return []
 
 
-def get_content_dashboard(param: parameters.WebParameters):
+def get_content_host(param: parameters.WebParameters, host_id):
+    """
+    Возвращает форматированную информацию о хосте.
+    :param param: param: WebParameters
+    :param host_id: schema.Host.id
+    :return: dict
+    """
+    content = {}
+    host = get_host(param, host_id)
+    content['id'] = host_id
+    content['name'] = host.name
+    content['ip'] = host.ip
+    content['describe'] = host.describe
+    content['ilo'] = host.ilo
+    if access.check_access(param, 'ShowLogin', h_object=host) \
+            or access.check_access(param, 'EditHostInformation', h_object=host)\
+            or access.check_access(param, 'Administrate', h_object=host):
+        content['default_login'] = host.default_login
+        if host.default_login:
+            content['default_login'] = host.default_login
+        else:
+            content['default_login'] = ''
+    else:
+        content['default_login'] = '*' * len(host.default_login)
+    if access.check_access(param, 'ShowPassword', h_object=host) \
+            or access.check_access(param, 'EditHostInformation', h_object=host) \
+            or access.check_access(param, 'Administrate', h_object=host):
+        if host.default_password:
+            content['default_password'] = utils.password(host.default_password, host_id, False)
+        else:
+            content['default_password'] = ''
+    else:
+        content['default_password'] = '*' * len(host.default_password)
+    content['tcp_port'] = host.tcp_port
+    if not isinstance(host.note, dict) and host.note:
+        content['note'] = json.loads(host.note)
+    else:
+        content['note'] = host.note
+
+    with schema.db_select(param.engine) as db:
+        content['connection_type'] = db.query(schema.ConnectionType).\
+            filter(schema.ConnectionType.id == host.connection_type).one()
+        content['file_transfer_type'] = db.query(schema.FileTransferType).\
+            filter(schema.FileTransferType.id == host.file_transfer_type).one()
+        try:
+            content['parent'] = db.query(schema.Host).filter(schema.Host.id == host.parent).one().name
+        except NoResultFound:
+            content['parent'] = None
+        try:
+            content['ilo_type'] = db.query(schema.IloType).\
+                filter(schema.IloType.id == host.ilo_type).one()
+        except NoResultFound:
+            content['ilo_type'] = None
+
+    return content
+
+
+def get_admin_content_dashboard(param: parameters.WebParameters):
     """
     content - dict включает:
-        access_request - список запросов доступа.
-        connection - список активных подключений
+        access_request  - список запросов доступа.
+        new_users       - новые пользователи
+        connection      - список активных подключений
     :param param: WebParameters
     :return: dict
     """
+    with schema.db_select(param.engine) as db:
+        connection_count = db.query(schema.Connection).filter(schema.Connection.status == 1).count()
+        storage_dir = db.query(schema.Parameter).filter(schema.Parameter.name == 'STORAGE_DIR').one()
     content = {'access_request': get_access_request(param.engine, param.user_info),
-               'connection': get_connection(param.engine, param.user_info)}
+               'connection': get_connection(param.engine, param.user_info),
+               'connection_count': connection_count,
+               'la': os.getloadavg()[2],
+               'free': psutil.virtual_memory().percent,
+               'disk': psutil.disk_usage(storage_dir.value).percent}
     return content
+
+
+def get_user_content_dashboard(param: parameters.WebParameters):
+    """
+    content - dict включает:
+    :param param: WebParameters
+    :return: dict
+    """
+    content = {}
+    return content
+
+
+def get_host(param: parameters.WebParameters, host_id=None, name=None,  parent=0):
+    """
+    Возвращает объект Host, поиск по schema.Host.id или schema.Host.name и schema.Host.parent
+    :param host_id: schema.Host.id
+    :param param: WebParameters
+    :param name: schema.Host.name
+    :param parent: schema.Host.parent
+    :return: schema.Host
+    """
+    if host_id:
+        with schema.db_select(param.engine) as db:
+            try:
+                host = db.query(schema.Host).filter(schema.Host.id == host_id).one()
+            except NoResultFound:
+                return None
+            except MultipleResultsFound:
+                raise error.WTF("Дубли Host.id в таблице Host!!!")
+
+            return host
+    if name and parent:
+        with schema.db_select(param.engine) as db:
+            try:
+                host = db.query(schema.Host).filter(schema.Host.name == name, schema.Host.parent == parent).one()
+            except NoResultFound:
+                return None
+            except MultipleResultsFound:
+                raise error.WTF("Дубли Host.name в таблице Host!!!")
+
+            return host
+    else:
+        raise error.WTF("Ошибка работы weblib.get_host!!!")
+
+
+def get_host_list(param: parameters.WebParameters, level=None):
+    """
+    Возвращает список хостов.
+    :param level: вхождение директории
+    :param param: WebParameters
+    :return: list
+    """
+    with schema.db_select(param.engine) as db:
+        host_list = db.query(schema.Host)\
+            .filter(schema.Host.parent == level, schema.Host.prefix == param.user_info.prefix)\
+            .order_by(schema.Host.type.desc()).order_by(schema.Host.name).all()
+    return host_list
+
+
+def get_path(param: parameters.WebParameters, host_id=None):
+    """
+    Возвращает строку пути к хосту
+    :param param: WebParameters
+    :param host_id: schema.Host.id
+    :return: str
+    """
+    if host_id is None or host_id == 0:
+        return "/"
+    else:
+        return "path"
 
 
 def user_info(username, engine):
@@ -164,6 +305,41 @@ def reset_password(key, engine, password=False, check=False):
     return True
 
 
+def user_registration(reg_data, engine):
+    with schema.db_edit(engine) as db:
+        aaa = schema.AAAUser(username=reg_data['username'],
+                             password=hashlib.md5(reg_data['password'].encode()).hexdigest())
+        db.add(aaa)
+        db.flush()
+        db.refresh(aaa)
+        user = schema.User(login=aaa.uid,
+                           full_name=reg_data['full_name'],
+                           date_create=datetime.datetime.now(),
+                           disable=False,
+                           date_disable=datetime.datetime.now() + datetime.timedelta(days=365),
+                           ip=reg_data['ip'],
+                           email=reg_data['email'],
+                           check=0)
+        db.add(user)
+        db.flush()
+    return True
+
+
+def add_folder(param: parameters.WebParameters, folder):
+    with schema.db_edit(param.engine) as db:
+        folder = schema.Host(
+            name=folder['name'],
+            describe=folder['describe'],
+            parent=folder['parent'],
+            type=2,
+            prefix=folder['prefix']
+        )
+        db.add(folder)
+        db.flush()
+
+    return True
+
+
 if __name__ == '__main__':
     e = create_engine('{0}://{1}:{2}@{3}:{4}/{5}'.format('postgresql',
                                                          'acs',
@@ -172,5 +348,4 @@ if __name__ == '__main__':
                                                          '5432',
                                                          'acs'
                                                          ))
-
     pass

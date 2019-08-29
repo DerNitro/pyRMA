@@ -1,0 +1,56 @@
+{% extends "main.html" %}
+{% from "menu.html" import show_menu %}
+{% from "search.html" import show_search %}
+
+{% block header %}
+{{ show_menu(Admin=admin, Active='host') }}
+{{ show_search() }}
+{{ super() }}
+{% endblock %}
+
+{% block content %}
+<hr>
+{% if EditHostInformation or admin %}
+<div class="host_edit">
+    <ul class="host_edit">
+        {% if EditHostInformation or admin %} <li class="host_edit"> <a class="host_edit" href="/host/{{ content['id'] }}/edit">Редактировать</a> </li> {% endif %}
+    </ul>
+</div>
+{% endif %}
+{{ path }}
+<hr>
+<div class="host">
+<h3>Хост - {{ content['name'] }} {% if content['parent'] %}({{ content['parent'] }}){% endif %}</h3>
+<table style="width: 700px;">
+<tbody>
+<tr>
+<td style="width: 150px;">IP</td>
+<td style="width: 550px;">{{ content['ip'] }}</td>
+</tr>
+<tr>
+<td style="width: 150px;">Описание</td>
+<td style="width: 550px;">{{ content['describe'] }}</td>
+</tr>
+<tr>
+<td style="width: 150px;">IPMI</td>
+<td style="width: 550px;">{{ content['ilo_type'] }}: {{ content['ilo'] }}</td>
+</tr>
+<tr>
+<td style="width: 150px;">Login</td>
+<td style="width: 550px;">{{ content['default_login'] }}</td>
+</tr>
+<tr>
+<td style="width: 150px;">Password</td>
+<td style="width: 550px;">{{ content['default_password'] }}</td>
+</tr>
+</tbody>
+</table>
+<h3>Note</h3>
+    {% if content['note'] %}
+        {% for key, value in content['note'].items()|sort() %}
+            <h4>{{ key }}</h4>
+            <p>{{ value }}</p>
+        {% endfor %}
+    {% endif %}
+</div>
+{% endblock %}

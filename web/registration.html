@@ -4,16 +4,18 @@
 {% if status %}
 <div class="registrationStatus">
     {{ status }}
+    <br>
+    <a href="/">На главную</a>
 </div>
 {% else %}
 <div class="registrationForm">
     <h3>Регистрация нового пользователя</h3>
-    <form action="/restore" method="POST" name="registration">
+    <form action="/registration" method="POST" name="registration">
         Логин:<br>
         <input name="username" type="text" size="45"/><br/>
         Пароль и подтверждение пароля:<br>
-        <input name="password" type="text" size="45"/><br/>
-        <input name="password_check" type="text" size="45"/><br/>
+        <input name="password" type="password" size="45"/><br/>
+        <input name="password_check" type=password size="45"/><br/>
         ФИО:<br>
         <input name="full_name" type="text" size="45"/><br/>
         E-Mail:<br>
@@ -24,9 +26,11 @@
     </form>
 </div>
 {% endif %}
-{%- if error -%}
+{% if error %}
 <div class="registrationError">
-    <h3>{{error}}</h3>
+    <h3>{{ error }}</h3>
+    <br>
+    <a href="/">На главную</a>
 </div>
 {% endif %}
 {% endblock %}

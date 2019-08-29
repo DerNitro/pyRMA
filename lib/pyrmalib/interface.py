@@ -139,7 +139,7 @@ class HostListDisplay(npyscreen.FormMutt):
                     filter(schema.Host.prefix == appParameters.user_info.prefix). \
                     filter(schema.Host.parent == self.Level[-1]). \
                     filter(schema.Host.name.like('%{0}%'.format(self.Filter))). \
-                    order_by(schema.Host.type.desc()).order_by(schema.Host.name.desc()).all()
+                    order_by(schema.Host.type.desc()).order_by(schema.Host.name).all()
 
         appParameters.log.debug("HostListDisplay.update_list - {}".format(self.HostList))
 
@@ -336,17 +336,17 @@ class InformationForm(npyscreen.Form):
         self.ip_address.value = self.host.ip
         self.description.value = self.host.describe
         login_password = access.get_password(appParameters, appParameters.user_info.login, self.host.id)
-        if access.check_access(appParameters, 'DisableShowLoginPassword', h_object=self.host):
+        if access.check_access(appParameters, 'ShowLogin', h_object=self.host):
             if isinstance(login_password, schema.PasswordList):
                 self.login.value = login_password.login
-                if access.check_access(appParameters, 'DisableShowPassword', h_object=self.host):
+                if access.check_access(appParameters, 'ShowPassword', h_object=self.host):
                     if self.host.default_password is not None:
                         self.password.value = utils.password(login_password.password, self.host.id, False)
                 else:
                     self.password.value = '*' * 10
             else:
                 self.login.value = self.host.default_login
-                if access.check_access(appParameters, 'DisableShowPassword', h_object=self.host):
+                if access.check_access(appParameters, 'ShowPassword', h_object=self.host):
                     self.password.value = utils.password(self.host.default_password, self.host.id, False)
                 else:
                     self.password.value = '*' * 10

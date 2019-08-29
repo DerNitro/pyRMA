@@ -30,13 +30,12 @@ from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 """
 
 user_access_map = {
-    'ShowHostInformation': 0,       # Просмотр информации об узле, автоматом отключает
-                                    # DisableShowLoginPassword и DisableShowPassword
+    'ShowHostInformation': 0,       # Просмотр информации об узле
     'EditHostInformation': 1,       # Редактировать хосты
     'EditDirectory': 2,             # Создание|Редактирование директорий
     'EditPrefixHost': 3,            # Смена родителя для узлов
-    'DisableShowLoginPassword': 4,  # Отключение видимости логина и пароля
-    'DisableShowPassword': 5,       # Отключение видимости пароля
+    'ShowLogin': 4,                 # Отображение логина
+    'ShowPassword': 5,              # Отображение пароля
     'ShowAllSession': 6,            # Просмотр сессии пользователя
     'ShowAllGroupSession': 7,       # Просмотр сессии своей группы
     'Administrate': 8               # Режим "бога"

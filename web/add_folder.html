@@ -1,0 +1,38 @@
+{% extends "main.html" %}
+{% from "menu.html" import show_menu %}
+{% from "search.html" import show_search %}
+
+{% block header %}
+{{ show_menu(Admin=admin, Active='host') }}
+{{ show_search() }}
+{{ super() }}
+{% endblock %}
+
+{% block content %}
+<hr>
+{% if status %}
+<div class="registrationStatus">
+    {{ status }}
+    <br>
+    <a href="/hosts/{{ directory_id }}">Назад</a>
+</div>
+{% else %}
+<div class="addFolderForm">
+    <h3>Добавить директорию</h3>
+    <form action="/hosts/{{ directory_id }}/add_folder" method="POST" name="add_folder">
+        Название директории:<br>
+        <input name="name" type="text" size="45"/><br/>
+        Краткое описание:<br>
+        <input name="describe" type="text" size="45"/><br/>
+        <input class="submit_add_folder" type="submit" value="Добавить"/><br>
+    </form>
+</div>
+{% endif %}
+{% if error %}
+<div class="addFolderError">
+    <h3>{{ error }}</h3>
+    <br>
+    <a href="/hosts/{{ directory_id }}">Назад</a>
+</div>
+{% endif %}
+{% endblock %}

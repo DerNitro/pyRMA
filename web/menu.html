@@ -22,26 +22,26 @@
             {% endif %}
         </li>
         {% if Active == "host" %}
-        <li class="menu"><a class="active" href="hosts">Узлы</a></li>
+        <li class="menu"><a class="active" href="/hosts">Узлы</a></li>
         {% else %}
-        <li class="menu"><a href="hosts">Узлы</a></li>
+        <li class="menu"><a href="/hosts">Узлы</a></li>
         {% endif %}
         {% if Active == "statistic" %}
-        <li class="menu"><a class="active" href="statistic">Статистика</a></li>
+        <li class="menu"><a class="active" href="/statistic">Статистика</a></li>
         {% else %}
-        <li class="menu"><a href="statistic">Статистика</a></li>
+        <li class="menu"><a href="/statistic">Статистика</a></li>
         {% endif %}
         {% if Active == "settings" %}
-        <li class="menu"><a class="active" href="settings">Настройки</a></li>
+        <li class="menu"><a class="active" href="/settings">Настройки</a></li>
         {% else %}
-        <li class="menu"><a href="settings">Настройки</a></li>
+        <li class="menu"><a href="/settings">Настройки</a></li>
         {% endif %}
-        <li class="menu" style="float:right"><a href="logout">Выход</a></li>
+        <li class="menu" style="float:right"><a href="/logout">Выход</a></li>
         {% if Admin %}
             {% if Active == "administrate" %}
-                <li class="menu" style="float:right"><a class="active" href="administrate">Администрирование</a></li>
+                <li class="menu" style="float:right"><a class="active" href="/administrate">Администрирование</a></li>
             {% else %}
-                <li class="menu" style="float:right"><a href="administrate">Администрирование</a></li>
+                <li class="menu" style="float:right"><a href="/administrate">Администрирование</a></li>
             {% endif %}
         {% endif %}
     </ul>

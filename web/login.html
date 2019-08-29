@@ -5,10 +5,10 @@
     <h1>Вход в систему</h1>
     <form action="/login" method="POST" name="login">
         <input name="username" type="text" size="45"/><br/>
-        <input name="password" type="text" size="45"/><br/>
+        <input name="password" type="password" size="45"/><br/>
         <input class="submit_login" type="submit" value="Войти"/><br>
     </form>
-    {%- if error -%}
+    {% if error %}
     <div class="loginError">
         {{ error }}
     </div>

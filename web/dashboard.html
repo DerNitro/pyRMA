@@ -4,13 +4,12 @@
 
 {% macro admin_dashboard(content) %}
 <hr>
-<div class="statusPanel" xmlns="http://www.w3.org/1999/html">
+<div class="statusPanel">
         <ul class="statusPanel">
-            <li>connection</li>
-            <li>la</li>
-            <li>free</li>
-            <li>Disk</li>
-            <li>DB state</li>
+            <li>{{ content['connection_count'] }}</li>
+            <li>{{ content['la'] }} la</li>
+            <li>Mem {{ content['free'] }}% Used</li>
+            <li>Disk {{ content['disk'] }}% Used</li>
         </ul>
     </div>
     <hr>

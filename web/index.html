@@ -14,8 +14,7 @@
         {% from "dashboard.html" import admin_dashboard %}
 	{{ admin_dashboard(content) }}
     {% else %}
-        {% from "dashboard.html" import user_dashboard %}
-	{{ user_dashboard(content) }}
+        UserDashboard
     {% endif %}
 </div>
 {% endblock %}

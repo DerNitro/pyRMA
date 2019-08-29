@@ -33,6 +33,12 @@ def restore_password_access():
     return msg + footer
 
 
+def registration_user():
+    msg = "Регистрация нового пользователя {username}.\n" \
+          "Профиль доступен по ссылке: {user_url}\n"
+    return msg + footer
+
+
 def help_main_form():
     msg = '{program} version: {version}\n\n' \
           'Руководсво пользователя\n' \

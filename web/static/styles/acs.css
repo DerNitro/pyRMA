@@ -59,6 +59,72 @@ div.statusPanel {
 
 }
 
+div.host {
+    padding: 14px 16px;
+}
+
+div.host_add_button {
+    vertical-align: middle;
+    text-align: left;
+}
+
+ul.host_add_button {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #333;
+}
+
+li.host_add_button {
+    float: left;
+    border-right:1px solid #bbb;
+}
+
+li.host_add_button a {
+    display: block;
+    color: white;
+    text-align: center;
+    padding: 14px 16px;
+    text-decoration: none;
+}
+
+
+li.host_add_button a:hover:not(.active) {
+    background-color: #111;
+}
+
+div.host_edit {
+    vertical-align: middle;
+    text-align: left;
+}
+
+ul.host_edit {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #333;
+}
+
+li.host_edit {
+    float: left;
+    border-right:1px solid #bbb;
+}
+
+li.host_edit a {
+    display: block;
+    color: white;
+    text-align: center;
+    padding: 14px 16px;
+    text-decoration: none;
+}
+
+
+li.host_edit a:hover:not(.active) {
+    background-color: #111;
+}
+
 ul.statusPanel {
     list-style-type = none;
     overflow: hidden;
@@ -88,6 +154,36 @@ div.login {
 }
 
 div.registrationForm {
+    padding: 10px;
+    vertical-align: middle;
+    text-align: center;
+}
+
+div.registrationError {
+    padding: 10px;
+    vertical-align: middle;
+    text-align: center;
+}
+
+div.registrationStatus {
+    padding: 10px;
+    vertical-align: middle;
+    text-align: center;
+}
+
+div.addFolderForm {
+    padding: 10px;
+    vertical-align: middle;
+    text-align: center;
+}
+
+div.addFolderError {
+    padding: 10px;
+    vertical-align: middle;
+    text-align: center;
+}
+
+div.addFolderStatus {
     padding: 10px;
     vertical-align: middle;
     text-align: center;
