@@ -332,9 +332,38 @@ def add_folder(param: parameters.WebParameters, folder):
             describe=folder['describe'],
             parent=folder['parent'],
             type=2,
-            prefix=folder['prefix']
+            prefix=folder['prefix'],
+            note=folder['note']
         )
         db.add(folder)
+        db.flush()
+        db.refresh(folder)
+        action = schema.Action(
+            user=param.user_info.login,
+            action_type=10,
+            date=datetime.datetime.now(),
+            message="Создание директории: {folder.name} - id={folder.id}".format(folder=folder)
+        )
+        db.add(action)
+        db.flush()
+
+    return True
+
+
+def edit_folder(param: parameters.WebParameters, folder, folder_id):
+    with schema.db_edit(param.engine) as db:
+        host = db.query(schema.Host).filter(schema.Host.id == folder_id).one()
+        host.name = folder['name']
+        host.describe = folder['describe']
+        host.note = folder['note']
+
+        action = schema.Action(
+            user=param.user_info.login,
+            action_type=11,
+            date=datetime.datetime.now(),
+            message="Редактирование директории: {folder.name} - id={folder.id}".format(folder=host)
+        )
+        db.add(action)
         db.flush()
 
     return True

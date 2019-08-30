@@ -188,3 +188,21 @@ div.addFolderStatus {
     vertical-align: middle;
     text-align: center;
 }
+
+div.editFolderForm {
+    padding: 10px;
+    vertical-align: middle;
+    text-align: center;
+}
+
+div.editFolderError {
+    padding: 10px;
+    vertical-align: middle;
+    text-align: center;
+}
+
+div.editFolderStatus {
+    padding: 10px;
+    vertical-align: middle;
+    text-align: center;
+}

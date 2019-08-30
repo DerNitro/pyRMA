@@ -17,6 +17,7 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 """
+import json
 
 from flask import Flask, render_template, request, redirect, session, url_for
 from pyrmalib import parameters, weblib, log, access
@@ -50,7 +51,8 @@ siteMap = {'index': 'index.html',
            'registration': 'registration.html',
            '404': '404.html',
            'access_denied': 'access_denied.html',
-           'add_folder': 'add_folder.html'}
+           'add_folder': 'add_folder.html',
+           'edit_folder': 'edit_folder.html'}
 
 
 def check_auth(username, password, client_ip):
@@ -108,15 +110,22 @@ def hosts(directory_id=None):
                                              h_object=weblib.get_host(webParameters, host_id=directory_id))
         admin = access.check_access(webParameters, 'Administrate',
                                     h_object=weblib.get_host(webParameters, host_id=directory_id))
+        folder = weblib.get_host(webParameters, host_id=directory_id)
     else:
         directory_id = 0
         edit_host_information = access.check_access(webParameters, 'EditHostInformation')
         edit_directory = access.check_access(webParameters, 'EditDirectory')
         admin = access.check_access(webParameters, 'Administrate')
+        folder = None
     host_list = weblib.get_host_list(webParameters, directory_id)
+    if folder and folder.note:
+        note = json.loads(folder.note)
+    else:
+        note = None
     return render_template(siteMap['hosts'],
                            admin=admin,
                            host_list=host_list,
+                           note=note,
                            path=weblib.get_path(webParameters, host_id=directory_id),
                            directory_id=directory_id,
                            EditHostInformation=edit_host_information,
@@ -136,9 +145,9 @@ def add_folder(directory_id):
             'name': request.form['name'],
             'describe': request.form['describe'],
             'parent': directory_id,
-            'prefix': webParameters.user_info.prefix
+            'prefix': webParameters.user_info.prefix,
+            'note': request.form['note']
         }
-        print(folder)
         if weblib.get_host(webParameters, name=folder['name'], parent=directory_id):
             error = 'Имя уже существует'
 
@@ -150,6 +159,39 @@ def add_folder(directory_id):
 
     return render_template(siteMap['add_folder'],
                            admin=admin,
+                           directory_id=directory_id,
+                           error=error,
+                           status=status)
+
+
+@app.route('/hosts/<directory_id>/edit_folder', methods=['GET', 'POST'])
+@weblib.authorization(session, request, webParameters)
+def edit_folder(directory_id):
+    error = None
+    status = None
+    admin = access.check_access(webParameters, 'Administrate',
+                                h_object=weblib.get_host(webParameters, host_id=directory_id))
+    folder = weblib.get_host(webParameters, host_id=directory_id)
+    if not folder:
+        status = "Невозможно отредактировать данную директорию!!!"
+
+    if request.method == 'POST':
+        folder = {
+            'name': request.form['name'],
+            'describe': request.form['describe'],
+            'parent': directory_id,
+            'prefix': webParameters.user_info.prefix,
+            'note': request.form['note']
+        }
+        if not error:
+            if weblib.edit_folder(webParameters, folder, directory_id):
+                status = 'Директория отредактирована'
+            else:
+                status = 'Ошибка редактирования директории'
+
+    return render_template(siteMap['edit_folder'],
+                           admin=admin,
+                           host=folder,
                            directory_id=directory_id,
                            error=error,
                            status=status)

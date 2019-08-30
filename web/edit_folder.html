@@ -11,27 +11,27 @@
 {% block content %}
 <hr>
 {% if status %}
-<div class="addFolderStatus">
+<div class="editFolderStatus">
     {{ status }}
     <br>
     <a href="/hosts/{{ directory_id }}">Назад</a>
 </div>
 {% else %}
-<div class="addFolderForm">
+<div class="editFolderForm">
     <h3>Добавить директорию</h3>
-    <form action="/hosts/{{ directory_id }}/add_folder" method="POST" name="add_folder">
+    <form action="/hosts/{{ directory_id }}/edit_folder" method="POST" name="edit_folder">
         Название директории:<br>
-        <input name="name" type="text" size="45"/><br/>
+        <input name="name" type="text" size="45" value="{{ host.name }}"/><br/>
         Краткое описание:<br>
-        <input name="describe" type="text" size="45"/><br/>
+        <input name="describe" type="text" size="45" value="{{ host.describe }}"/><br/>
         Note:<br>
-        <textarea name="note" rows="15" cols="45"></textarea><br/>
-        <input class="submit_add_folder" type="submit" value="Добавить"/><br>
+        <textarea name="note" rows="15" cols="45">{{ host.note }}</textarea><br/>
+        <input class="submit_edit_folder" type="submit" value="Редактировать"/><br>
     </form>
 </div>
 {% endif %}
 {% if error %}
-<div class="addFolderError">
+<div class="editFolderError">
     <h3>{{ error }}</h3>
     <br>
     <a href="/hosts/{{ directory_id }}">Назад</a>
