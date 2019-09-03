@@ -208,7 +208,7 @@ class Host(Base):
     ilo = sqlalchemy.Column(sqlalchemy.String)
     ilo_type = sqlalchemy.Column(sqlalchemy.Integer)
     parent = sqlalchemy.Column(sqlalchemy.Integer)
-    remove = sqlalchemy.Column(sqlalchemy.Boolean)
+    remove = sqlalchemy.Column(sqlalchemy.Boolean, default=False)
     default_login = sqlalchemy.Column(sqlalchemy.String)
     default_password = sqlalchemy.Column(sqlalchemy.String)
     tcp_port = sqlalchemy.Column(sqlalchemy.Integer)

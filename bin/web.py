@@ -20,7 +20,7 @@
 import json
 
 from flask import Flask, render_template, request, redirect, session, url_for
-from pyrmalib import parameters, weblib, log, access
+from pyrmalib import parameters, weblib, log, access, forms
 import os.path
 from sqlalchemy import create_engine
 import validators
@@ -135,18 +135,19 @@ def hosts(directory_id=None):
 @app.route('/hosts/<directory_id>/add_folder', methods=['GET', 'POST'])
 @weblib.authorization(session, request, webParameters)
 def add_folder(directory_id):
+    form = forms.EditFolder()
     error = None
     status = None
     admin = access.check_access(webParameters, 'Administrate',
                                 h_object=weblib.get_host(webParameters, host_id=directory_id))
 
-    if request.method == 'POST':
+    if request.method == 'POST' and form.add_sub.data:
         folder = {
-            'name': request.form['name'],
-            'describe': request.form['describe'],
+            'name': form.name.data,
+            'describe': form.describe.data,
             'parent': directory_id,
             'prefix': webParameters.user_info.prefix,
-            'note': request.form['note']
+            'note': form.note.data
         }
         if weblib.get_host(webParameters, name=folder['name'], parent=directory_id):
             error = 'Имя уже существует'
@@ -160,6 +161,7 @@ def add_folder(directory_id):
     return render_template(siteMap['add_folder'],
                            admin=admin,
                            directory_id=directory_id,
+                           form=form,
                            error=error,
                            status=status)
 
@@ -167,21 +169,28 @@ def add_folder(directory_id):
 @app.route('/hosts/<directory_id>/edit_folder', methods=['GET', 'POST'])
 @weblib.authorization(session, request, webParameters)
 def edit_folder(directory_id):
+    form = forms.EditFolder()
     error = None
     status = None
     admin = access.check_access(webParameters, 'Administrate',
                                 h_object=weblib.get_host(webParameters, host_id=directory_id))
-    folder = weblib.get_host(webParameters, host_id=directory_id)
-    if not folder:
-        status = "Невозможно отредактировать данную директорию!!!"
 
-    if request.method == 'POST':
+    if request.method == 'GET':
+        folder = weblib.get_host(webParameters, host_id=directory_id)
+        if not folder:
+            status = "Невозможно отредактировать данную директорию!!!"
+        else:
+            form.name.data = folder.name
+            form.describe.data = folder.describe
+            form.note.data = folder.note
+
+    if request.method == 'POST' and form.edit_sub.data:
         folder = {
-            'name': request.form['name'],
-            'describe': request.form['describe'],
+            'name': form.name.data,
+            'describe': form.describe.data,
             'parent': directory_id,
             'prefix': webParameters.user_info.prefix,
-            'note': request.form['note']
+            'note': form.note.data
         }
         if not error:
             if weblib.edit_folder(webParameters, folder, directory_id):
@@ -189,12 +198,16 @@ def edit_folder(directory_id):
             else:
                 status = 'Ошибка редактирования директории'
 
+    elif request.method == 'POST' and form.delete_sub.data:
+        weblib.delete_folder(webParameters, directory_id)
+        status = "Директория удалена"
+
     return render_template(siteMap['edit_folder'],
                            admin=admin,
-                           host=folder,
                            directory_id=directory_id,
                            error=error,
-                           status=status)
+                           status=status,
+                           form=form)
 
 
 @app.route('/hosts/<directory_id>/add_host')

@@ -208,7 +208,9 @@ def get_host_list(param: parameters.WebParameters, level=None):
     """
     with schema.db_select(param.engine) as db:
         host_list = db.query(schema.Host)\
-            .filter(schema.Host.parent == level, schema.Host.prefix == param.user_info.prefix)\
+            .filter(schema.Host.parent == level,
+                    schema.Host.prefix == param.user_info.prefix,
+                    schema.Host.remove.is_(False))\
             .order_by(schema.Host.type.desc()).order_by(schema.Host.name).all()
     return host_list
 
@@ -362,6 +364,22 @@ def edit_folder(param: parameters.WebParameters, folder, folder_id):
             action_type=11,
             date=datetime.datetime.now(),
             message="Редактирование директории: {folder.name} - id={folder.id}".format(folder=host)
+        )
+        db.add(action)
+        db.flush()
+
+    return True
+
+
+def delete_folder(param: parameters.WebParameters, host_id):
+    with schema.db_edit(param.engine) as db:
+        d_host = db.query(schema.Host).filter(schema.Host.id == host_id).one()
+        d_host.remove = True
+        action = schema.Action(
+            user=param.user_info.login,
+            action_type=12,
+            date=datetime.datetime.now(),
+            message="Удаление директории: {folder.name} - id={folder.id}".format(folder=d_host)
         )
         db.add(action)
         db.flush()
