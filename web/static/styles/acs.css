@@ -206,3 +206,21 @@ div.editFolderStatus {
     vertical-align: middle;
     text-align: center;
 }
+
+div.addHostForm {
+    padding: 10px;
+    vertical-align: middle;
+    text-align: center;
+}
+
+div.addHostError {
+    padding: 10px;
+    vertical-align: middle;
+    text-align: center;
+}
+
+div.addHostStatus {
+    padding: 10px;
+    vertical-align: middle;
+    text-align: center;
+}

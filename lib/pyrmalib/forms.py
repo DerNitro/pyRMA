@@ -23,7 +23,9 @@
 """
 
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, BooleanField, SubmitField, TextAreaField
+from wtforms import StringField, SubmitField, TextAreaField, SelectField, IntegerField
+from flask_wtf.file import FileField, FileRequired
+from wtforms.validators import DataRequired, IPAddress, NumberRange
 
 
 class EditFolder(FlaskForm):
@@ -33,3 +35,21 @@ class EditFolder(FlaskForm):
     edit_sub = SubmitField('Редктировать')
     delete_sub = SubmitField('Удалить')
     add_sub = SubmitField('Добавить')
+
+
+class EditHost(FlaskForm):
+    name = StringField('Имя', validators=[DataRequired()])
+    ip = StringField('IP адрес', validators=[DataRequired(), IPAddress()])
+    port = IntegerField('Порт', validators=[NumberRange(min=0, max=65536)])
+    connection_type = SelectField('Протокол подключения')
+    file_transfer_type = SelectField('Протокол передачи данных')
+    describe = StringField('Описание')
+    ilo = StringField('iLo адрес', validators=[IPAddress()])
+    ilo_type = SelectField('Вендор IPMI')
+    default_login = StringField('Логин')
+    default_password = StringField('Пароль')
+    note = TextAreaField('Note')
+    add_sub = SubmitField('Добавить')
+
+    file_host = FileField('Файл', validators=[FileRequired()])
+    upload_sub = SubmitField('Загрузить')

@@ -1,0 +1,117 @@
+{% extends "main.html" %}
+{% from "menu.html" import show_menu %}
+{% from "search.html" import show_search %}
+
+{% block header %}
+{{ show_menu(Admin=admin, Active='host') }}
+{{ show_search() }}
+{{ super() }}
+{% endblock %}
+
+{% block content %}
+<hr>
+{% if status %}
+<div class="addHostStatus">
+    {{ status }}
+    <br>
+    <a href="/hosts/{{ directory_id }}">Назад</a>
+</div>
+{% else %}
+<div class="addHostFile">
+    <details>
+        <summary>Добавить из файла</summary>
+        <form action="/hosts/{{ directory_id }}/add_host" method="POST" name="upload_file" enctype="multipart/form-data">
+            <p>
+                {{ form.file_host() }} {{ form.upload_sub() }}
+            </p>
+        </form>
+        <hr>
+    </details>
+</div>
+<div class="addHostForm">
+    <h3>Добавить Хост</h3>
+    <form action="/hosts/{{ directory_id }}/add_host" method="POST" name="add_host">
+        <p>
+            {{ form.name.label }}<br>
+            {{ form.name(size=32) }}<br>
+            {% for error in form.name.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.describe.label }}<br>
+            {{ form.describe(size=32) }}<br>
+            {% for error in form.describe.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.ip.label }}:{{ form.port.label }}<br>
+            {{ form.ip(size=32) }}:{{ form.port(size=4) }}<br>
+            {% for error in form.ip.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+         <p>
+            {{ form.default_login.label }}<br>
+            {{ form.default_login(size=32) }}<br>
+            {% for error in form.default_login.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+         <p>
+            {{ form.default_password.label }}<br>
+            {{ form.default_password(size=32) }}<br>
+            {% for error in form.default_password.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.connection_type.label }}<br>
+            {{ form.connection_type() }}<br>
+            {% for error in form.connection_type.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.file_transfer_type.label }}<br>
+            {{ form.file_transfer_type() }}<br>
+            {% for error in form.file_transfer_type.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.ilo.label }}<br>
+            {{ form.ilo(size=32) }}<br>
+            {% for error in form.ilo.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.ilo_type.label }}<br>
+            {{ form.ilo_type() }}<br>
+            {% for error in form.ilo_type.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.note.label }}<br>
+            {{ form.note() }}<br>
+            {% for error in form.note.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.add_sub() }}
+        </p>
+    </form>
+</div>
+{% endif %}
+{% if error %}
+<div class="addHostError">
+    <h3>{{ error }}</h3>
+    <br>
+    <a href="/hosts/{{ directory_id }}">Назад</a>
+</div>
+{% endif %}
+{% endblock %}

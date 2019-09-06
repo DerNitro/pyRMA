@@ -20,10 +20,11 @@
 import json
 
 from flask import Flask, render_template, request, redirect, session, url_for
-from pyrmalib import parameters, weblib, log, access, forms
+from pyrmalib import parameters, weblib, log, access, forms, error as rma_error
 import os.path
 from sqlalchemy import create_engine
 import validators
+from werkzeug.utils import secure_filename
 
 webParameters = parameters.WebParameters()
 webParameters.engine = create_engine('{0}://{1}:{2}@{3}:{4}/{5}'.format(webParameters.dbase,
@@ -52,7 +53,8 @@ siteMap = {'index': 'index.html',
            '404': '404.html',
            'access_denied': 'access_denied.html',
            'add_folder': 'add_folder.html',
-           'edit_folder': 'edit_folder.html'}
+           'edit_folder': 'edit_folder.html',
+           'add_host': 'add_host.html'}
 
 
 def check_auth(username, password, client_ip):
@@ -80,7 +82,7 @@ def login():
                                request.remote_addr,
                                webParameters.engine):
             session['username'] = request.form['username']
-            return redirect('/')
+            return redirect(url_for('root'))
         else:
             error = 'Не правильный логин|пароль или учетная запись заблокирована!!!'
     return render_template(siteMap['login'], error=error)
@@ -170,19 +172,18 @@ def add_folder(directory_id):
 @weblib.authorization(session, request, webParameters)
 def edit_folder(directory_id):
     form = forms.EditFolder()
+    host = weblib.get_host(webParameters, host_id=directory_id)
     error = None
     status = None
-    admin = access.check_access(webParameters, 'Administrate',
-                                h_object=weblib.get_host(webParameters, host_id=directory_id))
+    admin = access.check_access(webParameters, 'Administrate', h_object=host)
 
     if request.method == 'GET':
-        folder = weblib.get_host(webParameters, host_id=directory_id)
-        if not folder:
+        if not host:
             status = "Невозможно отредактировать данную директорию!!!"
         else:
-            form.name.data = folder.name
-            form.describe.data = folder.describe
-            form.note.data = folder.note
+            form.name.data = host.name
+            form.describe.data = host.describe
+            form.note.data = host.note
 
     if request.method == 'POST' and form.edit_sub.data:
         folder = {
@@ -192,6 +193,12 @@ def edit_folder(directory_id):
             'prefix': webParameters.user_info.prefix,
             'note': form.note.data
         }
+        check_folder = weblib.get_host(webParameters, name=folder['name'], parent=host.parent)
+        if check_folder:
+            print(check_folder.id, directory_id)
+            if int(check_folder.id) != int(directory_id):
+                error = 'Имя уже существует'
+
         if not error:
             if weblib.edit_folder(webParameters, folder, directory_id):
                 status = 'Директория отредактирована'
@@ -210,10 +217,44 @@ def edit_folder(directory_id):
                            form=form)
 
 
-@app.route('/hosts/<directory_id>/add_host')
+@app.route('/hosts/<directory_id>/add_host', methods=['GET', 'POST'])
 @weblib.authorization(session, request, webParameters)
 def add_host(directory_id):
-    return 'add_host'
+    form = forms.EditHost()
+    host = weblib.get_host(webParameters, host_id=directory_id)
+    form.connection_type.choices = weblib.get_connection_type(webParameters)
+    form.file_transfer_type.choices = weblib.get_file_transfer_type(webParameters)
+    form.ilo_type.choices = weblib.get_ilo_type(webParameters)
+    admin = access.check_access(webParameters, 'Administrate', h_object=host)
+    error = None
+    status = None
+
+    if request.method == 'GET':
+        form.default_login.data = 'root'
+# TODO: Проверка наличия в базе данных
+    if request.method == 'POST' and form.add_sub.data:
+        weblib.add_host(webParameters, form, parent=directory_id)
+        status = "Хост добавлен"
+
+    if request.method == 'POST' and form.upload_sub.data:
+        f = form.file_host.data
+        filename = secure_filename(f.filename)
+        if not os.path.isdir('/tmp/pyRMA'):
+            os.mkdir('/tmp/pyRMA')
+        f.save(os.path.join('/tmp/pyRMA', filename))
+        try:
+            weblib.add_hosts_file(webParameters, os.path.join('/tmp/pyRMA', filename), parent=directory_id)
+            status = "Узлы добавлены"
+        except rma_error.WTF as e:
+            error = e
+        os.remove(os.path.join('/tmp/pyRMA', filename))
+
+    return render_template(siteMap['add_host'],
+                           admin=admin,
+                           directory_id=directory_id,
+                           error=error,
+                           status=status,
+                           form=form)
 
 
 @app.route('/host/<host_id>')

@@ -20,7 +20,7 @@ import json
 import psutil
 import os
 import random
-from pyrmalib import schema, utils, email, template, parameters, error, access
+from pyrmalib import schema, utils, email, template, parameters, error, access, forms
 from functools import wraps
 import hashlib
 import sqlalchemy
@@ -128,7 +128,7 @@ def get_content_host(param: parameters.WebParameters, host_id):
             content['parent'] = None
         try:
             content['ilo_type'] = db.query(schema.IloType).\
-                filter(schema.IloType.id == host.ilo_type).one()
+                filter(schema.IloType.id == host.ilo_type).one().name
         except NoResultFound:
             content['ilo_type'] = None
 
@@ -185,7 +185,7 @@ def get_host(param: parameters.WebParameters, host_id=None, name=None,  parent=0
                 raise error.WTF("Дубли Host.id в таблице Host!!!")
 
             return host
-    if name and parent:
+    if name:
         with schema.db_select(param.engine) as db:
             try:
                 host = db.query(schema.Host).filter(schema.Host.name == name, schema.Host.parent == parent).one()
@@ -226,6 +226,27 @@ def get_path(param: parameters.WebParameters, host_id=None):
         return "/"
     else:
         return "path"
+
+
+def get_connection_type(param: parameters.WebParameters):
+    with schema.db_select(param.engine) as db:
+        connection_type = db.query(schema.ConnectionType).all()
+
+    return [(t.id, t.name) for t in connection_type]
+
+
+def get_file_transfer_type(param: parameters.WebParameters):
+    with schema.db_select(param.engine) as db:
+        file_transfer_type = db.query(schema.FileTransferType).all()
+
+    return [(t.id, t.name) for t in file_transfer_type]
+
+
+def get_ilo_type(param: parameters.WebParameters):
+    with schema.db_select(param.engine) as db:
+        ilo_type = db.query(schema.IloType).all()
+
+    return [(t.id, t.name) for t in ilo_type]
 
 
 def user_info(username, engine):
@@ -349,6 +370,53 @@ def add_folder(param: parameters.WebParameters, folder):
         db.add(action)
         db.flush()
 
+    return True
+
+
+def add_host(param: parameters.WebParameters, form: forms.EditHost, parent=0):
+    with schema.db_edit(param.engine) as db:
+        host = schema.Host(
+            name=form.name.data,
+            ip=form.ip.data,
+            type=1,
+            connection_type=form.connection_type.data,
+            file_transfer_type=form.file_transfer_type.data,
+            describe=form.describe.data,
+            ilo=form.ilo.data,
+            ilo_type=form.ilo_type.data,
+            parent=parent,
+            remove=False,
+            default_login=form.default_login.data,
+            tcp_port=form.port.data,
+            prefix=param.user_info.prefix,
+            note=form.note.data
+        )
+        db.add(host)
+        db.flush()
+        db.refresh(host)
+        host.default_password = utils.password(form.default_password.data, host.id, True)
+        action = schema.Action(
+            user=param.user_info.login,
+            action_type=20,
+            date=datetime.datetime.now(),
+            message="Создание хоста: {host.name} - id={host.id}".format(host=host)
+        )
+        db.add(action)
+        db.flush()
+        return True
+
+
+def add_hosts_file(param: parameters.WebParameters, filepath: str, parent=0):
+    if not os.path.isfile(filepath):
+        raise error.WTF("Отсутсвует файл на загрузку")
+    f = open(filepath, 'r')
+    header = f.readline().strip().split(',')
+    hosts = []
+    for line in f:
+        hosts.append(dict(zip(header, line.strip().split(','))))
+    f.close()
+    for h in hosts:
+        pass
     return True
 
 
