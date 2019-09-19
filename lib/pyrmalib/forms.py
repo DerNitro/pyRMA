@@ -50,6 +50,9 @@ class EditHost(FlaskForm):
     default_password = StringField('Пароль')
     note = TextAreaField('Note')
     add_sub = SubmitField('Добавить')
+    edit_sub = SubmitField('Редктировать')
+    delete_sub = SubmitField('Удалить')
 
     file_host = FileField('Файл', validators=[FileRequired()])
     upload_sub = SubmitField('Загрузить')
+

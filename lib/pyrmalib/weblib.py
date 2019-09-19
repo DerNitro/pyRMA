@@ -20,7 +20,7 @@ import json
 import psutil
 import os
 import random
-from pyrmalib import schema, utils, email, template, parameters, error, access, forms
+from pyrmalib import schema, utils, email, template, parameters, error, access
 from functools import wraps
 import hashlib
 import sqlalchemy
@@ -28,7 +28,7 @@ import datetime
 import string
 from flask import request, redirect, session
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, func
 
 
 def authorization(web_session: session, req: request, param: parameters.WebParameters, ):
@@ -106,7 +106,7 @@ def get_content_host(param: parameters.WebParameters, host_id):
             or access.check_access(param, 'EditHostInformation', h_object=host) \
             or access.check_access(param, 'Administrate', h_object=host):
         if host.default_password:
-            content['default_password'] = utils.password(host.default_password, host_id, False)
+            content['default_password'] = host.default_password
         else:
             content['default_password'] = ''
     else:
@@ -178,23 +178,27 @@ def get_host(param: parameters.WebParameters, host_id=None, name=None,  parent=0
     if host_id:
         with schema.db_select(param.engine) as db:
             try:
-                host = db.query(schema.Host).filter(schema.Host.id == host_id).one()
+                host = db.query(schema.Host).filter(schema.Host.id == host_id, schema.Host.remove.is_(False)).one()
             except NoResultFound:
                 return None
             except MultipleResultsFound:
                 raise error.WTF("Дубли Host.id в таблице Host!!!")
-
-            return host
+        if host.default_password and len(host.default_password) > 0:
+            host.default_password = utils.password(host.default_password, host.id, False)
+        return host
     if name:
         with schema.db_select(param.engine) as db:
             try:
-                host = db.query(schema.Host).filter(schema.Host.name == name, schema.Host.parent == parent).one()
+                host = db.query(schema.Host).filter(schema.Host.name == name,
+                                                    schema.Host.parent == parent,
+                                                    schema.Host.remove.is_(False)).one()
             except NoResultFound:
                 return None
             except MultipleResultsFound:
                 raise error.WTF("Дубли Host.name в таблице Host!!!")
-
-            return host
+        if host.default_password and len(host.default_password) > 0:
+            host.default_password = utils.password(host.default_password, host.id, False)
+        return host
     else:
         raise error.WTF("Ошибка работы weblib.get_host!!!")
 
@@ -373,28 +377,15 @@ def add_folder(param: parameters.WebParameters, folder):
     return True
 
 
-def add_host(param: parameters.WebParameters, form: forms.EditHost, parent=0):
+def add_host(param: parameters.WebParameters, host: schema.Host, parent=0, password=None):
     with schema.db_edit(param.engine) as db:
-        host = schema.Host(
-            name=form.name.data,
-            ip=form.ip.data,
-            type=1,
-            connection_type=form.connection_type.data,
-            file_transfer_type=form.file_transfer_type.data,
-            describe=form.describe.data,
-            ilo=form.ilo.data,
-            ilo_type=form.ilo_type.data,
-            parent=parent,
-            remove=False,
-            default_login=form.default_login.data,
-            tcp_port=form.port.data,
-            prefix=param.user_info.prefix,
-            note=form.note.data
-        )
+        host.prefix = param.user_info.prefix
+        host.parent = parent
         db.add(host)
         db.flush()
         db.refresh(host)
-        host.default_password = utils.password(form.default_password.data, host.id, True)
+        if password:
+            host.default_password = utils.password(password, host.id, True)
         action = schema.Action(
             user=param.user_info.login,
             action_type=20,
@@ -416,7 +407,53 @@ def add_hosts_file(param: parameters.WebParameters, filepath: str, parent=0):
         hosts.append(dict(zip(header, line.strip().split(','))))
     f.close()
     for h in hosts:
-        pass
+        password = None
+        n_host = schema.Host()
+        n_host.note = {}
+        n_host.type = 1
+        n_host.remove = False
+        for i in h:
+            if str(i).upper() == 'Name'.upper():
+                n_host.name = h[i]
+            elif str(i).upper() == 'IP'.upper():
+                n_host.ip = h[i]
+            elif str(i).upper() == 'Password'.upper():
+                password = h[i]
+            elif str(i).upper() == 'Login'.upper():
+                n_host.default_login = h[i]
+            elif str(i).upper() == 'IPMI'.upper():
+                n_host.ilo = h[i]
+            elif str(i).upper() == 'Protocol'.upper():
+                with schema.db_select(param.engine) as db:
+                    try:
+                        n_host.connection_type = db.query(schema.ConnectionType).\
+                            filter(func.upper(schema.ConnectionType.name) == func.upper(h[i])).one().id
+                    except sqlalchemy.orm.exc.NoResultFound:
+                        n_host.connection_type = None
+            elif str(i).upper() == 'Vendor'.upper():
+                with schema.db_select(param.engine) as db:
+                    try:
+                        n_host.ilo_type = db.query(schema.IloType).\
+                            filter(func.upper(schema.IloType.vendor) == func.upper(h[i])).one().id
+                    except sqlalchemy.orm.exc.NoResultFound:
+                        n_host.ilo_type = None
+            elif str(i).split(':')[0].upper() == 'Note'.upper():
+                n_host.note[str(i).split(':')[1]] = h[i]
+        n_host.note = json.dumps(n_host.note, ensure_ascii=False)
+        if not n_host.connection_type:
+            with schema.db_select(param.engine) as db:
+                n_host.connection_type = db.query(schema.ConnectionType).\
+                    order_by(schema.ConnectionType.id).first().id
+        if not n_host.file_transfer_type:
+            with schema.db_select(param.engine) as db:
+                n_host.file_transfer_type = db.query(schema.FileTransferType).\
+                    order_by(schema.FileTransferType.id).first().id
+        if not n_host.ilo_type:
+            with schema.db_select(param.engine) as db:
+                n_host.ilo_type = db.query(schema.IloType).\
+                    order_by(schema.IloType.id).first().id
+        add_host(param, n_host, password=password, parent=parent)
+        del n_host
     return True
 
 
@@ -439,6 +476,33 @@ def edit_folder(param: parameters.WebParameters, folder, folder_id):
     return True
 
 
+def edit_host(param: parameters.WebParameters, d, host_id):
+    with schema.db_edit(param.engine) as db:
+        host = db.query(schema.Host).filter(schema.Host.id == host_id).one()
+        host.name = d['name'],
+        host.ip = d['ip'],
+        host.connection_type = d['connection_type'],
+        host.file_transfer_type = d['file_transfer_type'],
+        host.describe = d['describe'],
+        host.ilo = d['ilo'],
+        host.ilo_type = d['ilo_type'],
+        host.default_login = d['default_login'],
+        host.tcp_port = d['port'],
+        host.note = d['note']
+        print(host)
+
+        action = schema.Action(
+            user=param.user_info.login,
+            action_type=21,
+            date=datetime.datetime.now(),
+            message="Редактирование хоста: {folder.name} - id={folder.id}".format(folder=host)
+        )
+        db.add(action)
+        db.flush()
+
+    return True
+
+
 def delete_folder(param: parameters.WebParameters, host_id):
     with schema.db_edit(param.engine) as db:
         d_host = db.query(schema.Host).filter(schema.Host.id == host_id).one()
@@ -448,6 +512,22 @@ def delete_folder(param: parameters.WebParameters, host_id):
             action_type=12,
             date=datetime.datetime.now(),
             message="Удаление директории: {folder.name} - id={folder.id}".format(folder=d_host)
+        )
+        db.add(action)
+        db.flush()
+
+    return True
+
+
+def delete_host(param: parameters.WebParameters, host_id):
+    with schema.db_edit(param.engine) as db:
+        d_host = db.query(schema.Host).filter(schema.Host.id == host_id).one()
+        d_host.remove = True
+        action = schema.Action(
+            user=param.user_info.login,
+            action_type=22,
+            date=datetime.datetime.now(),
+            message="Удаление хоста: {folder.name} - id={folder.id}".format(folder=d_host)
         )
         db.add(action)
         db.flush()

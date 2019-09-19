@@ -20,7 +20,7 @@
 import json
 
 from flask import Flask, render_template, request, redirect, session, url_for
-from pyrmalib import parameters, weblib, log, access, forms, error as rma_error
+from pyrmalib import schema, parameters, weblib, log, access, forms, error as rma_error
 import os.path
 from sqlalchemy import create_engine
 import validators
@@ -54,7 +54,8 @@ siteMap = {'index': 'index.html',
            'access_denied': 'access_denied.html',
            'add_folder': 'add_folder.html',
            'edit_folder': 'edit_folder.html',
-           'add_host': 'add_host.html'}
+           'add_host': 'add_host.html',
+           'edit_host': 'edit_host.html'}
 
 
 def check_auth(username, password, client_ip):
@@ -151,7 +152,8 @@ def add_folder(directory_id):
             'prefix': webParameters.user_info.prefix,
             'note': form.note.data
         }
-        if weblib.get_host(webParameters, name=folder['name'], parent=directory_id):
+        check_folder = weblib.get_host(webParameters, name=folder['name'], parent=directory_id)
+        if check_folder:
             error = 'Имя уже существует'
 
         if not error:
@@ -195,7 +197,6 @@ def edit_folder(directory_id):
         }
         check_folder = weblib.get_host(webParameters, name=folder['name'], parent=host.parent)
         if check_folder:
-            print(check_folder.id, directory_id)
             if int(check_folder.id) != int(directory_id):
                 error = 'Имя уже существует'
 
@@ -221,19 +222,33 @@ def edit_folder(directory_id):
 @weblib.authorization(session, request, webParameters)
 def add_host(directory_id):
     form = forms.EditHost()
-    host = weblib.get_host(webParameters, host_id=directory_id)
+    folder = weblib.get_host(webParameters, host_id=directory_id)
     form.connection_type.choices = weblib.get_connection_type(webParameters)
     form.file_transfer_type.choices = weblib.get_file_transfer_type(webParameters)
     form.ilo_type.choices = weblib.get_ilo_type(webParameters)
-    admin = access.check_access(webParameters, 'Administrate', h_object=host)
+    admin = access.check_access(webParameters, 'Administrate', h_object=folder)
     error = None
     status = None
 
     if request.method == 'GET':
         form.default_login.data = 'root'
-# TODO: Проверка наличия в базе данных
+    # TODO: Проверка наличия в базе данных
     if request.method == 'POST' and form.add_sub.data:
-        weblib.add_host(webParameters, form, parent=directory_id)
+        h = schema.Host(
+            name=form.name.data,
+            ip=form.ip.data,
+            tcp_port=form.port.data,
+            connection_type=form.connection_type.data,
+            file_transfer_type=form.file_transfer_type.data,
+            describe=form.describe.data,
+            ilo=form.ilo.data,
+            ilo_type=form.ilo_type.data,
+            default_login=form.default_login.data,
+            default_password=form.default_password.data,
+            note=form.note.data,
+            type=1
+        )
+        weblib.add_host(webParameters, h, parent=directory_id, password=form.default_password.data)
         status = "Хост добавлен"
 
     if request.method == 'POST' and form.upload_sub.data:
@@ -247,11 +262,76 @@ def add_host(directory_id):
             status = "Узлы добавлены"
         except rma_error.WTF as e:
             error = e
-        os.remove(os.path.join('/tmp/pyRMA', filename))
+        finally:
+            os.remove(os.path.join('/tmp/pyRMA', filename))
 
     return render_template(siteMap['add_host'],
                            admin=admin,
                            directory_id=directory_id,
+                           error=error,
+                           status=status,
+                           form=form)
+
+
+@app.route('/host/<host_id>/edit', methods=['GET', 'POST'])
+@weblib.authorization(session, request, webParameters)
+def edit_host(host_id):
+    form = forms.EditHost()
+    host = weblib.get_host(webParameters, host_id=host_id)
+    form.connection_type.choices = weblib.get_connection_type(webParameters)
+    form.file_transfer_type.choices = weblib.get_file_transfer_type(webParameters)
+    form.ilo_type.choices = weblib.get_ilo_type(webParameters)
+    error = None
+    status = None
+    admin = access.check_access(webParameters, 'Administrate', h_object=host)
+
+    if request.method == 'GET':
+        if not host:
+            status = "Невозможно отредактировать данный хост!!!"
+        else:
+            form.name.data = host.name
+            form.ip.data = host.ip
+            form.port.data = host.tcp_port
+            form.ilo.data = host.ilo
+            form.describe.data = host.describe
+            form.note.data = host.note
+            form.default_login.data = host.default_login
+            form.default_password.data = host.default_password
+            form.connection_type.process_data(host.connection_type)
+            form.file_transfer_type.process_data(host.file_transfer_type)
+            form.ilo_type.process_data(host.ilo_type)
+
+    if request.method == 'POST' and form.edit_sub.data:
+        d = {'name': form.name.data,
+             'ip': form.ip.data,
+             'port': form.port.data,
+             'connection_type': form.connection_type.data,
+             'file_transfer_type': form.file_transfer_type.data,
+             'describe': form.describe.data,
+             'ilo': form.ilo.data,
+             'ilo_type': form.ilo_type.data,
+             'default_login': form.default_login.data,
+             'default_password': form.default_password.data,
+             'note': form.note.data
+             }
+        check_folder = weblib.get_host(webParameters, name=form.name.data, parent=host.parent)
+        if check_folder:
+            if int(check_folder.id) != int(host_id):
+                error = 'Имя уже существует'
+        if not error:
+            if weblib.edit_host(webParameters, d, host_id):
+                status = 'Хост отредактирован'
+            else:
+                status = 'Ошибка редактирования хоста'
+
+    elif request.method == 'POST' and form.delete_sub.data:
+        weblib.delete_host(webParameters, host_id)
+        status = "Хост удален"
+
+    return render_template(siteMap['edit_host'],
+                           admin=admin,
+                           directory_id=host.parent,
+                           host_id=host.id,
                            error=error,
                            status=status,
                            form=form)
@@ -319,7 +399,7 @@ def registration():
     return render_template(siteMap['registration'], status=status, error=error)
 
 
-@app.route('/restore', methods=['GET','POST'])
+@app.route('/restore', methods=['GET', 'POST'])
 def get_restore():
     if request.method == 'POST':
         if weblib.restore_password(request.form['username'], webParameters.engine, request):
