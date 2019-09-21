@@ -57,8 +57,10 @@ def help_main_form():
 
 def information_host(note):
     msg = ''
-    if not isinstance(note, dict):
+    if not isinstance(note, dict) and note:
         note = json.loads(note)
+    else:
+        note = note
     for key in sorted(note):
         msg += "{key}\n".format(key=key)
         msg += "{header}\n".format(header="=" * len(key))

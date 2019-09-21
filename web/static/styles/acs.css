@@ -142,9 +142,18 @@ ul.statusPanel li {
 }
 
 div.searchField {
-    height: 14px;
+    height: 24px;
+    padding-top: 5px;
     vertical-align: middle;
     text-align: right;
+}
+
+input.search_text {
+    font-size: 12px;
+}
+
+input.search_text:focus {
+  background-color: lightblue;
 }
 
 div.login {

@@ -74,6 +74,19 @@ def root():
                            content=content)
 
 
+@app.route('/search', methods=['POST'])
+@weblib.authorization(session, request, webParameters)
+def search():
+    query = request.form['search']
+    host_list = weblib.search(webParameters, query)
+    admin = access.check_access(webParameters, 'Administrate')
+
+    return render_template(siteMap['hosts'],
+                           admin=admin,
+                           host_list=host_list,
+                           Search=query)
+
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     error = None

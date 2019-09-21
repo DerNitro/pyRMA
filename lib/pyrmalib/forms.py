@@ -23,7 +23,7 @@
 """
 
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField, TextAreaField, SelectField, IntegerField
+from wtforms import StringField, SubmitField, TextAreaField, SelectField, IntegerField, BooleanField
 from flask_wtf.file import FileField, FileRequired
 from wtforms.validators import DataRequired, IPAddress, NumberRange
 
@@ -56,3 +56,12 @@ class EditHost(FlaskForm):
     file_host = FileField('Файл', validators=[FileRequired()])
     upload_sub = SubmitField('Загрузить')
 
+
+class AddService(FlaskForm):
+    type = SelectField('Вендор IPMI')
+    remote_port = IntegerField('Порт', validators=[NumberRange(min=0, max=65536)])
+    remote_ip = StringField('iLo адрес', validators=[IPAddress()])
+    internal = BooleanField('Внутренний')
+    describe = StringField('Описание')
+
+    add_sub = SubmitField('Добавить')

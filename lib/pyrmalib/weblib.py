@@ -28,7 +28,7 @@ import datetime
 import string
 from flask import request, redirect, session
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
-from sqlalchemy import create_engine, func
+from sqlalchemy import create_engine, func, or_
 
 
 def authorization(web_session: session, req: request, param: parameters.WebParameters, ):
@@ -215,6 +215,25 @@ def get_host_list(param: parameters.WebParameters, level=None):
             .filter(schema.Host.parent == level,
                     schema.Host.prefix == param.user_info.prefix,
                     schema.Host.remove.is_(False))\
+            .order_by(schema.Host.type.desc()).order_by(schema.Host.name).all()
+    return host_list
+
+
+def search(param: parameters.WebParameters, query):
+    """
+    Возвращает список хостов подходящих под условие.
+    :param param: WebParameters
+    :param query: string
+    :return: list
+    """
+    with schema.db_select(param.engine) as db:
+        host_list = db.query(schema.Host)\
+            .filter(or_(schema.Host.name.like("%" + query + "%"),
+                        schema.Host.ilo == query,
+                        schema.Host.ip == query,
+                        schema.Host.describe.like("%" + query + "%"),
+                        schema.Host.note.like("%" + query + "%")))\
+            .filter(schema.Host.remove.is_(False))\
             .order_by(schema.Host.type.desc()).order_by(schema.Host.name).all()
     return host_list
 

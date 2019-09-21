@@ -19,7 +19,6 @@ import weakref
 import npyscreen
 import curses.ascii
 from pyrmalib import schema, template, access, parameters, utils
-from sqlalchemy import or_
 
 
 class MultiLineEditableBoxed(npyscreen.BoxTitle):
@@ -130,15 +129,17 @@ class HostListDisplay(npyscreen.FormMutt):
         if access.check_access(appParameters, 'Administrate'):
             with schema.db_select(appParameters.engine) as db:
                 self.HostList = db.query(schema.Host).filter(schema.Host.parent == self.Level[-1]). \
-                    filter(schema.Host.name.like('%{0}%'.format(self.Filter))). \
+                    filter(schema.Host.name.like('%{0}%'.format(self.Filter)),
+                           schema.Host.remove.is_(False)).\
                     order_by(schema.Host.type.desc()).order_by(schema.Host.name).all()
         else:
             with schema.db_select(appParameters.engine) as db:
                 # TODO. Разобратся с префиксами
                 self.HostList = db.query(schema.Host). \
-                    filter(schema.Host.prefix == appParameters.user_info.prefix). \
-                    filter(schema.Host.parent == self.Level[-1]). \
-                    filter(schema.Host.name.like('%{0}%'.format(self.Filter))). \
+                    filter(schema.Host.prefix == appParameters.user_info.prefix,
+                           schema.Host.parent == self.Level[-1],
+                           schema.Host.name.like('%{0}%'.format(self.Filter)),
+                           schema.Host.remove.is_(False)). \
                     order_by(schema.Host.type.desc()).order_by(schema.Host.name).all()
 
         appParameters.log.debug("HostListDisplay.update_list - {}".format(self.HostList))
@@ -381,7 +382,7 @@ class Interface(npyscreen.NPSAppManaged):
     appParameters = None  # type: parameters.AppParameters
     keypress_timeout_default = 1
 
-    def __init__(self, app_param: parameters.Parameters):
+    def __init__(self, app_param: parameters.AppParameters):
         super().__init__()
         self.appParameters = app_param
 

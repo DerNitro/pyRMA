@@ -7,9 +7,15 @@
 {{ show_search() }}
 {{ super() }}
 {% endblock %}
-
 {% block content %}
 <hr>
+{% if Search %}
+<center>
+    <h2>Поиск</h2>
+    <h3>{{ Search }}</h3>
+</center>
+<hr>
+{% else %}
 {% if EditHostInformation or EditDirectory or admin%}
 <div class="host_add_button">
     <ul class="host_add_button">
@@ -33,6 +39,7 @@
     </details>
 </div>
 <hr>
+{% endif %}
 {% endif %}
 <div class="hosts">
     {% for host in host_list %}

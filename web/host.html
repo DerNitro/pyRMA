@@ -13,7 +13,10 @@
 {% if EditHostInformation or admin %}
 <div class="host_edit">
     <ul class="host_edit">
-        {% if EditHostInformation or admin %} <li class="host_edit"> <a class="host_edit" href="/host/{{ content['id'] }}/edit">Редактировать</a> </li> {% endif %}
+        {% if EditHostInformation or admin %}
+        <li class="host_edit"> <a class="host_edit" href="/host/{{ content['id'] }}/edit">Редактировать</a> </li>
+        <li class="host_edit"> <a class="host_edit" href="/host/{{ content['id'] }}/add_service">Добавить сервис</a></li>
+        {% endif %}
     </ul>
 </div>
 {% endif %}
