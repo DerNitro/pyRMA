@@ -116,6 +116,13 @@ def valid_ip(ip_addr):
     return True
 
 
+def check_ip_network(ip, network):
+    if ipaddress.IPv4Address(ip) in ipaddress.ip_network(network):
+        return True
+    else:
+        return False
+
+
 def password(passwd, magic, mask):
     """
     Функция маскировки/демаскировки пароля

@@ -1,0 +1,71 @@
+{% extends "main.html" %}
+{% from "menu.html" import show_menu %}
+{% from "search.html" import show_search %}
+
+{% block header %}
+{{ show_menu(Admin=admin, Active='host') }}
+{{ show_search() }}
+{{ super() }}
+{% endblock %}
+
+{% block content %}
+<hr>
+{% if status %}
+<div class="addServiceStatus">
+    {{ status }}
+    <br>
+    <a href="/host/{{ host_id }}">Назад</a>
+</div>
+{% else %}
+<div class="addServiceForm">
+    <h3>Добавить Хост</h3>
+    <form action="/host/{{ host_id }}/add_service" method="POST" name="add_service">
+        <p>
+            {{ form.type.label }}<br>
+            {{ form.type }}
+            {% for error in form.type.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.remote_port.label }}<br>
+            {{ form.remote_port }}
+            {% for error in form.remote_port.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.remote_ip.label }}<br>
+            {{ form.remote_ip }}
+            {% for error in form.remote_ip.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.internal.label }}<br>
+            {{ form.internal }}
+            {% for error in form.internal.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.describe.label }}<br>
+            {{ form.describe }}
+            {% for error in form.describe.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.add_sub() }}
+        </p>
+    </form>
+</div>
+{% endif %}
+{% if error %}
+<div class="addServiceError">
+    <h3>{{ error }}</h3>
+    <br>
+    <a href="/host/{{ host_id }}">Назад</a>
+</div>
+{% endif %}
+{% endblock %}

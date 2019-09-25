@@ -260,7 +260,7 @@ def get_password(app_param: parameters.Parameters, user, host):
     """
     Возвращает schema.Password
     :param app_param: Настроки приложения.
-    :param user: Идентификатор польззователя
+    :param user: Идентификатор пользователя
     :param host: Идентификатор хоста
     :return: False or schema.Password
     """

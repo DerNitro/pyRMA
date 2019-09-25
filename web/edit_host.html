@@ -28,6 +28,13 @@
             {% endfor %}
         </p>
         <p>
+            {{ form.proxy.label }}<br>
+            {{ form.proxy() }}<br>
+            {% for error in form.proxy.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
             {{ form.describe.label }}<br>
             {{ form.describe(size=32) }}<br>
             {% for error in form.describe.errors %}

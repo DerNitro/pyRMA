@@ -140,6 +140,8 @@ class Action(Base):
         20 - Создание хоста
         21 - Редактирование хоста
         22 - Удаление хоста
+        23 - Добавление сервиса
+        24 - Удаление сервиса
         50 - Восстановление пароля.
         51 - Изменение правил доступа.
     """
@@ -149,7 +151,7 @@ class Action(Base):
     user = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
     action_type = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
     date = sqlalchemy.Column(sqlalchemy.DateTime, nullable=False)
-    message = sqlalchemy.Column(sqlalchemy.String(256))
+    message = sqlalchemy.Column(sqlalchemy.Text())
 
     def __repr__(self):
         return "{0}".format(self.__dict__)
@@ -213,6 +215,7 @@ class Host(Base):
     default_password = sqlalchemy.Column(sqlalchemy.String)
     tcp_port = sqlalchemy.Column(sqlalchemy.Integer)
     prefix = sqlalchemy.Column(sqlalchemy.String)
+    proxy = sqlalchemy.Column(sqlalchemy.Boolean, default=False)
     note = sqlalchemy.Column(sqlalchemy.Text)
 
     def __repr__(self):

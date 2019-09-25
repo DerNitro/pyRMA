@@ -49,6 +49,7 @@ class EditHost(FlaskForm):
     default_login = StringField('Логин')
     default_password = StringField('Пароль')
     note = TextAreaField('Note')
+    proxy = BooleanField('Прокси-сервер')
     add_sub = SubmitField('Добавить')
     edit_sub = SubmitField('Редктировать')
     delete_sub = SubmitField('Удалить')
@@ -58,9 +59,9 @@ class EditHost(FlaskForm):
 
 
 class AddService(FlaskForm):
-    type = SelectField('Вендор IPMI')
+    type = SelectField('Тип подключения')
     remote_port = IntegerField('Порт', validators=[NumberRange(min=0, max=65536)])
-    remote_ip = StringField('iLo адрес', validators=[IPAddress()])
+    remote_ip = StringField('Адрес назначения', validators=[IPAddress()])
     internal = BooleanField('Внутренний')
     describe = StringField('Описание')
 

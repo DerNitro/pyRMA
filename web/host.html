@@ -23,7 +23,7 @@
 {{ path }}
 <hr>
 <div class="host">
-<h3>Хост - {{ content['name'] }} {% if content['parent'] %}({{ content['parent'] }}){% endif %}</h3>
+<h3>Хост - {{ content['name'] }} {% if content['parent'] %}({{ content['parent'] }}){% endif %} {% if content['proxy'] %} - proxy{% endif %}</h3>
 <table style="width: 700px;">
 <tbody>
 <tr>
@@ -48,6 +48,32 @@
 </tr>
 </tbody>
 </table>
+{% if content['services'] %}
+<div class="services">
+    <h3>Подключеные сервисы</h3>
+<table>
+    {% for service in content['services'] %}
+    <tr>
+        <td style="width: 150px;">
+            {% for type in content['service_type'] %}
+            {% if type.id == service.type %}
+            {{ type.name }}
+            {% endif %}
+            {% endfor %}
+        </td>
+        <td style="width: 450px;">
+            {{ service.local_port }} -> {{ service.remote_ip }}:{{ service.remote_port }}
+        </td>
+        <td style="width: 450px;">{{ service.describe }}</td>
+        <td style="width: 150px;">{% if service.internal %}Внутренний{% endif %}</td>
+        {% if EditHostInformation or admin %}
+        <td style="width: 150px;"><a href="/delete_service/{{ service.id }}"><button>Удалить</button></a></td>
+        {% endif %}
+    </tr>
+    {% endfor %}
+</table>
+</div>
+{% endif %}
 <h3>Note</h3>
     {% if content['note'] %}
         {% for key, value in content['note'].items()|sort() %}

@@ -55,7 +55,9 @@ siteMap = {'index': 'index.html',
            'add_folder': 'add_folder.html',
            'edit_folder': 'edit_folder.html',
            'add_host': 'add_host.html',
-           'edit_host': 'edit_host.html'}
+           'edit_host': 'edit_host.html',
+           'add_service': 'add_service.html',
+           'delete_service': 'del_service.html'}
 
 
 def check_auth(username, password, client_ip):
@@ -142,7 +144,6 @@ def hosts(directory_id=None):
                            admin=admin,
                            host_list=host_list,
                            note=note,
-                           path=weblib.get_path(webParameters, host_id=directory_id),
                            directory_id=directory_id,
                            EditHostInformation=edit_host_information,
                            EditDirectory=edit_directory)
@@ -259,7 +260,8 @@ def add_host(directory_id):
             default_login=form.default_login.data,
             default_password=form.default_password.data,
             note=form.note.data,
-            type=1
+            type=1,
+            proxy=form.proxy.data
         )
         weblib.add_host(webParameters, h, parent=directory_id, password=form.default_password.data)
         status = "Хост добавлен"
@@ -303,6 +305,7 @@ def edit_host(host_id):
             status = "Невозможно отредактировать данный хост!!!"
         else:
             form.name.data = host.name
+            form.proxy.data = host.proxy
             form.ip.data = host.ip
             form.port.data = host.tcp_port
             form.ilo.data = host.ilo
@@ -325,7 +328,8 @@ def edit_host(host_id):
              'ilo_type': form.ilo_type.data,
              'default_login': form.default_login.data,
              'default_password': form.default_password.data,
-             'note': form.note.data
+             'note': form.note.data,
+             'proxy': form.proxy.data
              }
         check_folder = weblib.get_host(webParameters, name=form.name.data, parent=host.parent)
         if check_folder:
@@ -364,6 +368,59 @@ def host(host_id):
                                                                                                 host_id=host_id)),
                                content=weblib.get_content_host(webParameters, host_id)
                                )
+    else:
+        return render_template(siteMap['access_denied'])
+
+
+@app.route('/delete_service/<service_id>', methods=['GET', 'POST'])
+@weblib.authorization(session, request, webParameters)
+def del_service(service_id):
+    service = weblib.get_service(webParameters, service=service_id)
+    if request.method == 'POST':
+        weblib.del_service(webParameters, service=service_id)
+        return redirect('/host/{service.host}'.format(service=service))
+    return render_template(siteMap['delete_service'],
+                           admin=access.check_access(webParameters, 'Administrate'),
+                           service=service)
+
+
+@app.route('/host/<host_id>/add_service', methods=['GET', 'POST'])
+@weblib.authorization(session, request, webParameters)
+def add_service(host_id):
+    edit_host_information = access.check_access(webParameters, 'EditHostInformation',
+                                                h_object=weblib.get_host(webParameters, host_id=host_id))
+    admin = access.check_access(webParameters, 'Administrate',
+                                h_object=weblib.get_host(webParameters, host_id=host_id))
+    error = None
+    status = None
+
+    if edit_host_information or admin:
+        form = forms.AddService()
+        form.type.choices = weblib.get_service_type(webParameters)
+
+        if request.method == 'POST' and form.add_sub.data:
+            s = schema.Service(
+                type=form.type.data,
+                host=host_id,
+                local_port=weblib.get_local_port(webParameters),
+                remote_port=form.remote_port.data,
+                remote_ip=form.remote_ip.data,
+                internal=form.internal.data,
+                describe=form.describe.data
+            )
+
+            if weblib.check_ip_net(form.remote_ip.data, '127.0.0.0/8') and not form.internal.data:
+                error = 'Не корректное значение "Адрес назначения" или "Внутренний"!!!'
+            else:
+                if weblib.add_service(webParameters, s):
+                    status = 'Сервис добавлен'
+
+        return render_template(siteMap['add_service'],
+                               form=form,
+                               error=error,
+                               status=status,
+                               admin=admin,
+                               host_id=host_id)
     else:
         return render_template(siteMap['access_denied'])
 

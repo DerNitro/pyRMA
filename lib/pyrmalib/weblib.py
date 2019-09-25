@@ -70,6 +70,10 @@ def login_access(username, password, ip, engine):
     return True
 
 
+def check_ip_net(ip, network):
+    return utils.check_ip_network(ip, network)
+
+
 def get_access_request(engine, user):
     return []
 
@@ -88,6 +92,7 @@ def get_content_host(param: parameters.WebParameters, host_id):
     content = {}
     host = get_host(param, host_id)
     content['id'] = host_id
+    content['proxy'] = host.proxy
     content['name'] = host.name
     content['ip'] = host.ip
     content['describe'] = host.describe
@@ -116,6 +121,10 @@ def get_content_host(param: parameters.WebParameters, host_id):
         content['note'] = json.loads(host.note)
     else:
         content['note'] = host.note
+
+    with schema.db_select(param.engine) as db:
+        content['services'] = db.query(schema.Service).filter(schema.Service.host == host_id).all()
+        content['service_type'] = db.query(schema.ServiceType).all()
 
     with schema.db_select(param.engine) as db:
         content['connection_type'] = db.query(schema.ConnectionType).\
@@ -219,36 +228,24 @@ def get_host_list(param: parameters.WebParameters, level=None):
     return host_list
 
 
-def search(param: parameters.WebParameters, query):
+def get_service(param: parameters.WebParameters, host=None, service=None):
     """
-    Возвращает список хостов подходящих под условие.
+    Запрос сервисов
     :param param: WebParameters
-    :param query: string
-    :return: list
+    :param host: Service.host
+    :param service: Service.id
+    :return: list Service or Service
     """
-    with schema.db_select(param.engine) as db:
-        host_list = db.query(schema.Host)\
-            .filter(or_(schema.Host.name.like("%" + query + "%"),
-                        schema.Host.ilo == query,
-                        schema.Host.ip == query,
-                        schema.Host.describe.like("%" + query + "%"),
-                        schema.Host.note.like("%" + query + "%")))\
-            .filter(schema.Host.remove.is_(False))\
-            .order_by(schema.Host.type.desc()).order_by(schema.Host.name).all()
-    return host_list
+    if not host and not service:
+        return None
 
-
-def get_path(param: parameters.WebParameters, host_id=None):
-    """
-    Возвращает строку пути к хосту
-    :param param: WebParameters
-    :param host_id: schema.Host.id
-    :return: str
-    """
-    if host_id is None or host_id == 0:
-        return "/"
-    else:
-        return "path"
+    if host:
+        with schema.db_select(param.engine) as db:
+            s = db.query(schema.Service).filter(schema.Service.host == host).all()
+    if service:
+        with schema.db_select(param.engine) as db:
+            s = db.query(schema.Service).filter(schema.Service.id == service).one()
+    return s
 
 
 def get_connection_type(param: parameters.WebParameters):
@@ -270,6 +267,43 @@ def get_ilo_type(param: parameters.WebParameters):
         ilo_type = db.query(schema.IloType).all()
 
     return [(t.id, t.name) for t in ilo_type]
+
+
+def get_service_type(param: parameters.WebParameters):
+    with schema.db_select(param.engine) as db:
+        service_type = db.query(schema.ServiceType).all()
+
+    return [(t.id, t.name) for t in service_type]
+
+
+def get_local_port(param: parameters.WebParameters):
+    with schema.db_select(param.engine) as db:
+        local_port = db.query(schema.Service).all()
+        ports = db.query(schema.Parameter).filter(schema.Parameter.name == 'FORWARD_TCP_PORT_RANGE').first()
+
+    l = [t.local_port for t in local_port]
+    for i in range(int(str(ports.value).split(';')[0]), int(str(ports.value).split(';')[1])):
+        if i not in l:
+            return i
+
+
+def search(param: parameters.WebParameters, query):
+    """
+    Возвращает список хостов подходящих под условие.
+    :param param: WebParameters
+    :param query: string
+    :return: list
+    """
+    with schema.db_select(param.engine) as db:
+        host_list = db.query(schema.Host)\
+            .filter(or_(schema.Host.name.like("%" + query + "%"),
+                        schema.Host.ilo == query,
+                        schema.Host.ip == query,
+                        schema.Host.describe.like("%" + query + "%"),
+                        schema.Host.note.like("%" + query + "%")))\
+            .filter(schema.Host.remove.is_(False))\
+            .order_by(schema.Host.type.desc()).order_by(schema.Host.name).all()
+    return host_list
 
 
 def user_info(username, engine):
@@ -388,7 +422,7 @@ def add_folder(param: parameters.WebParameters, folder):
             user=param.user_info.login,
             action_type=10,
             date=datetime.datetime.now(),
-            message="Создание директории: {folder.name} - id={folder.id}".format(folder=folder)
+            message="Создание директории: {folder.name} - id={folder.id}({folder})".format(folder=folder)
         )
         db.add(action)
         db.flush()
@@ -409,7 +443,23 @@ def add_host(param: parameters.WebParameters, host: schema.Host, parent=0, passw
             user=param.user_info.login,
             action_type=20,
             date=datetime.datetime.now(),
-            message="Создание хоста: {host.name} - id={host.id}".format(host=host)
+            message="Создание хоста: {host.name} - id={host.id}({host})".format(host=host)
+        )
+        db.add(action)
+        db.flush()
+        return True
+
+
+def add_service(param: parameters.WebParameters, service: schema.Service):
+    with schema.db_edit(param.engine) as db:
+        db.add(service)
+        db.flush()
+        db.refresh(service)
+        action = schema.Action(
+            user=param.user_info.login,
+            action_type=23,
+            date=datetime.datetime.now(),
+            message="Добавление сервиса: {service.host} - id={service.id}({service})".format(service=service)
         )
         db.add(action)
         db.flush()
@@ -487,7 +537,7 @@ def edit_folder(param: parameters.WebParameters, folder, folder_id):
             user=param.user_info.login,
             action_type=11,
             date=datetime.datetime.now(),
-            message="Редактирование директории: {folder.name} - id={folder.id}".format(folder=host)
+            message="Редактирование директории: {folder.name} - id={folder.id}({folder})".format(folder=host)
         )
         db.add(action)
         db.flush()
@@ -498,23 +548,23 @@ def edit_folder(param: parameters.WebParameters, folder, folder_id):
 def edit_host(param: parameters.WebParameters, d, host_id):
     with schema.db_edit(param.engine) as db:
         host = db.query(schema.Host).filter(schema.Host.id == host_id).one()
-        host.name = d['name'],
-        host.ip = d['ip'],
-        host.connection_type = d['connection_type'],
-        host.file_transfer_type = d['file_transfer_type'],
-        host.describe = d['describe'],
-        host.ilo = d['ilo'],
-        host.ilo_type = d['ilo_type'],
-        host.default_login = d['default_login'],
-        host.tcp_port = d['port'],
+        host.name = d['name']
+        host.ip = d['ip']
+        host.connection_type = d['connection_type']
+        host.file_transfer_type = d['file_transfer_type']
+        host.describe = d['describe']
+        host.ilo = d['ilo']
+        host.ilo_type = d['ilo_type']
+        host.default_login = d['default_login']
+        host.tcp_port = d['port']
         host.note = d['note']
-        print(host)
+        host.proxy = d['proxy']
 
         action = schema.Action(
             user=param.user_info.login,
             action_type=21,
             date=datetime.datetime.now(),
-            message="Редактирование хоста: {folder.name} - id={folder.id}".format(folder=host)
+            message="Редактирование хоста: {folder.name} - id={folder.id}({folder})".format(folder=host)
         )
         db.add(action)
         db.flush()
@@ -551,6 +601,42 @@ def delete_host(param: parameters.WebParameters, host_id):
         db.add(action)
         db.flush()
 
+    return True
+
+
+def del_service(param: parameters.WebParameters, host=None, service=None):
+    """
+        Удаление сервисов
+        :param param: WebParameters
+        :param host: Service.host
+        :param service: Service.id
+        :return: true or false
+        """
+    if not host and not service:
+        return False
+
+    if host:
+        with schema.db_edit(param.engine) as db:
+            db.query(schema.Service).filter(schema.Service.host == host).delete()
+            action = schema.Action(
+                user=param.user_info.login,
+                action_type=24,
+                date=datetime.datetime.now(),
+                message="Удаление сервиса: host={}".format(host)
+            )
+            db.add(action)
+            db.flush()
+    if service:
+        with schema.db_edit(param.engine) as db:
+            db.query(schema.Service).filter(schema.Service.id == service).delete()
+            action = schema.Action(
+                user=param.user_info.login,
+                action_type=24,
+                date=datetime.datetime.now(),
+                message="Удаление сервиса: id={}".format(service)
+            )
+            db.add(action)
+            db.flush()
     return True
 
 
