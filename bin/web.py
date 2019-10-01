@@ -38,6 +38,7 @@ app = Flask(__name__,
             template_folder=webParameters.template,
             static_folder=os.path.join(webParameters.template, 'static'))
 app.secret_key = os.urandom(64)
+app.debug = True
 
 logger = log.Log("Web_syslog", **webParameters.log_param)
 
@@ -57,7 +58,8 @@ siteMap = {'index': 'index.html',
            'add_host': 'add_host.html',
            'edit_host': 'edit_host.html',
            'add_service': 'add_service.html',
-           'delete_service': 'del_service.html'}
+           'delete_service': 'del_service.html',
+           'route': 'route.html'}
 
 
 def check_auth(username, password, client_ip):
@@ -114,6 +116,28 @@ def logout():
 @weblib.authorization(session, request, webParameters)
 def settings():
     return render_template(siteMap['settings'], admin=access.check_access(webParameters, 'Administrate'))
+
+
+@app.route('/route/<host_id>', methods=['GET', 'POST'])
+@weblib.authorization(session, request, webParameters)
+def route(host_id):
+    form = forms.AddRoute()
+    form.route.choices = weblib.get_route_host(webParameters)
+
+    if request.method == 'POST' and form.add_sub.data:
+        r = {
+            'host': host_id,
+            'route': form.route.data
+        }
+        weblib.add_route(webParameters, r)
+
+    if request.method == 'POST' and form.clear_sub.data:
+        weblib.clear_routes(webParameters, host_id)
+
+    return render_template(siteMap['route'],
+                           form=form,
+                           host_id=host_id,
+                           routes=weblib.get_routes(webParameters, host_id))
 
 
 @app.route('/hosts')
@@ -188,18 +212,18 @@ def add_folder(directory_id):
 @weblib.authorization(session, request, webParameters)
 def edit_folder(directory_id):
     form = forms.EditFolder()
-    host = weblib.get_host(webParameters, host_id=directory_id)
+    h = weblib.get_host(webParameters, host_id=directory_id)
     error = None
     status = None
-    admin = access.check_access(webParameters, 'Administrate', h_object=host)
+    admin = access.check_access(webParameters, 'Administrate', h_object=h)
 
     if request.method == 'GET':
-        if not host:
+        if not h:
             status = "Невозможно отредактировать данную директорию!!!"
         else:
-            form.name.data = host.name
-            form.describe.data = host.describe
-            form.note.data = host.note
+            form.name.data = h.name
+            form.describe.data = h.describe
+            form.note.data = h.note
 
     if request.method == 'POST' and form.edit_sub.data:
         folder = {
@@ -209,7 +233,7 @@ def edit_folder(directory_id):
             'prefix': webParameters.user_info.prefix,
             'note': form.note.data
         }
-        check_folder = weblib.get_host(webParameters, name=folder['name'], parent=host.parent)
+        check_folder = weblib.get_host(webParameters, name=folder['name'], parent=h.parent)
         if check_folder:
             if int(check_folder.id) != int(directory_id):
                 error = 'Имя уже существует'
@@ -292,30 +316,30 @@ def add_host(directory_id):
 @weblib.authorization(session, request, webParameters)
 def edit_host(host_id):
     form = forms.EditHost()
-    host = weblib.get_host(webParameters, host_id=host_id)
+    h = weblib.get_host(webParameters, host_id=host_id)
     form.connection_type.choices = weblib.get_connection_type(webParameters)
     form.file_transfer_type.choices = weblib.get_file_transfer_type(webParameters)
     form.ilo_type.choices = weblib.get_ilo_type(webParameters)
     error = None
     status = None
-    admin = access.check_access(webParameters, 'Administrate', h_object=host)
+    admin = access.check_access(webParameters, 'Administrate', h_object=h)
 
     if request.method == 'GET':
-        if not host:
+        if not h:
             status = "Невозможно отредактировать данный хост!!!"
         else:
-            form.name.data = host.name
-            form.proxy.data = host.proxy
-            form.ip.data = host.ip
-            form.port.data = host.tcp_port
-            form.ilo.data = host.ilo
-            form.describe.data = host.describe
-            form.note.data = host.note
-            form.default_login.data = host.default_login
-            form.default_password.data = host.default_password
-            form.connection_type.process_data(host.connection_type)
-            form.file_transfer_type.process_data(host.file_transfer_type)
-            form.ilo_type.process_data(host.ilo_type)
+            form.name.data = h.name
+            form.proxy.data = h.proxy
+            form.ip.data = h.ip
+            form.port.data = h.tcp_port
+            form.ilo.data = h.ilo
+            form.describe.data = h.describe
+            form.note.data = h.note
+            form.default_login.data = h.default_login
+            form.default_password.data = h.default_password
+            form.connection_type.process_data(h.connection_type)
+            form.file_transfer_type.process_data(h.file_transfer_type)
+            form.ilo_type.process_data(h.ilo_type)
 
     if request.method == 'POST' and form.edit_sub.data:
         d = {'name': form.name.data,
@@ -331,13 +355,13 @@ def edit_host(host_id):
              'note': form.note.data,
              'proxy': form.proxy.data
              }
-        check_folder = weblib.get_host(webParameters, name=form.name.data, parent=host.parent)
+        check_folder = weblib.get_host(webParameters, name=form.name.data, parent=h.parent)
         if check_folder:
             if int(check_folder.id) != int(host_id):
                 error = 'Имя уже существует'
         if not error:
             if weblib.edit_host(webParameters, d, host_id):
-                status = 'Хост отредактирован'
+                return redirect(url_for('host', host_id=host_id))
             else:
                 status = 'Ошибка редактирования хоста'
 
@@ -347,8 +371,8 @@ def edit_host(host_id):
 
     return render_template(siteMap['edit_host'],
                            admin=admin,
-                           directory_id=host.parent,
-                           host_id=host.id,
+                           directory_id=h.parent,
+                           host_id=h.id,
                            error=error,
                            status=status,
                            form=form)

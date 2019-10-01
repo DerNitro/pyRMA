@@ -66,3 +66,10 @@ class AddService(FlaskForm):
     describe = StringField('Описание')
 
     add_sub = SubmitField('Добавить')
+
+
+class AddRoute(FlaskForm):
+    route = SelectField('Промежуточный хост')
+    add_sub = SubmitField('Добавить')
+
+    clear_sub = SubmitField('Очистить')

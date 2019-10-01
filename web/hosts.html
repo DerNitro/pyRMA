@@ -22,6 +22,7 @@
         {% if EditHostInformation or admin%} <li class="host_add_button"> <a class="host_add_button" href="/hosts/{{ directory_id }}/add_host">Добавить хост</a> </li> {% endif %}
         {% if EditDirectory or admin%} <li class="host_add_button"> <a class="host_add_button" href="/hosts/{{ directory_id }}/add_folder">Добавить директорию</a> </li> {% endif %}
         {% if EditDirectory or admin%} <li class="host_add_button"> <a class="host_add_button" href="/hosts/{{ directory_id }}/edit_folder">Редактировать директорию</a> </li> {% endif %}
+        {% if EditDirectory or admin%} <li class="host_add_button"> <a class="host_add_button" href="/route/{{ directory_id }}">Маршрут</a> </li> {% endif %}
     </ul>
 </div>
 <hr>

@@ -287,6 +287,24 @@ def get_local_port(param: parameters.WebParameters):
             return i
 
 
+def get_route_host(param: parameters.WebParameters):
+    with schema.db_select(param.engine) as db:
+        route_host = db.query(schema.Host).filter(schema.Host.proxy.is_(True)).all()
+
+    return [(t.id, t.name) for t in route_host]
+
+
+def get_routes(param: parameters.WebParameters, host_id):
+    with schema.db_select(param.engine) as db:
+        routes = db.query(schema.RouteMap, schema.Host).join(schema.Host, schema.Host.id == schema.RouteMap.route).\
+            filter(schema.RouteMap.host == host_id).\
+            order_by(schema.RouteMap.sequence).all()
+
+    if len(routes) == 0:
+        routes = None
+    return routes
+
+
 def search(param: parameters.WebParameters, query):
     """
     Возвращает список хостов подходящих под условие.
@@ -526,6 +544,30 @@ def add_hosts_file(param: parameters.WebParameters, filepath: str, parent=0):
     return True
 
 
+def add_route(param: parameters.WebParameters, r):
+    with schema.db_edit(param.engine) as db:
+        routes = db.query(schema.RouteMap).filter(schema.RouteMap.host == r['host']).all()
+
+        route = schema.RouteMap(
+            sequence=len(routes)+1,
+            host=r['host'],
+            route=r['route']
+        )
+        db.add(route)
+        db.flush()
+        db.refresh(route)
+
+        action = schema.Action(
+            user=param.user_info.login,
+            action_type=25,
+            date=datetime.datetime.now(),
+            message="Добавлен маршрут: {route.host} - id={route.id}({route})".format(route=route)
+        )
+        db.add(action)
+        db.flush()
+    return True
+
+
 def edit_folder(param: parameters.WebParameters, folder, folder_id):
     with schema.db_edit(param.engine) as db:
         host = db.query(schema.Host).filter(schema.Host.id == folder_id).one()
@@ -637,6 +679,21 @@ def del_service(param: parameters.WebParameters, host=None, service=None):
             )
             db.add(action)
             db.flush()
+    return True
+
+
+def clear_routes(param: parameters.WebParameters, host_id):
+    with schema.db_edit(param.engine) as db:
+        db.query(schema.RouteMap).filter(schema.RouteMap.host == host_id).delete()
+        action = schema.Action(
+            user=param.user_info.login,
+            action_type=26,
+            date=datetime.datetime.now(),
+            message="Очистка маршрутов: host={}".format(host_id)
+        )
+        db.add(action)
+        db.flush()
+
     return True
 
 

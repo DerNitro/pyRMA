@@ -142,6 +142,8 @@ class Action(Base):
         22 - Удаление хоста
         23 - Добавление сервиса
         24 - Удаление сервиса
+        25 - Добавление маршрута
+        26 - Очистка маршрута
         50 - Восстановление пароля.
         51 - Изменение правил доступа.
     """
@@ -279,6 +281,7 @@ class RouteMap(Base):
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
     sequence = sqlalchemy.Column(sqlalchemy.Integer)
     host = sqlalchemy.Column(sqlalchemy.Integer)
+    route = sqlalchemy.Column(sqlalchemy.Integer)
 
     def __repr__(self):
         return "{0}".format(self.__dict__)
