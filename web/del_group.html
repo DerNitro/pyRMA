@@ -1,0 +1,27 @@
+{% extends "main.html" %}
+{% from "menu.html" import show_menu %}
+{% from "search.html" import show_search %}
+
+{% block header %}
+{{ show_menu(Admin=admin, Active='host') }}
+{{ show_search() }}
+{{ super() }}
+{% endblock %}
+
+{% block content %}
+<center>
+    <h3>Удалить группу?</h3>
+    <table>
+        <tr>
+            <td>
+                <form action="/administrate/group/{{ group_id }}/delete" method="POST" name="delete_group">
+                    <input class="delete_group" type="submit" value="Удалить"/>
+                </form>
+            </td>
+            <td>
+                <a href="/administrate/group"><button>Назад</button></a>
+            </td>
+        </tr>
+    </table>
+</center>
+{% endblock %}

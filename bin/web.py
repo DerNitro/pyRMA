@@ -59,7 +59,9 @@ siteMap = {'index': 'index.html',
            'edit_host': 'edit_host.html',
            'add_service': 'add_service.html',
            'delete_service': 'del_service.html',
-           'route': 'route.html'}
+           'route': 'route.html',
+           'admin_group': 'admin_group.html',
+           'administrate_group_delete': 'del_group.html'}
 
 
 def check_auth(username, password, client_ip):
@@ -453,6 +455,35 @@ def add_service(host_id):
 @weblib.authorization(session, request, webParameters)
 def administrate():
     return render_template(siteMap['administrate'], admin=access.check_access(webParameters, 'Administrate'))
+
+
+@app.route('/administrate/group', methods=['GET', 'POST'])
+@weblib.authorization(session, request, webParameters)
+def administrate_group():
+    form = forms.AddGroup()
+    if request.method == 'POST' and form.add_sub.data:
+        g = {
+            'name': form.name.data,
+            'type': form.type.data
+        }
+
+        weblib.add_group(webParameters, g)
+    return render_template(siteMap['admin_group'],
+                           admin=access.check_access(webParameters, 'Administrate'),
+                           form=form,
+                           group_user=weblib.get_group_user(webParameters),
+                           group_host=weblib.get_group_host(webParameters))
+
+
+@app.route('/administrate/group/<group_id>/delete', methods=['GET', 'POST'])
+@weblib.authorization(session, request, webParameters)
+def administrate_group_delete(group_id):
+    if request.method == 'POST':
+        weblib.del_group(webParameters, group=group_id)
+        return redirect('/administrate/group')
+    return render_template(siteMap['administrate_group_delete'],
+                           admin=access.check_access(webParameters, 'Administrate'),
+                           group_id=group_id)
 
 
 @app.route('/registration', methods=['GET', 'POST'])

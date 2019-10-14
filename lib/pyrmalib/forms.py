@@ -73,3 +73,10 @@ class AddRoute(FlaskForm):
     add_sub = SubmitField('Добавить')
 
     clear_sub = SubmitField('Очистить')
+
+
+class AddGroup(FlaskForm):
+    name = StringField('Имя группы')
+    type = SelectField('Тип группы', choices=[(0, 'Пользователи'), (1, 'Хосты')])
+
+    add_sub = SubmitField('Добавить')

@@ -67,6 +67,16 @@ def login_access(username, password, ip, engine):
     if user.date_disable < datetime.datetime.now() or user.disable:
         return False
 
+    with schema.db_select(engine) as db:
+        auto_extension = db.query(schema.Parameter).filter(schema.Parameter.name == 'AUTO_EXTENSION').one()
+        extension_days = db.query(schema.Parameter).filter(schema.Parameter.name == 'EXTENSION_DAYS').one()
+
+    if auto_extension.value == '1' and user.date_disable < datetime.datetime.now() + datetime.timedelta(days=15):
+        ex_days = int(extension_days.value)
+        with schema.db_edit(engine) as db:
+            db.query(schema.User).filter(schema.User.login == user.login). \
+                update({schema.User.date_disable: datetime.datetime.now() + datetime.timedelta(days=ex_days)})
+
     return True
 
 
@@ -303,6 +313,24 @@ def get_routes(param: parameters.WebParameters, host_id):
     if len(routes) == 0:
         routes = None
     return routes
+
+
+def get_group_user(param: parameters.WebParameters):
+    with schema.db_select(param.engine) as db:
+        group = db.query(schema.Group).filter(schema.Group.type == 0).all()
+
+    if len(group) == 0:
+        group = None
+    return group
+
+
+def get_group_host(param: parameters.WebParameters):
+    with schema.db_select(param.engine) as db:
+        group = db.query(schema.Group).filter(schema.Group.type == 1).all()
+
+    if len(group) == 0:
+        group = None
+    return group
 
 
 def search(param: parameters.WebParameters, query):
@@ -568,6 +596,27 @@ def add_route(param: parameters.WebParameters, r):
     return True
 
 
+def add_group(param: parameters.WebParameters, g):
+    with schema.db_edit(param.engine) as db:
+        group = schema.Group(
+            name=g['name'],
+            type=g['type']
+        )
+        db.add(group)
+        db.flush()
+        db.refresh(group)
+
+        action = schema.Action(
+            user=param.user_info.login,
+            action_type=52,
+            date=datetime.datetime.now(),
+            message="Добавлена группа: {group.name} - id={group.id}({group})".format(group=group)
+        )
+        db.add(action)
+        db.flush()
+    return True
+
+
 def edit_folder(param: parameters.WebParameters, folder, folder_id):
     with schema.db_edit(param.engine) as db:
         host = db.query(schema.Host).filter(schema.Host.id == folder_id).one()
@@ -639,6 +688,27 @@ def delete_host(param: parameters.WebParameters, host_id):
             action_type=22,
             date=datetime.datetime.now(),
             message="Удаление хоста: {folder.name} - id={folder.id}".format(folder=d_host)
+        )
+        db.add(action)
+        db.flush()
+
+    return True
+
+
+def del_group(param: parameters.WebParameters, group=None):
+    """
+    Удаление групп
+    :param param: WebParameters
+    :param group: schema.Group.id
+    :return: True
+    """
+    with schema.db_edit(param.engine) as db:
+        db.query(schema.Group).filter(schema.Group.id == group).delete()
+        action = schema.Action(
+            user=param.user_info.login,
+            action_type=24,
+            date=datetime.datetime.now(),
+            message="Удаление группы: id={}".format(group)
         )
         db.add(action)
         db.flush()

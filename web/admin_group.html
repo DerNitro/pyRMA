@@ -1,0 +1,61 @@
+{% extends "main.html" %}
+{% from "menu.html" import show_menu %}
+{% from "search.html" import show_search %}
+
+{% block header %}
+{{ show_menu(Admin=admin, Active='administrate') }}
+{{ show_search() }}
+{{ super() }}
+{% endblock %}
+
+{% block content %}
+<hr>
+<div class="admin_add_button">
+    <ul class="admin_add_button">
+        <li class="admin_add_button"> <a class="admin_add_button" href="/administrate/group">Группы</a> </li>
+        <li class="admin_add_button"> <a class="admin_add_button" href="/administrate/users">Пользователи</a> </li>
+        <li class="admin_add_button"> <a class="admin_add_button" href="/administrate/logs">Логи</a> </li>
+        <li class="admin_add_button"> <a class="admin_add_button" href="/administrate/session">Сессии</a> </li>
+    </ul>
+</div>
+<hr>
+<div class="admin_group">
+    <div class="addGroupe">
+        <details>
+            <summary>Добавить</summary>
+            <form action="/administrate/group" method="POST" name="add_group">
+                <p>
+                    {{ form.name.label }} {{ form.name() }} {{ form.type() }} {{ form.add_sub() }}
+                </p>
+            </form>
+            <hr>
+        </details>
+    </div>
+{% if group_user %}
+<div class="group_user">
+    <h3>Группы пользоватлей</h3>
+<table>
+    {% for group in group_user %}
+    <tr>
+        <td style="width: 450px;"><a href="/administrate/group/{{ group.id }}"> {{ group.name }} </a></td>
+        <td style="width: 150px;"><a href="/administrate/group/{{ group.id }}/delete"><button>Удалить</button></a></td>
+    </tr>
+    {% endfor %}
+</table>
+</div>
+{% endif %}
+{% if group_host %}
+<div class="group_host">
+    <h3>Группы узлов</h3>
+<table>
+    {% for group in group_host %}
+    <tr>
+        <td style="width: 450px;"><a href="/administrate/group/{{ group.id }}"> {{ group.name }} </a></td>
+        <td style="width: 150px;"><a href="/administrate/group/{{ group.id }}/delete"><button>Удалить</button></a></td>
+    </tr>
+    {% endfor %}
+</table>
+</div>
+{% endif %}
+</div>
+{% endblock %}
