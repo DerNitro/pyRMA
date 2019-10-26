@@ -189,7 +189,7 @@ class Access:
         for i in sorted(self.access_map, key=self.access_map.get):
             bin_str.append(self.map[i])
         s = ''.join(bin_str)
-        return int(s.lstrip('0')[::-1], 2)
+        return int(s, 2)
 
     def __repr__(self):
         return "{0}".format(self.map)
@@ -203,9 +203,10 @@ class ConnectionAccess(Access):
     access_map = connection_access_map
 
 
-def check_access(app_param: parameters.Parameters, access, h_object=None):
+def check_access(app_param: parameters.Parameters, access, h_object=None, permission=None):
     """
     Возвращает True|False по разрещенному доступу
+    :param permission: Строка или Список schema.Permission
     :param app_param: Настроки приложения.
     :param access: Правило доступа из access_map
     :param h_object: группа/хост
@@ -224,7 +225,10 @@ def check_access(app_param: parameters.Parameters, access, h_object=None):
     else:
         raise error.WTF('не корректно указан host_object!')
 
-    perm = get_permission(app_param, app_param.user_info.login, obj=obj, t_obj=t_obj)
+    if permission:
+        perm = permission
+    else:
+        perm = get_permission(app_param, app_param.user_info.login, obj=obj, t_obj=t_obj)
 
     if user_access_map.get(access) is not None:
         if isinstance(perm, list):
@@ -268,4 +272,9 @@ def get_password(app_param: parameters.Parameters, user, host):
 
 
 if __name__ == '__main__':
-    pass
+    user = UserAccess(0)
+    print(user)
+    print(user.get_int())
+    user.change('Administrate', set_access=True)
+    print(user)
+    print(user.get_int())

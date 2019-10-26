@@ -46,6 +46,7 @@ class Parameters:
     aaa_user = None
     user_info = None
     log_param = {}
+    log = None
 
     def __init__(self):
         if not os.path.isfile(pathConfigFile):

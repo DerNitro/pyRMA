@@ -20,7 +20,7 @@ import json
 import psutil
 import os
 import random
-from pyrmalib import schema, utils, email, template, parameters, error, access
+from pyrmalib import schema, utils, email, template, parameters, error, access, forms
 from functools import wraps
 import hashlib
 import sqlalchemy
@@ -315,6 +315,46 @@ def get_routes(param: parameters.WebParameters, host_id):
     return routes
 
 
+def get_group(param: parameters.WebParameters, group_id):
+    content = {}
+    with schema.db_select(param.engine) as db:
+        try:
+            group = db.query(schema.Group).filter(schema.Group.id == group_id).one()    # type: schema.Group
+            content['group'] = group
+        except NoResultFound:
+            return False
+        except MultipleResultsFound:
+            raise error.WTF("Дубли Group.id в таблице Group!!!")
+
+    if group.type == 0:
+        with schema.db_select(param.engine) as db:
+            users = db.query(schema.GroupUser, schema.User)\
+                .join(schema.User, schema.GroupUser.user == schema.User.login)\
+                .filter(schema.GroupUser.group == group_id).all()
+            content['users'] = users
+
+    if group.type == 1:
+        with schema.db_select(param.engine) as db:
+            hosts = db.query(schema.GroupHost, schema.Host)\
+                .join(schema.Host, schema.GroupHost.host == schema.Host.id)\
+                .filter(schema.GroupHost.group == group_id).all()
+            content['hosts'] = hosts
+
+    with schema.db_select(param.engine) as db:
+        try:
+            permission = db.query(schema.Permission).filter(
+                schema.Permission.t_subject == 1,
+                schema.Permission.subject == group_id,
+                schema.Permission.object.is_(None)
+            ).one()
+            content['permission'] = permission
+        except NoResultFound:
+            content['permission'] = None
+        except MultipleResultsFound:
+            raise error.WTF("Дубли default Permission в таблице Permission!!!")
+    return content
+
+
 def get_group_user(param: parameters.WebParameters):
     with schema.db_select(param.engine) as db:
         group = db.query(schema.Group).filter(schema.Group.type == 0).all()
@@ -331,6 +371,48 @@ def get_group_host(param: parameters.WebParameters):
     if len(group) == 0:
         group = None
     return group
+
+
+def set_group_permission(param: parameters.WebParameters, group_id, form: forms.ChangePermission):
+    user_access = access.UserAccess(0)
+    user_access.change('ShowHostInformation', set_access=form.ShowHostInformation.data)
+    user_access.change('EditHostInformation', set_access=form.EditHostInformation.data)
+    user_access.change('EditDirectory', set_access=form.EditDirectory.data)
+    user_access.change('EditPrefixHost', set_access=form.EditPrefixHost.data)
+    user_access.change('ShowLogin', set_access=form.ShowLogin.data)
+    user_access.change('ShowPassword', set_access=form.ShowPassword.data)
+    user_access.change('ShowAllSession', set_access=form.ShowAllSession.data)
+    user_access.change('ShowAllGroupSession', set_access=form.ShowAllGroupSession.data)
+    user_access.change('Administrate', set_access=form.Administrate.data)
+    print(user_access)
+
+    connection_access = access.ConnectionAccess(0)
+    connection_access.change('Connection', set_access=form.Connection.data)
+    connection_access.change('FileTransfer', set_access=form.FileTransfer.data)
+    connection_access.change('ConnectionService', set_access=form.ConnectionService.data)
+    connection_access.change('ConnectionOnlyService', set_access=form.ConnectionOnlyService.data)
+    connection_access.change('ConnectionIlo', set_access=form.ConnectionIlo.data)
+    print(connection_access)
+    with schema.db_edit(param.engine) as db:
+        try:
+            perm = db.query(schema.Permission).filter(
+                schema.Permission.t_subject == 1,
+                schema.Permission.subject == group_id,
+                schema.Permission.object.is_(None)
+            ).one()
+            perm.conn_access = connection_access.get_int()
+            perm.user_access = user_access.get_int()
+            db.flush()
+        except NoResultFound:
+            perm = schema.Permission(
+                t_subject=1,
+                subject=group_id,
+                conn_access=connection_access.get_int(),
+                user_access=user_access.get_int()
+            )
+            db.add(perm)
+        except MultipleResultsFound:
+            raise error.WTF("Дубли default Permission в таблице Permission!!!")
 
 
 def search(param: parameters.WebParameters, query):

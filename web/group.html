@@ -1,0 +1,149 @@
+{% extends "main.html" %}
+{% from "menu.html" import show_menu %}
+{% from "search.html" import show_search %}
+
+{% block header %}
+{{ show_menu(Admin=admin, Active='administrate') }}
+{{ show_search() }}
+{{ super() }}
+{% endblock %}
+
+{% block content %}
+<hr>
+{% if content['group'].type == 0 %}
+<h4>Группа пользователей - {{ content['group'].name }}</h4>
+<div class="changePermission">
+    <details>
+        <summary>Права доступа</summary>
+        <form action="/administrate/group/{{ content['group'].id }}" method="POST" name="change_permission">
+            <table>
+                <tr>
+                    <td>{{ form.ShowHostInformation.label }}</td>
+                    <td>{{ form.ShowHostInformation()}}</td>
+                </tr>
+                <tr>
+                    <td>{{ form.EditHostInformation.label }}</td>
+                    <td>{{ form.EditHostInformation()}}</td>
+                </tr>
+                <tr>
+                    <td>{{ form.EditDirectory.label }}</td>
+                    <td>{{ form.EditDirectory()}}</td>
+                </tr>
+                <tr>
+                    <td>{{ form.EditPrefixHost.label }}</td>
+                    <td>{{ form.EditPrefixHost()}}</td>
+                </tr>
+                <tr>
+                    <td>{{ form.ShowLogin.label }}</td>
+                    <td>{{ form.ShowLogin()}}</td>
+                </tr>
+                <tr>
+                    <td>{{ form.ShowPassword.label }}</td>
+                    <td>{{ form.ShowPassword()}}</td>
+                </tr>
+                <tr>
+                    <td>{{ form.ShowAllSession.label }}</td>
+                    <td>{{ form.ShowAllSession()}}</td>
+                </tr>
+                <tr>
+                    <td>{{ form.ShowAllGroupSession.label }}</td>
+                    <td>{{ form.ShowAllGroupSession()}}</td>
+                </tr>
+                <tr>
+                    <td>{{ form.Connection.label }}</td>
+                    <td>{{ form.Connection()}}</td>
+                    </tr>
+                <tr>
+                    <td>{{ form.FileTransfer.label }}</td>
+                    <td>{{ form.FileTransfer()}}</td>
+                </tr>
+                <tr>
+                    <td>{{ form.ConnectionService.label }}</td>
+                    <td>{{ form.ConnectionService()}}</td>
+                </tr>
+                <tr>
+                    <td>{{ form.ConnectionOnlyService.label }}</td>
+                    <td>{{ form.ConnectionOnlyService()}}</td>
+                </tr>
+                <tr>
+                    <td>{{ form.ConnectionIlo.label }}</td>
+                    <td>{{ form.ConnectionIlo()}}</td>
+                </tr>
+            </table>
+            {{ form.edit_sub() }}
+        </form>
+        <hr>
+    </details>
+</div>
+{% else %}
+<h4>Группа хостов - {{ content['group'].name }}</h4>
+<div class="changePermission">
+    <details>
+        <summary>Права доступа</summary>
+        <form action="/administrate/group/{{ content['group'].id }}" method="POST" name="change_permission">
+            <table>
+                <tr>
+                    <td>{{ form.ShowLogin.label }}</td>
+                    <td>{{ form.ShowLogin() }}</td>
+                </tr>
+                <tr>
+                    <td>{{ form.ShowPassword.label }}</td>
+                    <td>{{ form.ShowPassword() }}</td>
+                </tr>
+                <tr>
+                    <td>{{ form.Connection.label }}</td>
+                    <td>{{ form.Connection() }}</td>
+                </tr>
+                <tr>
+                    <td>{{ form.FileTransfer.label }}</td>
+                    <td>{{ form.FileTransfer() }}</td>
+                </tr>
+                <tr>
+                    <td>{{ form.ConnectionService.label }}</td>
+                    <td>{{ form.ConnectionService() }}</td>
+                </tr>
+                <tr>
+                    <td>{{ form.ConnectionOnlyService.label }}</td>
+                    <td>{{ form.ConnectionOnlyService() }}</td>
+                </tr>
+                <tr>
+                    <td>{{ form.ConnectionIlo.label }}</td>
+                    <td>{{ form.ConnectionIlo() }}</td>
+                </tr>
+            </table>
+            {{ form.edit_sub() }}
+        </form>
+        <hr>
+    </details>
+</div>
+{% endif %}
+
+{% if content['group'].type == 0 %}
+<table>
+{% for group, user in content['users'] %}
+    <tr>
+        <td>
+            {{ user.full_name }}
+        </td>
+        <td>
+            <a href="/"><button>Удалить</button></a>
+        </td>
+    </tr>
+{% endfor %}
+</table>
+{% else %}
+<table>
+{% for group, host in content['hosts'] %}
+    <tr>
+        <td>
+            {{ host.name }}
+        </td>
+        <td>
+            <a href="/"><button>Удалить</button></a>
+        </td>
+    </tr>
+{% endfor %}
+</table>
+{% endif %}
+
+{% endblock %}

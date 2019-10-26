@@ -61,7 +61,8 @@ siteMap = {'index': 'index.html',
            'delete_service': 'del_service.html',
            'route': 'route.html',
            'admin_group': 'admin_group.html',
-           'administrate_group_delete': 'del_group.html'}
+           'administrate_group_delete': 'del_group.html',
+           'administrate_group_show': 'group.html'}
 
 
 def check_auth(username, password, client_ip):
@@ -473,6 +474,52 @@ def administrate_group():
                            form=form,
                            group_user=weblib.get_group_user(webParameters),
                            group_host=weblib.get_group_host(webParameters))
+
+
+@app.route('/administrate/group/<group_id>', methods=['GET', 'POST'])
+@weblib.authorization(session, request, webParameters)
+def administrate_group_show(group_id):
+    form = forms.ChangePermission()
+    if request.method == 'POST' and form.edit_sub.data:
+        weblib.set_group_permission(webParameters, group_id, form)
+
+    content = weblib.get_group(webParameters, group_id)
+
+    if content['permission']:
+        form.ShowHostInformation.data = \
+            access.check_access(webParameters, 'ShowHostInformation', permission=content['permission'])
+        form.EditHostInformation.data = \
+            access.check_access(webParameters, 'EditHostInformation', permission=content['permission'])
+        form.EditDirectory.data = \
+            access.check_access(webParameters, 'EditDirectory', permission=content['permission'])
+        form.EditPrefixHost.data = \
+            access.check_access(webParameters, 'EditPrefixHost', permission=content['permission'])
+        form.ShowLogin.data = \
+            access.check_access(webParameters, 'ShowLogin', permission=content['permission'])
+        form.ShowPassword.data = \
+            access.check_access(webParameters, 'ShowPassword', permission=content['permission'])
+        form.ShowAllSession.data = \
+            access.check_access(webParameters, 'ShowAllSession', permission=content['permission'])
+        form.ShowAllGroupSession.data = \
+            access.check_access(webParameters, 'ShowAllGroupSession', permission=content['permission'])
+        form.Administrate.data = \
+            access.check_access(webParameters, 'Administrate', permission=content['permission'])
+
+        form.Connection.data = \
+            access.check_access(webParameters, 'Connection', permission=content['permission'])
+        form.FileTransfer.data = \
+            access.check_access(webParameters, 'FileTransfer', permission=content['permission'])
+        form.ConnectionService.data = \
+            access.check_access(webParameters, 'ConnectionService', permission=content['permission'])
+        form.ConnectionOnlyService.data = \
+            access.check_access(webParameters, 'ConnectionOnlyService', permission=content['permission'])
+        form.ConnectionIlo.data = \
+            access.check_access(webParameters, 'ConnectionIlo', permission=content['permission'])
+
+    return render_template(siteMap['administrate_group_show'],
+                           content=content,
+                           form=form,
+                           admin=access.check_access(webParameters, 'Administrate'))
 
 
 @app.route('/administrate/group/<group_id>/delete', methods=['GET', 'POST'])

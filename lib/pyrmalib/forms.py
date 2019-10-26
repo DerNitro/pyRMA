@@ -80,3 +80,24 @@ class AddGroup(FlaskForm):
     type = SelectField('Тип группы', choices=[(0, 'Пользователи'), (1, 'Хосты')])
 
     add_sub = SubmitField('Добавить')
+
+
+class ChangePermission(FlaskForm):
+    ShowHostInformation = BooleanField('Просмотр информации об узле')
+    EditHostInformation = BooleanField('Редактировать хосты')
+    EditDirectory = BooleanField('Создание|Редактирование директорий')
+    EditPrefixHost = BooleanField('Смена родителя для узлов')
+    ShowLogin = BooleanField('Отображение логина')
+    ShowPassword = BooleanField('Отображение пароля')
+    ShowAllSession = BooleanField('Просмотр сессии пользователя')
+    ShowAllGroupSession = BooleanField('Просмотр сессии своей группы')
+    Administrate = BooleanField('Режим "бога"')
+
+    Connection = BooleanField('Подключение к узлу')
+    FileTransfer = BooleanField('Передача файлов')
+    ConnectionService = BooleanField('Подключение сервисов')
+    ConnectionOnlyService = BooleanField('Подключение только сервисов')
+    ConnectionIlo = BooleanField('Подключение к интерфейсу управления сервером')
+
+    edit_sub = SubmitField('Изменить')
+
