@@ -1,0 +1,44 @@
+{% extends "main.html" %}
+{% from "menu.html" import show_menu %}
+{% from "search.html" import show_search %}
+
+{% block header %}
+{{ show_menu(Admin=admin, Active='administrate') }}
+{{ show_search() }}
+{{ super() }}
+{% endblock %}
+
+{% block content %}
+<hr>
+<a href="/administrate/users/add">Добавить</a>
+{% if content['users'] %}
+<table border="1">
+    <tbody>
+    <th>Login</th>
+    <th>Имя пользователя</th>
+    <th>Дата создания</th>
+    <th>Дата отключения</th>
+    <th>IP адрес</th>
+    <th>Email</th>
+    <th>Отключить</th>
+    {% for aaa_user, user in content['users'] %}
+    {% if user.disable or user.date_disable < cur_date %} <tr bgcolor="#ff807a"> {% else %} <tr> {% endif %}
+        <td><a href="/administrate/user/{{ aaa_user.uid }}"> {{ aaa_user.username }}</a></td>
+        <td>{{ user.full_name }}</td>
+        <td>{{ user.date_create }}</td>
+        <td>{{ user.date_disable }}</td>
+        <td>{{ user.ip }}</td>
+        <td>{{ user.email }}</td>
+        <td>
+            {% if user.disable or user.date_disable < cur_date %}
+            <a href="/administrate/user/{{ aaa_user.uid }}/enable"><button>Включить</button></a>
+            {% else %}
+            <a href="/administrate/user/{{ aaa_user.uid }}/disable"><button>Выключить</button></a>
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endblock %}

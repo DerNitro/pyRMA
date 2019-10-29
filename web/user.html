@@ -1,0 +1,97 @@
+{% extends "main.html" %}
+{% from "menu.html" import show_menu %}
+{% from "search.html" import show_search %}
+
+{% block header %}
+{{ show_menu(Admin=admin, Active='administrate') }}
+{{ show_search() }}
+{{ super() }}
+{% endblock %}
+
+{% block content %}
+<hr>
+<div class="addGroup">
+    <details>
+        <summary>Добавить в группу</summary>
+        <form action="/administrate/user/{{ content['aaa_user'].uid }}" method="POST">
+            <p>
+                {{form.name.label}}: {{ form.name() }} {{ form.add_sub() }}
+            </p>
+        </form>
+        <hr>
+    </details>
+</div>
+{% if content['user'].disable or content['user'].date_disable < cur_date %}
+<h3>Пользователь - {{content['user'].full_name}}(Отключен)</h3>
+{% else %}
+<h3>Пользователь - {{content['user'].full_name}} </h3>
+{% endif %}
+<table>
+    <tbody>
+    <tr>
+        <td><b>login</b></td>
+        <td>{{content['aaa_user'].username}}</td>
+    </tr>
+    <tr>
+        <td><b>password</b></td>
+        <td><a href="/administrate/user/{{ content['aaa_user'].uid }}/change_password"><button>Сменить пароль</button></a></td>
+    </tr>
+    <tr>
+        <td><b>email</b></td>
+        <td>{{content['user'].email}}</td>
+    </tr>
+    <tr>
+        <td><b>ip</b></td>
+        <td>{{content['user'].ip}}</td>
+    </tr>
+    <tr>
+        <td><b>Группы</b></td>
+        <td>{{content['group']}}</td>
+    </tr>
+    </tbody>
+</table>
+<hr>
+<h3>Последние действия</h3>
+{% for action in content['action'] %}
+<table border="1" width="95%">
+    <tbody>
+    <tr>
+        <td width="15%">{{ action.date }}</td>
+        <td width="70%">{{ action.message }}</td>
+    </tr>
+    </tbody>
+</table>
+{% endfor %}
+<hr>
+<h3>Последние подключения</h3>
+<table border="1" width="95%">
+    <tbody>
+    <tr>
+        <th>Хост</th>
+        <th>IP</th>
+        <th>Подключение</th>
+        <th>Статус</th>
+        <th>Завершение</th>
+        <th>Дата Начала</th>
+        <th>Дата завершения</th>
+        <th>Ошибка</th>
+    </tr>
+{% for connection, host, type in content['connection'] %}
+    <tr>
+        <td>{{host.name}}</td>
+        <td>{{host.ip}}</td>
+        <td>{{type.name}}</td>
+        {% if connection.status == 0 %}<td>Создание подключения</td>{% endif %}
+        {% if connection.status == 1 %}<td>Подключен</td>{% endif %}
+        {% if connection.status == 2 %}<td>Отключен</td>{% endif %}
+        {% if connection.termination == 0 %}<td>Нормальное завершение</td>{% endif %}
+        {% if connection.termination == 1 %}<td>Принудительное завершение</td>{% endif %}
+        {% if connection.termination == 2 %}<td>Ошибка</td>{% endif %}
+        <td>{{connection.date_start}}</td>
+        <td>{{connection.date_end}}</td>
+        <td>{{connection.error}}</td>
+    </tr>
+{% endfor %}
+    </tbody>
+</table>
+{% endblock %}

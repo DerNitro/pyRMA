@@ -101,3 +101,7 @@ class ChangePermission(FlaskForm):
 
     edit_sub = SubmitField('Изменить')
 
+
+class AddUserGroup(FlaskForm):
+    name = SelectField('Имя группы')
+    add_sub = SubmitField('Добавить')

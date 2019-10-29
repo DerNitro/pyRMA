@@ -373,6 +373,65 @@ def get_group_host(param: parameters.WebParameters):
     return group
 
 
+def get_users(param: parameters.WebParameters):
+    content = {}
+    with schema.db_select(param.engine) as db:
+        users = db.query(schema.AAAUser, schema.User)\
+            .join(schema.User, schema.AAAUser.uid == schema.User.login)\
+            .order_by(schema.User.full_name).all()
+        content['users'] = users
+    return content
+
+
+def get_user(param: parameters.WebParameters, uid):
+    content = {}
+    with schema.db_select(param.engine) as db:
+        content['aaa_user'], content['user'] = db.query(schema.AAAUser, schema.User)\
+            .join(schema.User, schema.AAAUser.uid == schema.User.login)\
+            .order_by(schema.User.full_name)\
+            .filter(schema.AAAUser.uid == uid)\
+            .one()
+        content['action'] = db.query(schema.Action)\
+            .filter(schema.Action.user == uid)\
+            .order_by(schema.Action.date.desc()).limit(10).all()
+        content['connection'] = db.query(schema.Connection, schema.Host, schema.ConnectionType) \
+            .join(schema.Host, schema.Host.id == schema.Connection.host) \
+            .join(schema.ConnectionType, schema.ConnectionType.id == schema.Connection.connection_type) \
+            .filter(schema.Connection.user == uid) \
+            .order_by(schema.Connection.date_start.desc()).limit(10).all()
+        group = db.query(schema.GroupUser, schema.Group)\
+            .join(schema.Group, schema.Group.id == schema.GroupUser.group)\
+            .filter(schema.GroupUser.user == uid).all()
+        content['group'] = ", ".join([t.name for i, t in group])
+    return content
+
+
+def add_user_group(param: parameters.WebParameters, uid, gid):
+    with schema.db_select(param.engine) as db:
+        user_group = db.query(schema.GroupUser)\
+            .filter(schema.GroupUser.user == uid, schema.GroupUser.group == gid).all()
+        if len(user_group) > 0:
+            return False
+    with schema.db_edit(param.engine) as db:
+        r = schema.GroupUser(
+            user=uid,
+            group=gid
+        )
+        db.add(r)
+        db.flush()
+        db.refresh(r)
+
+        action = schema.Action(
+            user=param.user_info.login,
+            action_type=53,
+            date=datetime.datetime.now(),
+            message="Добавлена группа: {group.group} - user={group.user}({group})".format(group=r)
+        )
+        db.add(action)
+        db.flush()
+    return True
+
+
 def set_group_permission(param: parameters.WebParameters, group_id, form: forms.ChangePermission):
     user_access = access.UserAccess(0)
     user_access.change('ShowHostInformation', set_access=form.ShowHostInformation.data)

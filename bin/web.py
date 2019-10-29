@@ -17,6 +17,7 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 """
+import datetime
 import json
 
 from flask import Flask, render_template, request, redirect, session, url_for
@@ -62,7 +63,9 @@ siteMap = {'index': 'index.html',
            'route': 'route.html',
            'admin_group': 'admin_group.html',
            'administrate_group_delete': 'del_group.html',
-           'administrate_group_show': 'group.html'}
+           'administrate_group_show': 'group.html',
+           'administrate_users': 'users.html',
+           'administrate_user': 'user.html'}
 
 
 def check_auth(username, password, client_ip):
@@ -139,6 +142,7 @@ def route(host_id):
 
     return render_template(siteMap['route'],
                            form=form,
+                           admin=access.check_access(webParameters, 'Administrate'),
                            host_id=host_id,
                            routes=weblib.get_routes(webParameters, host_id))
 
@@ -531,6 +535,30 @@ def administrate_group_delete(group_id):
     return render_template(siteMap['administrate_group_delete'],
                            admin=access.check_access(webParameters, 'Administrate'),
                            group_id=group_id)
+
+
+@app.route('/administrate/users')
+@weblib.authorization(session, request, webParameters)
+def administrate_users():
+    content = weblib.get_users(webParameters)
+    return render_template(siteMap['administrate_users'],
+                           content=content,
+                           cur_date=datetime.datetime.now(),
+                           admin=access.check_access(webParameters, 'Administrate'))
+
+
+@app.route('/administrate/user/<uid>', methods=['GET', 'POST'])
+@weblib.authorization(session, request, webParameters)
+def administrate_user(uid):
+    form = forms.AddUserGroup()
+    form.name.choices = [(t.id, t.name) for t in weblib.get_group_user(webParameters)]
+    if request.method == 'POST' and form.add_sub.data:
+        weblib.add_user_group(webParameters, uid, form.name.data)
+    return render_template(siteMap['administrate_user'],
+                           content=weblib.get_user(webParameters, uid),
+                           form=form,
+                           cur_date=datetime.datetime.now(),
+                           admin=access.check_access(webParameters, 'Administrate'))
 
 
 @app.route('/registration', methods=['GET', 'POST'])
