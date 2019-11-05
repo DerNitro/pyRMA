@@ -34,7 +34,7 @@
 {% if group_user %}
 <div class="group_user">
     <h3>Группы пользоватлей</h3>
-<table>
+<table border="1">
     {% for group in group_user %}
     <tr>
         <td style="width: 450px;"><a href="/administrate/group/{{ group.id }}"> {{ group.name }} </a></td>
@@ -47,7 +47,7 @@
 {% if group_host %}
 <div class="group_host">
     <h3>Группы узлов</h3>
-<table>
+<table border="1">
     {% for group in group_host %}
     <tr>
         <td style="width: 450px;"><a href="/administrate/group/{{ group.id }}"> {{ group.name }} </a></td>

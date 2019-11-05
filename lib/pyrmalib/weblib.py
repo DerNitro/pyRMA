@@ -107,6 +107,8 @@ def get_content_host(param: parameters.WebParameters, host_id):
     content['ip'] = host.ip
     content['describe'] = host.describe
     content['ilo'] = host.ilo
+    content['group'] = ", ".join([t.name for i, t in get_group_list(param, host=host_id)])
+    content['parent_group'] = ", ".join([t.name for i, t in get_group_list(param, host=host.parent)])
     if access.check_access(param, 'ShowLogin', h_object=host) \
             or access.check_access(param, 'EditHostInformation', h_object=host)\
             or access.check_access(param, 'Administrate', h_object=host):
@@ -192,7 +194,7 @@ def get_host(param: parameters.WebParameters, host_id=None, name=None,  parent=0
     :param param: WebParameters
     :param name: schema.Host.name
     :param parent: schema.Host.parent
-    :return: schema.Host
+    :return: type: schema.Host
     """
     if host_id:
         with schema.db_select(param.engine) as db:
@@ -373,6 +375,22 @@ def get_group_host(param: parameters.WebParameters):
     return group
 
 
+def get_group_list(param: parameters.WebParameters, host=False, user=False):
+    if host:
+        with schema.db_select(param.engine) as db:
+            group = db.query(schema.GroupHost, schema.Group) \
+                .join(schema.Group, schema.Group.id == schema.GroupHost.group) \
+                .filter(schema.GroupHost.host == host).all()
+    elif user:
+        with schema.db_select(param.engine) as db:
+            group = db.query(schema.GroupUser, schema.Group) \
+                .join(schema.Group, schema.Group.id == schema.GroupUser.group) \
+                .filter(schema.GroupUser.user == user).all()
+    else:
+        group = []
+    return group
+
+
 def get_users(param: parameters.WebParameters):
     content = {}
     with schema.db_select(param.engine) as db:
@@ -399,10 +417,7 @@ def get_user(param: parameters.WebParameters, uid):
             .join(schema.ConnectionType, schema.ConnectionType.id == schema.Connection.connection_type) \
             .filter(schema.Connection.user == uid) \
             .order_by(schema.Connection.date_start.desc()).limit(10).all()
-        group = db.query(schema.GroupUser, schema.Group)\
-            .join(schema.Group, schema.Group.id == schema.GroupUser.group)\
-            .filter(schema.GroupUser.user == uid).all()
-        content['group'] = ", ".join([t.name for i, t in group])
+    content['group'] = ", ".join([t.name for i, t in get_group_list(param, user=uid)])
     return content
 
 
@@ -426,6 +441,32 @@ def add_user_group(param: parameters.WebParameters, uid, gid):
             action_type=53,
             date=datetime.datetime.now(),
             message="Добавлена группа: {group.group} - user={group.user}({group})".format(group=r)
+        )
+        db.add(action)
+        db.flush()
+    return True
+
+
+def add_host_group(param: parameters.WebParameters, host_id, gid):
+    with schema.db_select(param.engine) as db:
+        user_group = db.query(schema.GroupUser)\
+            .filter(schema.GroupHost.host == host_id, schema.GroupHost.group == gid).all()
+        if len(user_group) > 0:
+            return False
+    with schema.db_edit(param.engine) as db:
+        r = schema.GroupHost(
+            host=host_id,
+            group=gid
+        )
+        db.add(r)
+        db.flush()
+        db.refresh(r)
+
+        action = schema.Action(
+            user=param.user_info.login,
+            action_type=54,
+            date=datetime.datetime.now(),
+            message="Добавлена группа: {group.group} - host={group.host}({group})".format(group=r)
         )
         db.add(action)
         db.flush()
@@ -854,6 +895,34 @@ def del_group(param: parameters.WebParameters, group=None):
         db.add(action)
         db.flush()
 
+    return True
+
+
+def del_group_user(param: parameters.WebParameters, group=None, user=None):
+    with schema.db_edit(param.engine) as db:
+        db.query(schema.GroupUser).filter(schema.GroupUser.group == group, schema.GroupUser.user == user).delete()
+        action = schema.Action(
+            user=param.user_info.login,
+            action_type=55,
+            date=datetime.datetime.now(),
+            message="Удаление группы у пользователя {}: id={}".format(user, group)
+        )
+        db.add(action)
+        db.flush()
+    return True
+
+
+def del_group_host(param: parameters.WebParameters, group=None, host=None):
+    with schema.db_edit(param.engine) as db:
+        db.query(schema.GroupHost).filter(schema.GroupHost.group == group, schema.GroupHost.host == host).delete()
+        action = schema.Action(
+            user=param.user_info.login,
+            action_type=56,
+            date=datetime.datetime.now(),
+            message="Удаление группы у хоста {}: id={}".format(host, group)
+        )
+        db.add(action)
+        db.flush()
     return True
 
 

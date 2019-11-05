@@ -27,8 +27,20 @@
 </div>
 <hr>
 {% endif %}
-{{ path }}
+{% if admin and directory_id > 0 %}
+<div class="addGroup">
+    <details>
+        <summary>Добавить в группу</summary>
+        <form action="/administrate/host/{{ directory_id }}" method="POST">
+            <p>
+                {{form.name.label}}: {{ form.name() }} {{ form.add_sub() }}
+            </p>
+        </form>
+        Установленные группы: {{ group }}
+    </details>
+</div>
 <hr>
+{% endif %}
 {% if note %}
 <div class="note_folder">
     <details>

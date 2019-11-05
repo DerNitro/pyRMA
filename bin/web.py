@@ -151,8 +151,10 @@ def route(host_id):
 @app.route('/hosts/<directory_id>')
 @weblib.authorization(session, request, webParameters)
 def hosts(directory_id=None):
+    form = forms.AddHostGroup()
+    form.name.choices = [(t.id, t.name) for t in weblib.get_group_host(webParameters)]
     if directory_id:
-        directory_id = directory_id
+        directory_id = int(directory_id)
         edit_host_information = access.check_access(webParameters, 'EditHostInformation',
                                                     h_object=weblib.get_host(webParameters, host_id=directory_id))
         edit_directory = access.check_access(webParameters, 'EditDirectory',
@@ -160,12 +162,14 @@ def hosts(directory_id=None):
         admin = access.check_access(webParameters, 'Administrate',
                                     h_object=weblib.get_host(webParameters, host_id=directory_id))
         folder = weblib.get_host(webParameters, host_id=directory_id)
+        group = ", ".join([t.name for i, t in weblib.get_group_list(webParameters, host=directory_id)])
     else:
         directory_id = 0
         edit_host_information = access.check_access(webParameters, 'EditHostInformation')
         edit_directory = access.check_access(webParameters, 'EditDirectory')
         admin = access.check_access(webParameters, 'Administrate')
         folder = None
+        group = None
     host_list = weblib.get_host_list(webParameters, directory_id)
     if folder and folder.note:
         note = json.loads(folder.note)
@@ -175,6 +179,8 @@ def hosts(directory_id=None):
                            admin=admin,
                            host_list=host_list,
                            note=note,
+                           form=form,
+                           group=group,
                            directory_id=directory_id,
                            EditHostInformation=edit_host_information,
                            EditDirectory=edit_directory)
@@ -388,6 +394,8 @@ def edit_host(host_id):
 @app.route('/host/<host_id>')
 @weblib.authorization(session, request, webParameters)
 def host(host_id):
+    form = forms.AddHostGroup()
+    form.name.choices = [(t.id, t.name) for t in weblib.get_group_host(webParameters)]
     if access.check_access(webParameters,
                            'ShowHostInformation',
                            h_object=weblib.get_host(webParameters, host_id=host_id)):
@@ -397,7 +405,8 @@ def host(host_id):
                                                                        'EditHostInformation',
                                                                        h_object=weblib.get_host(webParameters,
                                                                                                 host_id=host_id)),
-                               content=weblib.get_content_host(webParameters, host_id)
+                               content=weblib.get_content_host(webParameters, host_id),
+                               form=form
                                )
     else:
         return render_template(siteMap['access_denied'])
@@ -559,6 +568,29 @@ def administrate_user(uid):
                            form=form,
                            cur_date=datetime.datetime.now(),
                            admin=access.check_access(webParameters, 'Administrate'))
+
+
+@app.route('/administrate/user/<user>/group/<group>/delete')
+@weblib.authorization(session, request, webParameters)
+def administrate_user_group_delete(user, group):
+    weblib.del_group_user(webParameters, group=group, user=user)
+    return redirect(request.referrer)
+
+
+@app.route('/administrate/host/<host_id>/group/<group>/delete')
+@weblib.authorization(session, request, webParameters)
+def administrate_host_group_delete(host_id, group):
+    weblib.del_group_host(webParameters, group=group, host=host_id)
+    return redirect(request.referrer)
+
+
+@app.route('/administrate/host/<host_id>', methods=['POST'])
+@weblib.authorization(session, request, webParameters)
+def administrate_host(host_id):
+    form = forms.AddHostGroup()
+    if request.method == 'POST' and form.add_sub.data:
+        weblib.add_host_group(webParameters, host_id, form.name.data)
+    return redirect(request.referrer)
 
 
 @app.route('/registration', methods=['GET', 'POST'])

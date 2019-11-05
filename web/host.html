@@ -19,10 +19,22 @@
     </ul>
 </div>
 {% endif %}
-{{ path }}
+{% if admin%}
 <hr>
+<div class="addGroup">
+    <details>
+        <summary>Добавить в группу</summary>
+        <form action="/administrate/host/{{ content['id'] }}" method="POST">
+            <p>
+                {{form.name.label}}: {{ form.name() }} {{ form.add_sub() }}
+            </p>
+        </form>
+    </details>
+</div>
+<hr>
+{% endif %}
 <div class="host">
-<h3>Хост - {{ content['name'] }} {% if content['parent'] %}({{ content['parent'] }}){% endif %} {% if content['proxy'] %} - proxy{% endif %}</h3>
+<h3>{{ content['name'] }} {% if content['parent'] %}({{ content['parent'] }}){% endif %}</h3>
 <table style="width: 700px;">
 <tbody>
 <tr>
@@ -32,6 +44,10 @@
 <tr>
 <td style="width: 150px;">Описание</td>
 <td style="width: 550px;">{{ content['describe'] }}</td>
+</tr>
+<tr>
+<td style="width: 150px;">Группы</td>
+<td style="width: 550px;">{{ content['group'] }} ({{content['parent_group']}})</td>
 </tr>
 <tr>
 <td style="width: 150px;">IPMI</td>
@@ -45,6 +61,12 @@
 <td style="width: 150px;">Password</td>
 <td style="width: 550px;">{{ content['default_password'] }}</td>
 </tr>
+{% if content['proxy'] %}
+<tr>
+    <td style="width: 150px;">Proxy</td>
+    <td style="width: 550px;">Вкл</td>
+</tr>
+{% endif %}
 </tbody>
 </table>
 {% if content['services'] %}

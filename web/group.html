@@ -119,27 +119,27 @@
 {% endif %}
 
 {% if content['group'].type == 0 %}
-<table>
+<table width="90%" border="1">
 {% for group, user in content['users'] %}
     <tr>
-        <td>
+        <td width="80%">
             {{ user.full_name }}
         </td>
         <td>
-            <a href="/"><button>Удалить</button></a>
+            <a href="/administrate/user/{{ user.login }}/group/{{ group.group }}/delete"><button>Удалить</button></a>
         </td>
     </tr>
 {% endfor %}
 </table>
 {% else %}
-<table>
+<table width="90%" border="1">
 {% for group, host in content['hosts'] %}
     <tr>
         <td>
             {{ host.name }}
         </td>
         <td>
-            <a href="/"><button>Удалить</button></a>
+            <a href="/administrate/host/{{ host.id }}/group/{{ group.group }}/delete"><button>Удалить</button></a>
         </td>
     </tr>
 {% endfor %}
