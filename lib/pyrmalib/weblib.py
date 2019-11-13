@@ -84,11 +84,11 @@ def check_ip_net(ip, network):
     return utils.check_ip_network(ip, network)
 
 
-def get_access_request(engine, user):
+def get_access_request(param: parameters.WebParameters, user):
     return []
 
 
-def get_connection(engine, user):
+def get_connection(param: parameters.WebParameters, user):
     return []
 
 
@@ -545,6 +545,66 @@ def user_info(username, engine):
             return False
 
     return aaa, user
+
+
+def user_disable(param: parameters.WebParameters, uid, disable=False, enable=False):
+    """
+    Включение/Отключение учетных записей.
+    :param param:   WebParameters
+    :param uid: User ID
+    :param disable: if True - Disable user
+    :param enable: if True - Enable user
+    :return: True
+    """
+    with schema.db_edit(param.engine) as db:
+        user = db.query(schema.User).filter(schema.User.login == uid).one()
+        if disable:
+            user.disable = True
+            user.date_disable = datetime.datetime.now()
+            status = 'Отключение'
+            status_id = 57
+            db.flush()
+        if enable:
+            user.disable = False
+            user.date_disable = datetime.datetime.now() + datetime.timedelta(days=365)
+            status = 'Включение'
+            status_id = 58
+            db.flush()
+
+        action = schema.Action(
+            user=param.user_info.login,
+            action_type=status_id,
+            date=datetime.datetime.now(),
+            message="{} пользователя: {user.full_name}({user})".format(status, user=user)
+        )
+        db.add(action)
+        db.flush()
+
+    return True
+
+
+def user_change_password(param: parameters.WebParameters, uid, password):
+    """
+    Смена пароля
+    :param param:
+    :param uid:
+    :param password:
+    :return:
+    """
+    with schema.db_edit(param.engine) as db:
+        user = db.query(schema.User).filter(schema.User.login == uid).one()
+        aaa = db.query(schema.AAAUser).filter(schema.AAAUser.uid == uid).one()
+        aaa.password = hashlib.md5(str(password).encode()).hexdigest()
+        action = schema.Action(
+            user=param.user_info.login,
+            action_type=59,
+            date=datetime.datetime.now(),
+            message="Смена пароля для пользователя: {user.full_name}".format(user=user)
+        )
+        db.add(action)
+        db.flush()
+
+    return True
 
 
 def restore_password(username, engine, request):

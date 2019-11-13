@@ -23,9 +23,15 @@
 """
 
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField, TextAreaField, SelectField, IntegerField, BooleanField
+from wtforms import StringField, SubmitField, TextAreaField, SelectField, IntegerField, BooleanField, PasswordField
 from flask_wtf.file import FileField, FileRequired
-from wtforms.validators import DataRequired, IPAddress, NumberRange
+from wtforms.validators import DataRequired, IPAddress, NumberRange, EqualTo
+
+
+class Login(FlaskForm):
+    username = StringField('Имя пользователя', validators=[DataRequired()], )
+    password = PasswordField('Пароль', validators=[DataRequired()])
+    submit_login = SubmitField('Войти')
 
 
 class EditFolder(FlaskForm):
@@ -110,3 +116,13 @@ class AddUserGroup(FlaskForm):
 class AddHostGroup(FlaskForm):
     name = SelectField('Имя группы')
     add_sub = SubmitField('Добавить')
+
+
+class UserChangePassword(FlaskForm):
+    password = PasswordField('Пароль', validators=[
+        EqualTo('confirm', message='Введеные пароли не совпадают!!!'),
+        DataRequired()
+    ])
+    confirm = PasswordField('Проверка пароля')
+
+    change_password = SubmitField('Изменить')

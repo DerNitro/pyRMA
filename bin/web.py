@@ -21,6 +21,7 @@ import datetime
 import json
 
 from flask import Flask, render_template, request, redirect, session, url_for
+from flask_wtf.csrf import CSRFProtect
 from pyrmalib import schema, parameters, weblib, log, access, forms, error as rma_error
 import os.path
 from sqlalchemy import create_engine
@@ -40,6 +41,8 @@ app = Flask(__name__,
             static_folder=os.path.join(webParameters.template, 'static'))
 app.secret_key = os.urandom(64)
 app.debug = True
+csrf = CSRFProtect()
+csrf.init_app(app)
 
 logger = log.Log("Web_syslog", **webParameters.log_param)
 
@@ -65,7 +68,8 @@ siteMap = {'index': 'index.html',
            'administrate_group_delete': 'del_group.html',
            'administrate_group_show': 'group.html',
            'administrate_users': 'users.html',
-           'administrate_user': 'user.html'}
+           'administrate_user': 'user.html',
+           'change_password': 'change_password.html'}
 
 
 def check_auth(username, password, client_ip):
@@ -100,7 +104,8 @@ def search():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     error = None
-    if request.method == 'POST':
+    form = forms.Login(meta={'csrf_context': str(request.remote_addr)})
+    if request.method == 'POST' and form.validate_on_submit():
         if weblib.login_access(request.form['username'],
                                request.form['password'],
                                request.remote_addr,
@@ -109,7 +114,7 @@ def login():
             return redirect(url_for('root'))
         else:
             error = 'Не правильный логин|пароль или учетная запись заблокирована!!!'
-    return render_template(siteMap['login'], error=error)
+    return render_template(siteMap['login'], error=error, form=form)
 
 
 @app.route('/logout')
@@ -553,6 +558,36 @@ def administrate_users():
     return render_template(siteMap['administrate_users'],
                            content=content,
                            cur_date=datetime.datetime.now(),
+                           admin=access.check_access(webParameters, 'Administrate'))
+
+
+@app.route('/administrate/user/<uid>/enable')
+@weblib.authorization(session, request, webParameters)
+def administrate_user_enable(uid):
+    weblib.user_disable(webParameters, uid, enable=True)
+    return redirect(request.referrer)
+
+
+@app.route('/administrate/user/<uid>/disable')
+@weblib.authorization(session, request, webParameters)
+def administrate_user_disable(uid):
+    weblib.user_disable(webParameters, uid, disable=True)
+    return redirect(request.referrer)
+
+
+@app.route('/administrate/user/<uid>/change_password', methods=['GET', 'POST'])
+@weblib.authorization(session, request, webParameters)
+def administrate_user_change_password(uid):
+    form = forms.UserChangePassword()
+    user_info = weblib.get_user(webParameters, uid)['user']
+    if request.method == 'POST' and form.validate_on_submit():
+        weblib.user_change_password(webParameters, uid, form.password.data)
+        return redirect(url_for('administrate_user', uid=uid))
+    print(form.is_submitted(), form.validate())
+    print(form.errors)
+    return render_template(siteMap['change_password'],
+                           form=form,
+                           user=user_info,
                            admin=access.check_access(webParameters, 'Administrate'))
 
 
