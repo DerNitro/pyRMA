@@ -4,7 +4,7 @@
 
 {% block header %}
 {{ show_menu(Admin=admin, Active='host') }}
-{{ show_search() }}
+{{ show_search(search) }}
 {{ super() }}
 {% endblock %}
 
@@ -20,6 +20,7 @@
 <div class="addFolderForm">
     <h3>Добавить директорию</h3>
     <form action="/hosts/{{ directory_id }}/add_folder" method="POST" name="add_folder">
+        {{ form.csrf_token }}
         <p>
             {{ form.name.label }}<br>
             {{ form.name(size=32) }}

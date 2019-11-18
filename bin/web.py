@@ -25,7 +25,6 @@ from flask_wtf.csrf import CSRFProtect
 from pyrmalib import schema, parameters, weblib, log, access, forms, error as rma_error
 import os.path
 from sqlalchemy import create_engine
-import validators
 from werkzeug.utils import secure_filename
 
 webParameters = parameters.WebParameters()
@@ -69,7 +68,8 @@ siteMap = {'index': 'index.html',
            'administrate_group_show': 'group.html',
            'administrate_users': 'users.html',
            'administrate_user': 'user.html',
-           'change_password': 'change_password.html'}
+           'change_password': 'change_password.html',
+           'logs': 'action.html'}
 
 
 def check_auth(username, password, client_ip):
@@ -79,26 +79,30 @@ def check_auth(username, password, client_ip):
 @app.route('/', methods=['GET'])
 @weblib.authorization(session, request, webParameters)
 def root():
+    search_field = forms.Search()
     if access.check_access(webParameters, 'Administrate'):
         content = weblib.get_admin_content_dashboard(webParameters)
     else:
         content = weblib.get_user_content_dashboard(webParameters)
     return render_template(siteMap['index'],
                            admin=access.check_access(webParameters, 'Administrate'),
-                           content=content)
+                           content=content,
+                           search=search_field)
 
 
 @app.route('/search', methods=['POST'])
 @weblib.authorization(session, request, webParameters)
 def search():
-    query = request.form['search']
+    form = forms.Search()
+    query = form.search.data
     host_list = weblib.search(webParameters, query)
     admin = access.check_access(webParameters, 'Administrate')
 
     return render_template(siteMap['hosts'],
                            admin=admin,
                            host_list=host_list,
-                           Search=query)
+                           Search=query,
+                           search=form)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -126,13 +130,44 @@ def logout():
 @app.route('/settings')
 @weblib.authorization(session, request, webParameters)
 def settings():
-    return render_template(siteMap['settings'], admin=access.check_access(webParameters, 'Administrate'))
+    search_field = forms.Search()
+    return render_template(
+        siteMap['settings'],
+        admin=access.check_access(webParameters, 'Administrate'),
+        search=search_field
+    )
+
+
+@app.route('/administrate/logs', methods=['GET', 'POST'])
+@weblib.authorization(session, request, webParameters)
+def logs(date=None):
+    search_field = forms.Search()
+    form = forms.ShowLog()
+    form.user.choices = [(0, "Все")]
+    for aaa, user in weblib.get_users(webParameters)['users']:
+        form.user.choices.append((user.login, user.full_name))
+
+    date = datetime.date.today()
+    user = 0
+    if request.method == 'POST' and form.validate_on_submit():
+        date = form.date.data
+        user = form.user.data
+    action_list = weblib.get_action(webParameters, user, date)
+
+    return render_template(
+        siteMap['logs'],
+        admin=access.check_access(webParameters, 'Administrate'),
+        search=search_field,
+        form=form,
+        action_list=action_list
+    )
 
 
 @app.route('/route/<host_id>', methods=['GET', 'POST'])
 @weblib.authorization(session, request, webParameters)
 def route(host_id):
     form = forms.AddRoute()
+    search_field = forms.Search()
     form.route.choices = weblib.get_route_host(webParameters)
 
     if request.method == 'POST' and form.add_sub.data:
@@ -149,7 +184,8 @@ def route(host_id):
                            form=form,
                            admin=access.check_access(webParameters, 'Administrate'),
                            host_id=host_id,
-                           routes=weblib.get_routes(webParameters, host_id))
+                           routes=weblib.get_routes(webParameters, host_id),
+                           search=search_field)
 
 
 @app.route('/hosts')
@@ -157,6 +193,7 @@ def route(host_id):
 @weblib.authorization(session, request, webParameters)
 def hosts(directory_id=None):
     form = forms.AddHostGroup()
+    search_field = forms.Search()
     form.name.choices = [(t.id, t.name) for t in weblib.get_group_host(webParameters)]
     if directory_id:
         directory_id = int(directory_id)
@@ -185,6 +222,7 @@ def hosts(directory_id=None):
                            host_list=host_list,
                            note=note,
                            form=form,
+                           search=search_field,
                            group=group,
                            directory_id=directory_id,
                            EditHostInformation=edit_host_information,
@@ -195,6 +233,7 @@ def hosts(directory_id=None):
 @weblib.authorization(session, request, webParameters)
 def add_folder(directory_id):
     form = forms.EditFolder()
+    search_field = forms.Search()
     error = None
     status = None
     admin = access.check_access(webParameters, 'Administrate',
@@ -223,13 +262,15 @@ def add_folder(directory_id):
                            directory_id=directory_id,
                            form=form,
                            error=error,
-                           status=status)
+                           status=status,
+                           search=search_field)
 
 
 @app.route('/hosts/<directory_id>/edit_folder', methods=['GET', 'POST'])
 @weblib.authorization(session, request, webParameters)
 def edit_folder(directory_id):
     form = forms.EditFolder()
+    search_field = forms.Search()
     h = weblib.get_host(webParameters, host_id=directory_id)
     error = None
     status = None
@@ -271,13 +312,15 @@ def edit_folder(directory_id):
                            directory_id=directory_id,
                            error=error,
                            status=status,
-                           form=form)
+                           form=form,
+                           search=search_field)
 
 
 @app.route('/hosts/<directory_id>/add_host', methods=['GET', 'POST'])
 @weblib.authorization(session, request, webParameters)
 def add_host(directory_id):
     form = forms.EditHost()
+    search_field = forms.Search()
     folder = weblib.get_host(webParameters, host_id=directory_id)
     form.connection_type.choices = weblib.get_connection_type(webParameters)
     form.file_transfer_type.choices = weblib.get_file_transfer_type(webParameters)
@@ -327,12 +370,14 @@ def add_host(directory_id):
                            directory_id=directory_id,
                            error=error,
                            status=status,
-                           form=form)
+                           form=form,
+                           search=search_field)
 
 
 @app.route('/host/<host_id>/edit', methods=['GET', 'POST'])
 @weblib.authorization(session, request, webParameters)
 def edit_host(host_id):
+    search_field = forms.Search()
     form = forms.EditHost()
     h = weblib.get_host(webParameters, host_id=host_id)
     form.connection_type.choices = weblib.get_connection_type(webParameters)
@@ -393,12 +438,14 @@ def edit_host(host_id):
                            host_id=h.id,
                            error=error,
                            status=status,
-                           form=form)
+                           form=form,
+                           search=search_field)
 
 
 @app.route('/host/<host_id>')
 @weblib.authorization(session, request, webParameters)
 def host(host_id):
+    search_field = forms.Search()
     form = forms.AddHostGroup()
     form.name.choices = [(t.id, t.name) for t in weblib.get_group_host(webParameters)]
     if access.check_access(webParameters,
@@ -411,7 +458,8 @@ def host(host_id):
                                                                        h_object=weblib.get_host(webParameters,
                                                                                                 host_id=host_id)),
                                content=weblib.get_content_host(webParameters, host_id),
-                               form=form
+                               form=form,
+                               search=search_field
                                )
     else:
         return render_template(siteMap['access_denied'])
@@ -420,18 +468,21 @@ def host(host_id):
 @app.route('/delete_service/<service_id>', methods=['GET', 'POST'])
 @weblib.authorization(session, request, webParameters)
 def del_service(service_id):
+    search_field = forms.Search()
     service = weblib.get_service(webParameters, service=service_id)
     if request.method == 'POST':
         weblib.del_service(webParameters, service=service_id)
         return redirect('/host/{service.host}'.format(service=service))
     return render_template(siteMap['delete_service'],
                            admin=access.check_access(webParameters, 'Administrate'),
-                           service=service)
+                           service=service,
+                           search=search_field)
 
 
 @app.route('/host/<host_id>/add_service', methods=['GET', 'POST'])
 @weblib.authorization(session, request, webParameters)
 def add_service(host_id):
+    search_field = forms.Search()
     edit_host_information = access.check_access(webParameters, 'EditHostInformation',
                                                 h_object=weblib.get_host(webParameters, host_id=host_id))
     admin = access.check_access(webParameters, 'Administrate',
@@ -465,7 +516,8 @@ def add_service(host_id):
                                error=error,
                                status=status,
                                admin=admin,
-                               host_id=host_id)
+                               host_id=host_id,
+                               search=search_field)
     else:
         return render_template(siteMap['access_denied'])
 
@@ -473,12 +525,18 @@ def add_service(host_id):
 @app.route('/administrate')
 @weblib.authorization(session, request, webParameters)
 def administrate():
-    return render_template(siteMap['administrate'], admin=access.check_access(webParameters, 'Administrate'))
+    search_field = forms.Search()
+    return render_template(
+        siteMap['administrate'],
+        admin=access.check_access(webParameters, 'Administrate'),
+        search=search_field
+    )
 
 
 @app.route('/administrate/group', methods=['GET', 'POST'])
 @weblib.authorization(session, request, webParameters)
 def administrate_group():
+    search_field = forms.Search()
     form = forms.AddGroup()
     if request.method == 'POST' and form.add_sub.data:
         g = {
@@ -491,12 +549,14 @@ def administrate_group():
                            admin=access.check_access(webParameters, 'Administrate'),
                            form=form,
                            group_user=weblib.get_group_user(webParameters),
-                           group_host=weblib.get_group_host(webParameters))
+                           group_host=weblib.get_group_host(webParameters),
+                           search=search_field)
 
 
 @app.route('/administrate/group/<group_id>', methods=['GET', 'POST'])
 @weblib.authorization(session, request, webParameters)
 def administrate_group_show(group_id):
+    search_field = forms.Search()
     form = forms.ChangePermission()
     if request.method == 'POST' and form.edit_sub.data:
         weblib.set_group_permission(webParameters, group_id, form)
@@ -537,28 +597,33 @@ def administrate_group_show(group_id):
     return render_template(siteMap['administrate_group_show'],
                            content=content,
                            form=form,
-                           admin=access.check_access(webParameters, 'Administrate'))
+                           admin=access.check_access(webParameters, 'Administrate'),
+                           search=search_field)
 
 
 @app.route('/administrate/group/<group_id>/delete', methods=['GET', 'POST'])
 @weblib.authorization(session, request, webParameters)
 def administrate_group_delete(group_id):
+    search_field = forms.Search()
     if request.method == 'POST':
         weblib.del_group(webParameters, group=group_id)
         return redirect('/administrate/group')
     return render_template(siteMap['administrate_group_delete'],
                            admin=access.check_access(webParameters, 'Administrate'),
-                           group_id=group_id)
+                           group_id=group_id,
+                           search=search_field)
 
 
 @app.route('/administrate/users')
 @weblib.authorization(session, request, webParameters)
 def administrate_users():
+    search_field = forms.Search()
     content = weblib.get_users(webParameters)
     return render_template(siteMap['administrate_users'],
                            content=content,
                            cur_date=datetime.datetime.now(),
-                           admin=access.check_access(webParameters, 'Administrate'))
+                           admin=access.check_access(webParameters, 'Administrate'),
+                           search=search_field)
 
 
 @app.route('/administrate/user/<uid>/enable')
@@ -578,6 +643,7 @@ def administrate_user_disable(uid):
 @app.route('/administrate/user/<uid>/change_password', methods=['GET', 'POST'])
 @weblib.authorization(session, request, webParameters)
 def administrate_user_change_password(uid):
+    search_field = forms.Search()
     form = forms.UserChangePassword()
     user_info = weblib.get_user(webParameters, uid)['user']
     if request.method == 'POST' and form.validate_on_submit():
@@ -588,12 +654,14 @@ def administrate_user_change_password(uid):
     return render_template(siteMap['change_password'],
                            form=form,
                            user=user_info,
-                           admin=access.check_access(webParameters, 'Administrate'))
+                           admin=access.check_access(webParameters, 'Administrate'),
+                           search=search_field)
 
 
 @app.route('/administrate/user/<uid>', methods=['GET', 'POST'])
 @weblib.authorization(session, request, webParameters)
 def administrate_user(uid):
+    search_field = forms.Search()
     form = forms.AddUserGroup()
     form.name.choices = [(t.id, t.name) for t in weblib.get_group_user(webParameters)]
     if request.method == 'POST' and form.add_sub.data:
@@ -602,7 +670,8 @@ def administrate_user(uid):
                            content=weblib.get_user(webParameters, uid),
                            form=form,
                            cur_date=datetime.datetime.now(),
-                           admin=access.check_access(webParameters, 'Administrate'))
+                           admin=access.check_access(webParameters, 'Administrate'),
+                           search=search_field)
 
 
 @app.route('/administrate/user/<user>/group/<group>/delete')
@@ -632,70 +701,49 @@ def administrate_host(host_id):
 def registration():
     status = None
     error = None
-    if request.method == 'POST':
-        registration_data = {'username': request.form['username'],
-                             'password': request.form['password'],
-                             'full_name': request.form['full_name'],
-                             'email': request.form['email'],
-                             'ip': request.form['ip']}
-        password_check = request.form['password_check']
-        if registration_data['password'] != password_check:
-            error = 'Не корректная пара паролей!'
-        if weblib.user_info(registration_data['username'], webParameters.engine):
-            error = 'Данное имя пользователя занято!'
-        if not validators.email(registration_data['email']):
-            error = 'Не корректно указан email!'
-        if not validators.ipv4(registration_data['ip']):
-            error = 'Не корректно указан IP адрес!'
-        if registration_data['username'] \
-                and password_check \
-                and registration_data['password'] \
-                and registration_data['full_name'] \
-                and registration_data['email'] \
-                and registration_data['ip']:
-            pass
+    form = forms.Registration()
+    if request.method == 'POST' and form.validate_on_submit():
+        registration_data = {'username': form.login.data,
+                             'password': form.password.data,
+                             'full_name': form.full_name.data,
+                             'email': form.email.data,
+                             'ip': form.ip.data}
+        if weblib.user_registration(registration_data, webParameters.engine):
+            status = 'Пользователь создан.'
         else:
-            error = 'Не все заполнены поля!'
+            error = 'Во время создания пользователя произошла ошибка!'
 
-        if not error:
-            if weblib.user_registration(registration_data, webParameters.engine):
-                status = 'Пользователь создан.'
-            else:
-                error = 'Во время создания пользователя произошла ошибка!'
-
-    return render_template(siteMap['registration'], status=status, error=error)
+    return render_template(siteMap['registration'], status=status, error=error, form=form)
 
 
 @app.route('/restore', methods=['GET', 'POST'])
 def get_restore():
-    if request.method == 'POST':
-        if weblib.restore_password(request.form['username'], webParameters.engine, request):
+    form = forms.ResetPassword()
+    if request.method == 'POST' and form.validate_on_submit():
+        if weblib.restore_password(form.login.data, webParameters.engine, request):
             status = "Инструкции отправлены"
             return render_template(siteMap['restore'], status=status)
         else:
             status = "Error!!!"
             return render_template(siteMap['restore'], status=status)
 
-    return render_template(siteMap['restore'])
+    return render_template(siteMap['restore'], form=form)
 
 
 @app.route('/restore/<key>', methods=['GET', 'POST'])
 def restore(key):
+    form = forms.UserChangePassword()
+    status = None
     if request.method == 'GET':
-        if weblib.reset_password(key, webParameters.engine, check=True):
-            return render_template(siteMap['reset password'], key=key)
-        else:
+        if not weblib.reset_password(key, webParameters.engine, check=True):
             render_template(siteMap['404']), 404
     elif request.method == 'POST':
-        if request.form['password_check'] == request.form['password']:
+        if form.validate_on_submit():
             if weblib.reset_password(key, webParameters.engine, password=request.form['password']):
                 status = 'Password reset'
-                return render_template(siteMap['reset password'], status=status)
             else:
                 status = 'Error reset'
-                return render_template(siteMap['reset password'], status=status)
-        else:
-            return render_template(siteMap['reset password'])
+    return render_template(siteMap['reset password'], key=key, form=form, status=status)
 
 
 if webParameters.template is not None:

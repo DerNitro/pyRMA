@@ -1,8 +1,9 @@
-{% macro show_search() %}
+{% macro show_search(search) %}
 <div class="searchField">
     <form action="/search" method="POST" name="search">
-        <input class="search_text" name="search" type="text" size="45"/>
-        <input class="submit_search" type="submit" value="Поиск"/>
+        {{ search.csrf_token }}
+        {{ search.search }}
+        {{ search.submit_search }}
     </form>
 </div>
 {% endmacro %}

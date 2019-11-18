@@ -4,7 +4,7 @@
 
 {% block header %}
 {{ show_menu(Admin=admin, Active='host') }}
-{{ show_search() }}
+{{ show_search(search) }}
 {{ super() }}
 {% endblock %}
 
@@ -20,6 +20,7 @@
 <div class="addServiceForm">
     <h3>Добавить Хост</h3>
     <form action="/host/{{ host_id }}/add_service" method="POST" name="add_service">
+        {{ form.csrf_token }}
         <p>
             {{ form.type.label }}<br>
             {{ form.type }}

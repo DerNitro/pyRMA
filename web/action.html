@@ -1,0 +1,28 @@
+{% extends "main.html" %}
+{% from "menu.html" import show_menu %}
+{% from "search.html" import show_search %}
+
+{% block header %}
+{{ show_menu(Admin=admin, Active='administrate') }}
+{{ show_search(search) }}
+{{ super() }}
+{% endblock %}
+
+{% block content %}
+<form action="/administrate/logs" method="POST" name="set_day">
+    {{ form.csrf_token }} {{ form.date(type='date') }} {{ form.user() }} {{ form.sub() }}
+</form>
+<hr>
+{% for action, action_type, user in action_list %}
+<table border="1" width="95%">
+    <tbody>
+    <tr>
+        <td width="15%">{{ action.date }}</td>
+        <td width="15%"><a href="/administrate/user/{{user.login}}">{{ user.full_name }}</a></td>
+        <td width="30%">{{ action_type.name }}</td>
+        <td width="40%">{{ action.message }}</td>
+    </tr>
+    </tbody>
+</table>
+{% endfor %}
+{% endblock %}

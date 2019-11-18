@@ -4,7 +4,7 @@
 
 {% block header %}
 {{ show_menu(Admin=admin, Active='host') }}
-{{ show_search() }}
+{{ show_search(search) }}
 {{ super() }}
 {% endblock %}
 
@@ -14,6 +14,7 @@
     <details>
         <summary>Добавить</summary>
         <form action="/route/{{ host_id }}" method="POST">
+            {{ form.csrf_token }}
             <p>
                 {{form.route.label}}: {{ form.route() }} {{ form.add_sub() }}
             </p>

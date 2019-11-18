@@ -1,4 +1,5 @@
 {% extends "main.html" %}
+{% from "_formhelpers.html" import render_field %}
 
 {% block content %}
 {% if status %}
@@ -11,18 +12,16 @@
 <div class="registrationForm">
     <h3>Регистрация нового пользователя</h3>
     <form action="/registration" method="POST" name="registration">
-        Логин:<br>
-        <input name="username" type="text" size="45"/><br/>
-        Пароль и подтверждение пароля:<br>
-        <input name="password" type="password" size="45"/><br/>
-        <input name="password_check" type=password size="45"/><br/>
-        ФИО:<br>
-        <input name="full_name" type="text" size="45"/><br/>
-        E-Mail:<br>
-        <input name="email" type="text" size="45"/><br/>
-        IP-адрес или сеть:<br>
-        <input name="ip" type="text" size="45"/><br/>
-        <input class="submit_registration" type="submit" value="Регистрация"/><br>
+        {{ form.csrf_token }}
+        <dl>
+            {{ render_field(form.login, size=45) }}
+            {{ render_field(form.password, size=45) }}
+            {{ render_field(form.confirm, size=45) }}
+            {{ render_field(form.full_name, size=45) }}
+            {{ render_field(form.email, size=45) }}
+            {{ render_field(form.ip, size=45) }}
+        </dl>
+        <p>{{ form.sub_reg() }}
     </form>
 </div>
 {% endif %}

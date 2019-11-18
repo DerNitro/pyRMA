@@ -34,8 +34,8 @@ def restore_password_access():
 
 
 def registration_user():
-    msg = "Регистрация нового пользователя {username}.\n" \
-          "Профиль доступен по ссылке: {user_url}\n"
+    msg = "Регистрация нового пользователя {username}.\n"
+
     return msg + footer
 
 

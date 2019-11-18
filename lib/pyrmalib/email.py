@@ -41,6 +41,10 @@ class Mail:
                 self.mail_from = db.query(schema.Parameter.value).filter(schema.Parameter.name == 'EMAIL_FROM').one()[0]
             except sqlalchemy.orm.exc.NoResultFound:
                 self.mail_from = 'pyrmalib@localhost'
+            try:
+                self.mail_cc = db.query(schema.Parameter.value).filter(schema.Parameter.name == 'EMAIL_CC').one()[0]
+            except sqlalchemy.orm.exc.NoResultFound:
+                self.mail_cc = ''
 
     def send(self, template, **data):
         if self.host:
@@ -51,9 +55,10 @@ class Mail:
         return "{0}".format(self.__dict__)
 
 
-def send_mail(engine, template, user_id, data):
+def send_mail(engine, template, user_id, data, admin=False):
     mail = Mail(engine)
-    user_id = user_id
     with schema.db_select(engine) as db:
         mail.mail_to = db.query(schema.User.email).filter(schema.User.login == user_id).one()[0]
+    if admin:
+        pass
     mail.send(template, **data)

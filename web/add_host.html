@@ -4,7 +4,7 @@
 
 {% block header %}
 {{ show_menu(Admin=admin, Active='host') }}
-{{ show_search() }}
+{{ show_search(search) }}
 {{ super() }}
 {% endblock %}
 
@@ -21,6 +21,7 @@
     <details>
         <summary>Добавить из файла</summary>
         <form action="/hosts/{{ directory_id }}/add_host" method="POST" name="upload_file" enctype="multipart/form-data">
+            {{ form.csrf_token }}
             <p>
                 {{ form.file_host() }} {{ form.upload_sub() }}
             </p>
@@ -31,6 +32,7 @@
 <div class="addHostForm">
     <h3>Добавить Хост</h3>
     <form action="/hosts/{{ directory_id }}/add_host" method="POST" name="add_host">
+        {{ form.csrf_token }}
         <p>
             {{ form.name.label }}<br>
             {{ form.name(size=32) }}<br>

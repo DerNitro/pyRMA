@@ -28,7 +28,7 @@ import datetime
 import string
 from flask import request, redirect, session
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
-from sqlalchemy import create_engine, func, or_
+from sqlalchemy import create_engine, func, or_, and_
 
 
 def authorization(web_session: session, req: request, param: parameters.WebParameters, ):
@@ -421,6 +421,29 @@ def get_user(param: parameters.WebParameters, uid):
     return content
 
 
+def get_action(param: parameters.WebParameters, uid, date):
+    date_start = date
+    date_stop = date + datetime.timedelta(days=1)
+    if uid == 0:
+        with schema.db_select(param.engine) as db:
+            actions = db.query(schema.Action, schema.ActionType, schema.User)\
+                .join(schema.ActionType, schema.Action.action_type == schema.ActionType.id)\
+                .join(schema.User, schema.Action.user == schema.User.login)\
+                .filter(and_(schema.Action.date >= utils.date_to_datetime(date_start),
+                             schema.Action.date < utils.date_to_datetime(date_stop)))\
+                .order_by(schema.Action.date.desc()).all()
+    else:
+        with schema.db_select(param.engine) as db:
+            actions = db.query(schema.Action, schema.ActionType, schema.User)\
+                .join(schema.ActionType, schema.Action.action_type == schema.ActionType.id)\
+                .join(schema.User, schema.Action.user == schema.User.login)\
+                .filter(and_(schema.Action.date >= utils.date_to_datetime(date_start),
+                             schema.Action.date < utils.date_to_datetime(date_stop),
+                             schema.Action.user == uid))\
+                .order_by(schema.Action.date.desc()).all()
+    return actions
+
+
 def add_user_group(param: parameters.WebParameters, uid, gid):
     with schema.db_select(param.engine) as db:
         user_group = db.query(schema.GroupUser)\
@@ -690,6 +713,9 @@ def user_registration(reg_data, engine):
                            check=0)
         db.add(user)
         db.flush()
+
+    aaa, user = user_info(reg_data['username'], engine)
+    email.send_mail(engine, template.registration_user(), aaa.uid, {'username': user.full_name}, admin=True)
     return True
 
 

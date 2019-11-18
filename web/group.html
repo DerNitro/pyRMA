@@ -4,7 +4,7 @@
 
 {% block header %}
 {{ show_menu(Admin=admin, Active='administrate') }}
-{{ show_search() }}
+{{ show_search(search) }}
 {{ super() }}
 {% endblock %}
 
@@ -16,6 +16,7 @@
     <details>
         <summary>Права доступа</summary>
         <form action="/administrate/group/{{ content['group'].id }}" method="POST" name="change_permission">
+            {{ form.csrf_token }}
             <table>
                 <tr>
                     <td>{{ form.ShowHostInformation.label }}</td>
@@ -81,6 +82,7 @@
     <details>
         <summary>Права доступа</summary>
         <form action="/administrate/group/{{ content['group'].id }}" method="POST" name="change_permission">
+            {{ form.csrf_token }}
             <table>
                 <tr>
                     <td>{{ form.ShowLogin.label }}</td>

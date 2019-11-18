@@ -4,7 +4,7 @@
 
 {% block header %}
 {{ show_menu(Admin=admin, Active='administrate') }}
-{{ show_search() }}
+{{ show_search(search) }}
 {{ super() }}
 {% endblock %}
 
@@ -14,6 +14,7 @@
     <details>
         <summary>Добавить в группу</summary>
         <form action="/administrate/user/{{ content['aaa_user'].uid }}" method="POST">
+            {{ search.csrf_token }}
             <p>
                 {{form.name.label}}: {{ form.name() }} {{ form.add_sub() }}
             </p>

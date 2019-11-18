@@ -16,6 +16,8 @@
 
 import os
 import ipaddress
+import pyrmalib.error
+from datetime import date, datetime
 
 
 def get_app_parameters(table_parameter, param):
@@ -116,6 +118,19 @@ def valid_ip(ip_addr):
     return True
 
 
+def valid_net(net):
+    """
+    Проверка корректности адреса сети
+    :param net: str
+    :return: Bool
+    """
+    try:
+        ipaddress.IPv4Network(net)
+    except ValueError:
+        return False
+    return True
+
+
 def check_ip_network(ip, network):
     if ipaddress.IPv4Address(ip) in ipaddress.ip_network(network):
         return True
@@ -172,6 +187,16 @@ def load_modules(path, log):
     pass
 
 
+def date_to_datetime(d):
+    if isinstance(d, datetime):
+        return d
+
+    if isinstance(d, date):
+        return datetime(year=d.year, month=d.month, day=d.day)
+    else:
+        raise pyrmalib.error.WTF('Error instance date_to_datetime!')
+
+
 if __name__ == '__main__':
-    print(valid_ip('192.168.91.203/32'))
+    print(valid_net('192.168.91.1/25'))
     pass

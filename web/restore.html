@@ -1,12 +1,15 @@
 {% extends "main.html" %}
+{% from "_formhelpers.html" import render_field %}
 
 {% block content %}
 {%- if not status -%}
 <center>
     <form action="/restore" method="POST" name="register">
-        <span>Логин или email:</span><br>
-        <input name="username" type="text" size="45"/><br/>
-        <input class="submit_login" type="submit" value="Восстановить пароль"/><br>
+        {{ form.csrf_token }}
+        <dl>
+            {{ render_field(form.login, size=45) }}
+        </dl>
+        <p>{{ form.reset_sub() }}
     </form>
 </center>
 {% else %}

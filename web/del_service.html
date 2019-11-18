@@ -4,7 +4,7 @@
 
 {% block header %}
 {{ show_menu(Admin=admin, Active='host') }}
-{{ show_search() }}
+{{ show_search(search) }}
 {{ super() }}
 {% endblock %}
 
@@ -15,6 +15,7 @@
         <tr>
             <td>
                 <form action="/delete_service/{{ service.id }}" method="POST" name="delete_service">
+                    {{ form.csrf_token }}
                     <input class="delete_service" type="submit" value="Удалить"/>
                 </form>
             </td>

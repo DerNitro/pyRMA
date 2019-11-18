@@ -21,17 +21,40 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 """
+from datetime import date
+from pyrmalib import utils
 
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField, TextAreaField, SelectField, IntegerField, BooleanField, PasswordField
 from flask_wtf.file import FileField, FileRequired
-from wtforms.validators import DataRequired, IPAddress, NumberRange, EqualTo
+from wtforms import StringField, SubmitField, TextAreaField, SelectField, IntegerField, BooleanField, PasswordField
+from wtforms.fields.html5 import DateField
+from wtforms.validators import DataRequired, IPAddress, NumberRange, EqualTo, Email, ValidationError
+
+
+def ip_net_check(form, field):
+    if utils.valid_net(field.data) or utils.valid_ip(field.data):
+        pass
+    else:
+        raise ValidationError('Не корректное значение IP адреса!!!')
 
 
 class Login(FlaskForm):
     username = StringField('Имя пользователя', validators=[DataRequired()], )
     password = PasswordField('Пароль', validators=[DataRequired()])
     submit_login = SubmitField('Войти')
+
+
+class Registration(FlaskForm):
+    login = StringField('Логин', validators=[DataRequired()])
+    password = PasswordField('Пароль', validators=[
+        EqualTo('confirm', message='Введеные пароли не совпадают!!!'),
+        DataRequired()
+    ])
+    confirm = PasswordField('Проверка пароля')
+    full_name = StringField('ФИО', validators=[DataRequired()])
+    email = StringField('E-Mail', validators=[DataRequired(), Email()])
+    ip = StringField('IP-адрес или сеть', validators=[ip_net_check])
+    sub_reg = SubmitField('Регистрация')
 
 
 class EditFolder(FlaskForm):
@@ -118,6 +141,11 @@ class AddHostGroup(FlaskForm):
     add_sub = SubmitField('Добавить')
 
 
+class ResetPassword(FlaskForm):
+    login = StringField('Логин или email')
+    reset_sub = SubmitField('Восстановить пароль')
+
+
 class UserChangePassword(FlaskForm):
     password = PasswordField('Пароль', validators=[
         EqualTo('confirm', message='Введеные пароли не совпадают!!!'),
@@ -126,3 +154,14 @@ class UserChangePassword(FlaskForm):
     confirm = PasswordField('Проверка пароля')
 
     change_password = SubmitField('Изменить')
+
+
+class Search(FlaskForm):
+    search = StringField('Поиск')
+    submit_search = SubmitField('Поиск')
+
+
+class ShowLog(FlaskForm):
+    date = DateField(format='%Y-%m-%d', default = date.today(), validators=[DataRequired()])
+    user = SelectField('Пользователь', coerce=int)
+    sub = SubmitField('Выбрать')

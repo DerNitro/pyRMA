@@ -24,6 +24,30 @@ from contextlib import contextmanager
 
 Base = declarative_base()
 
+action_type = {
+    1: "Вход в систему доступа",
+    10: "Создание директории",
+    11: "Редактирование директории",
+    12: "Удаление директории",
+    20: "Создание хоста",
+    21: "Редактирование хоста",
+    22: "Удаление хоста",
+    23: "Добавление сервиса",
+    24: "Удаление сервиса",
+    25: "Добавление маршрута",
+    26: "Очистка маршрута",
+    50: "Восстановление пароля",
+    51: "Изменение правил доступа",
+    52: "Добавление группы",
+    53: "Добавление группы к пользователю",
+    54: "Добавление группы к хосту",
+    55: "Удаление группы у пользователя",
+    56: "Удаление группы у хоста",
+    57: "Отключение пользователя",
+    58: "Включение пользователя",
+    59: "Смена пароля"
+}
+
 
 @contextmanager
 def db_select(engine):
@@ -162,6 +186,18 @@ class Action(Base):
     action_type = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
     date = sqlalchemy.Column(sqlalchemy.DateTime, nullable=False)
     message = sqlalchemy.Column(sqlalchemy.Text())
+
+    def __repr__(self):
+        return "{0}".format(self.__dict__)
+
+
+class ActionType(Base):
+    """
+    Типы событий
+    """
+    __tablename__ = 'action_type'
+    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, nullable=False)
+    name = sqlalchemy.Column(sqlalchemy.String(256))
 
     def __repr__(self):
         return "{0}".format(self.__dict__)
@@ -472,7 +508,10 @@ if __name__ == '__main__':
                                                               '5432',
                                                               'acs'
                                                               ))
-    # AAAUser.__table__.create(bind=engine)
+    # ActionType.__table__.create(bind=engine)
+    # for key, value in action_type.items():
+    #     with db_edit(engine) as db:
+    #         db.add(ActionType(id=key, name=value))
     # with db_edit(engine) as db:
     #     db.add(AAAUser(username='administrator', password='e10adc3949ba59abbe56e057f20f883e'))
     #     db.add(AAAUser(username='sergey', password='298b5acec4518ad08d53fee1d3f413e7'))

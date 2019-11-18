@@ -4,7 +4,7 @@
 
 {% block header %}
 {{ show_menu(Admin=admin, Active='host') }}
-{{ show_search() }}
+{{ show_search(search) }}
 {{ super() }}
 {% endblock %}
 
@@ -15,6 +15,7 @@
         <tr>
             <td>
                 <form action="/administrate/group/{{ group_id }}/delete" method="POST" name="delete_group">
+                    {{ form.csrf_token }}
                     <input class="delete_group" type="submit" value="Удалить"/>
                 </form>
             </td>
