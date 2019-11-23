@@ -13,6 +13,25 @@
         </ul>
     </div>
     <hr>
+    {% if content['new_user']|length != 0 %}
+    <div class="newUser">
+        <h3>Новые пользователи</h3>
+        <table border="1">
+            {% for user in content['new_user'] %}
+            <tr>
+                <td><a href="/administrate/user/{{ user.login }}"> {{ user.login }} </a></td>
+                <td>{{ user.full_name }}</td>
+                <td>{{ user.email }}</td>
+                <td>{{ user.ip }}</td>
+                <td>{{ user.date_create }}</td>
+                <td>{{ user.prefix }}</td>
+                <td><a href="/administrate/user/{{ user.login }}/enable"><button>Подтвердить</button></a></td>
+            </tr>
+            {% endfor %}
+        </table>
+        <hr>
+    </div>
+    {% endif %}
     {% if content['access_request']|length != 0 %}
     <div class="accessRequest">
         accessRequest
@@ -36,5 +55,4 @@
             {% endfor %}
         </ul>
     </div>
-
 {% endmacro %}

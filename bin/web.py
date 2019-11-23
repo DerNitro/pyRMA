@@ -538,7 +538,7 @@ def administrate():
 def administrate_group():
     search_field = forms.Search()
     form = forms.AddGroup()
-    if request.method == 'POST' and form.add_sub.data:
+    if request.method == 'POST' and form.validate_on_submit():
         g = {
             'name': form.name.data,
             'type': form.type.data
@@ -565,34 +565,34 @@ def administrate_group_show(group_id):
 
     if content['permission']:
         form.ShowHostInformation.data = \
-            access.check_access(webParameters, 'ShowHostInformation', permission=content['permission'])
+            access.check_access(webParameters, 'ShowHostInformation', check_permission=content['permission'])
         form.EditHostInformation.data = \
-            access.check_access(webParameters, 'EditHostInformation', permission=content['permission'])
+            access.check_access(webParameters, 'EditHostInformation', check_permission=content['permission'])
         form.EditDirectory.data = \
-            access.check_access(webParameters, 'EditDirectory', permission=content['permission'])
+            access.check_access(webParameters, 'EditDirectory', check_permission=content['permission'])
         form.EditPrefixHost.data = \
-            access.check_access(webParameters, 'EditPrefixHost', permission=content['permission'])
+            access.check_access(webParameters, 'EditPrefixHost', check_permission=content['permission'])
         form.ShowLogin.data = \
-            access.check_access(webParameters, 'ShowLogin', permission=content['permission'])
+            access.check_access(webParameters, 'ShowLogin', check_permission=content['permission'])
         form.ShowPassword.data = \
-            access.check_access(webParameters, 'ShowPassword', permission=content['permission'])
+            access.check_access(webParameters, 'ShowPassword', check_permission=content['permission'])
         form.ShowAllSession.data = \
-            access.check_access(webParameters, 'ShowAllSession', permission=content['permission'])
+            access.check_access(webParameters, 'ShowAllSession', check_permission=content['permission'])
         form.ShowAllGroupSession.data = \
-            access.check_access(webParameters, 'ShowAllGroupSession', permission=content['permission'])
+            access.check_access(webParameters, 'ShowAllGroupSession', check_permission=content['permission'])
         form.Administrate.data = \
-            access.check_access(webParameters, 'Administrate', permission=content['permission'])
+            access.check_access(webParameters, 'Administrate', check_permission=content['permission'])
 
         form.Connection.data = \
-            access.check_access(webParameters, 'Connection', permission=content['permission'])
+            access.check_access(webParameters, 'Connection', check_permission=content['permission'])
         form.FileTransfer.data = \
-            access.check_access(webParameters, 'FileTransfer', permission=content['permission'])
+            access.check_access(webParameters, 'FileTransfer', check_permission=content['permission'])
         form.ConnectionService.data = \
-            access.check_access(webParameters, 'ConnectionService', permission=content['permission'])
+            access.check_access(webParameters, 'ConnectionService', check_permission=content['permission'])
         form.ConnectionOnlyService.data = \
-            access.check_access(webParameters, 'ConnectionOnlyService', permission=content['permission'])
+            access.check_access(webParameters, 'ConnectionOnlyService', check_permission=content['permission'])
         form.ConnectionIlo.data = \
-            access.check_access(webParameters, 'ConnectionIlo', permission=content['permission'])
+            access.check_access(webParameters, 'ConnectionIlo', check_permission=content['permission'])
 
     return render_template(siteMap['administrate_group_show'],
                            content=content,
@@ -662,13 +662,23 @@ def administrate_user_change_password(uid):
 @weblib.authorization(session, request, webParameters)
 def administrate_user(uid):
     search_field = forms.Search()
-    form = forms.AddUserGroup()
-    form.name.choices = [(t.id, t.name) for t in weblib.get_group_user(webParameters)]
-    if request.method == 'POST' and form.add_sub.data:
-        weblib.add_user_group(webParameters, uid, form.name.data)
+    group_form = forms.AddUserGroup()
+    prefix_form = forms.ChangePrefix()
+    group_form.name.choices = [(t.id, t.name) for t in weblib.get_group_user(webParameters)]
+    prefix_form.prefix.choices = [(t.id, t.name) for t in weblib.get_prefix(webParameters)]
+    if request.method == 'POST' and group_form.add_sub.data:
+        weblib.add_user_group(webParameters, uid, group_form.name.data)
+    if request.method == 'POST' and prefix_form.sub.data and prefix_form.validate_on_submit():
+        prefix = None
+        for t in weblib.get_prefix(webParameters):
+            if t.id == prefix_form.prefix.data:
+                prefix = t.name
+                break
+        weblib.set_user_prefix(webParameters, prefix, uid)
     return render_template(siteMap['administrate_user'],
                            content=weblib.get_user(webParameters, uid),
-                           form=form,
+                           group_form=group_form,
+                           prefix_form=prefix_form,
                            cur_date=datetime.datetime.now(),
                            admin=access.check_access(webParameters, 'Administrate'),
                            search=search_field)

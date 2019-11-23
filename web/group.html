@@ -125,7 +125,7 @@
 {% for group, user in content['users'] %}
     <tr>
         <td width="80%">
-            {{ user.full_name }}
+            <a href="/administrate/user/{{ user.login }}">{{ user.full_name }}</a>
         </td>
         <td>
             <a href="/administrate/user/{{ user.login }}/group/{{ group.group }}/delete"><button>Удалить</button></a>
@@ -138,7 +138,16 @@
 {% for group, host in content['hosts'] %}
     <tr>
         <td>
-            {{ host.name }}
+
+            <a
+                {% if host.type == 1 %}
+                href="/host/{{ host.id }}"
+                {% else %}
+                href="/hosts/{{ host.id }}"
+                {% endif %}
+                >
+                {{ host.name }}
+            </a>
         </td>
         <td>
             <a href="/administrate/host/{{ host.id }}/group/{{ group.group }}/delete"><button>Удалить</button></a>

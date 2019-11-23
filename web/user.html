@@ -14,9 +14,22 @@
     <details>
         <summary>Добавить в группу</summary>
         <form action="/administrate/user/{{ content['aaa_user'].uid }}" method="POST">
-            {{ search.csrf_token }}
+            {{ group_form.csrf_token }}
             <p>
-                {{form.name.label}}: {{ form.name() }} {{ form.add_sub() }}
+                {{group_form.name.label}}: {{ group_form.name() }} {{ group_form.add_sub() }}
+            </p>
+        </form>
+        <hr>
+    </details>
+</div>
+<hr>
+<div class="addGroup">
+    <details>
+        <summary>Сменить префикс</summary>
+        <form action="/administrate/user/{{ content['aaa_user'].uid }}" method="POST">
+            {{ prefix_form.csrf_token }}
+            <p>
+                {{prefix_form.prefix.label}}: {{ prefix_form.prefix() }} {{ prefix_form.sub() }}
             </p>
         </form>
         <hr>
@@ -48,6 +61,10 @@
     <tr>
         <td><b>Группы</b></td>
         <td>{{content['group']}}</td>
+    </tr>
+    <tr>
+        <td><b>Префикс</b></td>
+        <td>{{content['user'].prefix}}</td>
     </tr>
     </tbody>
 </table>

@@ -173,7 +173,8 @@ def get_admin_content_dashboard(param: parameters.WebParameters):
                'connection_count': connection_count,
                'la': os.getloadavg()[2],
                'free': psutil.virtual_memory().percent,
-               'disk': psutil.disk_usage(storage_dir.value).percent}
+               'disk': psutil.disk_usage(storage_dir.value).percent,
+               'new_user': get_new_user(param)}
     return content
 
 
@@ -196,7 +197,7 @@ def get_host(param: parameters.WebParameters, host_id=None, name=None,  parent=0
     :param parent: schema.Host.parent
     :return: type: schema.Host
     """
-    if host_id:
+    if host_id or host_id == int(0):
         with schema.db_select(param.engine) as db:
             try:
                 host = db.query(schema.Host).filter(schema.Host.id == host_id, schema.Host.remove.is_(False)).one()
@@ -444,6 +445,18 @@ def get_action(param: parameters.WebParameters, uid, date):
     return actions
 
 
+def get_prefix(param: parameters.WebParameters):
+    with schema.db_select(param.engine) as db:
+        prefix = db.query(schema.Prefix).order_by(schema.Prefix.name).all()
+    return prefix
+
+
+def get_new_user(param: parameters.WebParameters):
+    with schema.db_select(param.engine) as db:
+        user = db.query(schema.User).filter(schema.User.check == 0).all()
+    return user
+
+
 def add_user_group(param: parameters.WebParameters, uid, gid):
     with schema.db_select(param.engine) as db:
         user_group = db.query(schema.GroupUser)\
@@ -538,6 +551,16 @@ def set_group_permission(param: parameters.WebParameters, group_id, form: forms.
             raise error.WTF("Дубли default Permission в таблице Permission!!!")
 
 
+def set_user_prefix(param: parameters.WebParameters, prefix, uid):
+    with schema.db_edit(param.engine) as db:
+        user = db.query(schema.User).filter(schema.User.login == uid).one()
+        user.prefix = prefix
+        db.flush()
+        db.refresh(user)
+
+    return True
+
+
 def search(param: parameters.WebParameters, query):
     """
     Возвращает список хостов подходящих под условие.
@@ -552,7 +575,8 @@ def search(param: parameters.WebParameters, query):
                         schema.Host.ip == query,
                         schema.Host.describe.like("%" + query + "%"),
                         schema.Host.note.like("%" + query + "%")))\
-            .filter(schema.Host.remove.is_(False))\
+            .filter(schema.Host.remove.is_(False),
+                    schema.Host.prefix == param.user_info.prefix)\
             .order_by(schema.Host.type.desc()).order_by(schema.Host.name).all()
     return host_list
 
@@ -584,12 +608,14 @@ def user_disable(param: parameters.WebParameters, uid, disable=False, enable=Fal
         if disable:
             user.disable = True
             user.date_disable = datetime.datetime.now()
+            user.check = 1
             status = 'Отключение'
             status_id = 57
             db.flush()
         if enable:
             user.disable = False
             user.date_disable = datetime.datetime.now() + datetime.timedelta(days=365)
+            user.check = 1
             status = 'Включение'
             status_id = 58
             db.flush()

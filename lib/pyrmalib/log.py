@@ -25,10 +25,10 @@ class Log:
     def __init__(self, name, level='INFO', facility='local0'):
         self.logger = logging.getLogger(name)
         self.logger.setLevel(level)
-        h = handlers.SysLogHandler(address='/dev/log', facility=facility)
+        self.handler = handlers.SysLogHandler(address='/dev/log', facility=facility)
         log_format = Formatter('[{0:<10}] [%(levelname)-8s] - %(message)s'.format(name))
-        h.setFormatter(log_format)
-        self.logger.addHandler(h)
+        self.handler.setFormatter(log_format)
+        self.logger.addHandler(self.handler)
 
     def error(self, text, pr=False):
         if pr:

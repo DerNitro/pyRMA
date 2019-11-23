@@ -26,7 +26,8 @@ from pyrmalib import utils
 
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileRequired
-from wtforms import StringField, SubmitField, TextAreaField, SelectField, IntegerField, BooleanField, PasswordField
+from wtforms import StringField, SubmitField, TextAreaField, SelectField, IntegerField, BooleanField, PasswordField, \
+    SelectMultipleField
 from wtforms.fields.html5 import DateField
 from wtforms.validators import DataRequired, IPAddress, NumberRange, EqualTo, Email, ValidationError
 
@@ -106,7 +107,7 @@ class AddRoute(FlaskForm):
 
 class AddGroup(FlaskForm):
     name = StringField('Имя группы')
-    type = SelectField('Тип группы', choices=[(0, 'Пользователи'), (1, 'Хосты')])
+    type = SelectField('Тип группы', choices=[(0, 'Пользователи'), (1, 'Хосты')], coerce=int)
 
     add_sub = SubmitField('Добавить')
 
@@ -132,12 +133,12 @@ class ChangePermission(FlaskForm):
 
 
 class AddUserGroup(FlaskForm):
-    name = SelectField('Имя группы')
+    name = SelectField('Имя группы', coerce=int)
     add_sub = SubmitField('Добавить')
 
 
 class AddHostGroup(FlaskForm):
-    name = SelectField('Имя группы')
+    name = SelectField('Имя группы', coerce=int)
     add_sub = SubmitField('Добавить')
 
 
@@ -165,3 +166,8 @@ class ShowLog(FlaskForm):
     date = DateField(format='%Y-%m-%d', default = date.today(), validators=[DataRequired()])
     user = SelectField('Пользователь', coerce=int)
     sub = SubmitField('Выбрать')
+
+
+class ChangePrefix(FlaskForm):
+    prefix = SelectField('Префикс', coerce=int)
+    sub = SubmitField('Сохранить')

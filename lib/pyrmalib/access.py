@@ -16,6 +16,8 @@
 
 from pyrmalib import schema, error, parameters
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
+from sqlalchemy import or_, and_
+
 
 """
 Модуль контроля и проверки правил доступа.
@@ -52,7 +54,7 @@ connection_access_map = {
 
 def get_permission(app_param: parameters.Parameters, subj, t_subj=0, obj=None, t_obj=None):
     # Пользователь -> Хост
-    global permission
+    # global permission
     if t_subj == 0 and t_obj == 2:
         with schema.db_select(app_param.engine) as db:
             try:
@@ -134,19 +136,27 @@ def get_permission(app_param: parameters.Parameters, subj, t_subj=0, obj=None, t
     # Общий режим пользователя
     # Общий режим группы хостов
     # Общий режим группы пользователей
+    # select p.* from "permission" p
+    # where
+    #   (p.subject = subj and p.t_subject = 0)
+    #   or (p.subject in (select gu."group" from group_user gu where gu."user" = subj) and p.t_subject = 1);
     with schema.db_select(app_param.engine) as db:
         try:
-            permission = db.query(schema.Permission) \
-                .filter(schema.Permission.subject == subj) \
-                .filter(schema.Permission.t_subject == t_subj) \
-                .filter(schema.Permission.t_object.is_(None)) \
-                .filter(schema.Permission.object.is_(None)) \
-                .one()
+            user_groups = db.query(schema.GroupUser.group) \
+                .filter(schema.GroupUser.user == subj) \
+                .group_by(schema.GroupUser.group).subquery()
+
+            permission = db.query(schema.Permission)\
+                .filter(or_(
+                            and_(schema.Permission.subject == subj, schema.Permission.t_subject == 0),
+                            and_(schema.Permission.subject.in_(user_groups), schema.Permission.t_subject == 1)
+                            )
+                        ).all()
             return permission
         except NoResultFound:
             pass
         except MultipleResultsFound:
-            raise error.QueryError("Multiple Results Found schema.Permission: U: {0}".format(subj))
+            pass
 
     return False
 
@@ -203,10 +213,10 @@ class ConnectionAccess(Access):
     access_map = connection_access_map
 
 
-def check_access(app_param: parameters.Parameters, access, h_object=None, permission=None):
+def check_access(app_param: parameters.Parameters, access, h_object=None, check_permission=None):
     """
     Возвращает True|False по разрещенному доступу
-    :param permission: Строка или Список schema.Permission
+    :param check_permission: Строка или Список schema.Permission
     :param app_param: Настроки приложения.
     :param access: Правило доступа из access_map
     :param h_object: группа/хост
@@ -225,8 +235,8 @@ def check_access(app_param: parameters.Parameters, access, h_object=None, permis
     else:
         raise error.WTF('не корректно указан host_object!')
 
-    if permission:
-        perm = permission
+    if check_permission:
+        perm = check_permission
     else:
         perm = get_permission(app_param, app_param.user_info.login, obj=obj, t_obj=t_obj)
 

@@ -24,6 +24,7 @@
         <details>
             <summary>Добавить</summary>
             <form action="/administrate/group" method="POST" name="add_group">
+                {{ form.csrf_token }}
                 <p>
                     {{ form.name.label }} {{ form.name() }} {{ form.type() }} {{ form.add_sub() }}
                 </p>
