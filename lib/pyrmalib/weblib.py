@@ -20,6 +20,9 @@ import json
 import psutil
 import os
 import random
+
+from sqlalchemy.orm import aliased
+
 from pyrmalib import schema, utils, email, template, parameters, error, access, forms
 from functools import wraps
 import hashlib
@@ -84,6 +87,89 @@ def check_ip_net(ip, network):
     return utils.check_ip_network(ip, network)
 
 
+def check_host(param: parameters.WebParameters, hid):
+    with schema.db_select(param.engine) as db:
+        try:
+            host = db.query(schema.Host).filter(schema.Host.id == hid).one()
+        except NoResultFound:
+            raise error.WTF('Данные не найдены')
+        except MultipleResultsFound:
+            raise error.WTF('Данные не найдены')
+
+        if host.type == 1:
+            return True
+        else:
+            return False
+
+
+def get_access_list(param: parameters.WebParameters):
+    """
+    select
+        al.id as id,
+        al.date_disable as date_disable,
+        al.note as note,
+        gu."name" as subject,
+        gu.id as subject_id,
+        al.t_subject as t_subject,
+        gh."name" as "object",
+        gh.id as object_id,
+        al.t_object as t_object
+    from access_list al
+    left join "group" as gu on al.subject = gu.id
+    left join "group" as gh on al.object = gh.id
+    where t_subject = 1 and t_object = 1
+    UNION
+    select
+        al.id as id,
+        al.date_disable as date_disable,
+        al.note as note,
+        gu.full_name as subject,
+        gu.login as subject_id,
+        al.t_subject as t_subject,
+        gh."name" as "object",
+        gh.id as object_id,
+        al.t_object as t_object
+    from access_list al
+    left join "user" as gu on al.subject = gu.login
+    left join host as gh on al.object = gh.id
+    where t_subject = 0 and t_object = 0;
+    """
+    with schema.db_select(param.engine) as db:
+        group_user = aliased(schema.Group)
+        group_host = aliased(schema.Group)
+        group_access = db.query(
+            schema.AccessList.id,
+            schema.AccessList.date_disable,
+            schema.AccessList.note,
+            group_user.name,
+            group_user.id,
+            schema.AccessList.t_subject,
+            group_host.name,
+            group_host.id,
+            schema.AccessList.t_object
+        ).\
+            join(group_user, schema.AccessList.subject == group_user.id).\
+            join(group_host, schema.AccessList.object == group_host.id).\
+            filter(schema.AccessList.t_object == 1, schema.AccessList.t_subject == 1)
+        user_access = db.query(
+            schema.AccessList.id,
+            schema.AccessList.date_disable,
+            schema.AccessList.note,
+            schema.User.full_name,
+            schema.User.login,
+            schema.AccessList.t_subject,
+            schema.Host.name,
+            schema.Host.id,
+            schema.AccessList.t_object
+        ).\
+            join(schema.User, schema.AccessList.subject == schema.User.login).\
+            join(schema.Host, schema.AccessList.object == schema.Host.id).\
+            filter(schema.AccessList.t_object == 0, schema.AccessList.t_subject == 0)
+        access_list = group_access.union(user_access).all()
+
+    return access_list
+
+
 def get_access_request(param: parameters.WebParameters, user):
     return []
 
@@ -110,7 +196,6 @@ def get_content_host(param: parameters.WebParameters, host_id):
     content['group'] = ", ".join([t.name for i, t in get_group_list(param, host=host_id)])
     content['parent_group'] = ", ".join([t.name for i, t in get_group_list(param, host=host.parent)])
     if access.check_access(param, 'ShowLogin', h_object=host) \
-            or access.check_access(param, 'EditHostInformation', h_object=host)\
             or access.check_access(param, 'Administrate', h_object=host):
         content['default_login'] = host.default_login
         if host.default_login:
@@ -120,7 +205,6 @@ def get_content_host(param: parameters.WebParameters, host_id):
     else:
         content['default_login'] = '*' * len(host.default_login)
     if access.check_access(param, 'ShowPassword', h_object=host) \
-            or access.check_access(param, 'EditHostInformation', h_object=host) \
             or access.check_access(param, 'Administrate', h_object=host):
         if host.default_password:
             content['default_password'] = host.default_password
@@ -139,10 +223,13 @@ def get_content_host(param: parameters.WebParameters, host_id):
         content['service_type'] = db.query(schema.ServiceType).all()
 
     with schema.db_select(param.engine) as db:
-        content['connection_type'] = db.query(schema.ConnectionType).\
-            filter(schema.ConnectionType.id == host.connection_type).one()
-        content['file_transfer_type'] = db.query(schema.FileTransferType).\
-            filter(schema.FileTransferType.id == host.file_transfer_type).one()
+        try:
+            content['connection_type'] = db.query(schema.ConnectionType).\
+                filter(schema.ConnectionType.id == host.connection_type).one()
+            content['file_transfer_type'] = db.query(schema.FileTransferType).\
+                filter(schema.FileTransferType.id == host.file_transfer_type).one()
+        except NoResultFound:
+            raise error.WTF('Не указан тип подклчюения')
         try:
             content['parent'] = db.query(schema.Host).filter(schema.Host.id == host.parent).one().name
         except NoResultFound:
@@ -347,8 +434,7 @@ def get_group(param: parameters.WebParameters, group_id):
         try:
             permission = db.query(schema.Permission).filter(
                 schema.Permission.t_subject == 1,
-                schema.Permission.subject == group_id,
-                schema.Permission.object.is_(None)
+                schema.Permission.subject == group_id
             ).one()
             content['permission'] = permission
         except NoResultFound:
@@ -360,7 +446,7 @@ def get_group(param: parameters.WebParameters, group_id):
 
 def get_group_user(param: parameters.WebParameters):
     with schema.db_select(param.engine) as db:
-        group = db.query(schema.Group).filter(schema.Group.type == 0).all()
+        group = db.query(schema.Group).filter(schema.Group.type == 0, schema.Group.id != 0).all()
 
     if len(group) == 0:
         group = None
@@ -369,7 +455,7 @@ def get_group_user(param: parameters.WebParameters):
 
 def get_group_host(param: parameters.WebParameters):
     with schema.db_select(param.engine) as db:
-        group = db.query(schema.Group).filter(schema.Group.type == 1).all()
+        group = db.query(schema.Group).filter(schema.Group.type == 1, schema.Group.id != 0).all()
 
     if len(group) == 0:
         group = None
@@ -520,7 +606,6 @@ def set_group_permission(param: parameters.WebParameters, group_id, form: forms.
     user_access.change('ShowAllSession', set_access=form.ShowAllSession.data)
     user_access.change('ShowAllGroupSession', set_access=form.ShowAllGroupSession.data)
     user_access.change('Administrate', set_access=form.Administrate.data)
-    print(user_access)
 
     connection_access = access.ConnectionAccess(0)
     connection_access.change('Connection', set_access=form.Connection.data)
@@ -528,13 +613,11 @@ def set_group_permission(param: parameters.WebParameters, group_id, form: forms.
     connection_access.change('ConnectionService', set_access=form.ConnectionService.data)
     connection_access.change('ConnectionOnlyService', set_access=form.ConnectionOnlyService.data)
     connection_access.change('ConnectionIlo', set_access=form.ConnectionIlo.data)
-    print(connection_access)
     with schema.db_edit(param.engine) as db:
         try:
             perm = db.query(schema.Permission).filter(
                 schema.Permission.t_subject == 1,
-                schema.Permission.subject == group_id,
-                schema.Permission.object.is_(None)
+                schema.Permission.subject == group_id
             ).one()
             perm.conn_access = connection_access.get_int()
             perm.user_access = user_access.get_int()
@@ -905,6 +988,23 @@ def add_group(param: parameters.WebParameters, g):
             action_type=52,
             date=datetime.datetime.now(),
             message="Добавлена группа: {group.name} - id={group.id}({group})".format(group=group)
+        )
+        db.add(action)
+        db.flush()
+    return True
+
+
+def add_access(param: parameters.WebParameters, a):
+    with schema.db_edit(param.engine) as db:
+        db.add(a)
+        db.flush()
+        db.refresh(a)
+
+        action = schema.Action(
+            user=param.user_info.login,
+            action_type=30,
+            date=datetime.datetime.now(),
+            message="Добавлено правило доступа - id={a.id}({a})".format(a=a)
         )
         db.add(action)
         db.flush()

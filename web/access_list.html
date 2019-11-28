@@ -1,0 +1,47 @@
+{% extends "main.html" %}
+{% from "menu.html" import show_menu %}
+{% from "search.html" import show_search %}
+
+{% block header %}
+{{ show_menu(Admin=admin, Active='administrate') }}
+{{ show_search(search) }}
+{{ super() }}
+{% endblock %}
+
+{% block content %}
+<div class="addAccess">
+    <details>
+        <summary>Добавить доступ</summary>
+        <form action="/administrate/access" method="POST">
+            {{ form.csrf_token }}
+            <p>
+                {{form.user_group()}} -> {{ form.host_group() }} {{ form.date() }} {{ form.note() }} {{ form.sub() }}
+            </p>
+        </form>
+    </details>
+</div>
+<hr>
+
+<table border="1" width="95%">
+    <tbody>
+{% for id, date_disable, note, subject, subject_id, t_subject, object, object_id, t_object in access_list %}
+    <tr>
+        {% if t_subject == 1 %}
+        <td><a href="/administrate/group/{{subject_id}}">{{ subject }}</a></td>
+        {% else %}
+        <td><a href="/administrate/user/{{subject_id}}">{{ subject }}</a></td>
+        {% endif %}
+        {% if t_object == 1 %}
+        <td><a href="/administrate/group/{{object_id}}">{{ object }}</a></td>
+        {% else %}
+        <td><a href="/host/{{object_id}}">{{ object }}</a></td>
+        {% endif %}
+        <td>{{ date_disable }}</td>
+        <td>{{ note }}</td>
+        <td><a href="/administrate/access/delete/{{id}}"><button>Удалить</button></a> </td>
+    </tr>
+{% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}

@@ -14,9 +14,9 @@
     <details>
         <summary>Добавить в группу</summary>
         <form action="/administrate/user/{{ content['aaa_user'].uid }}" method="POST">
-            {{ group_form.csrf_token }}
+            {{ group_user_form.csrf_token }}
             <p>
-                {{group_form.name.label}}: {{ group_form.name() }} {{ group_form.add_sub() }}
+                {{group_user_form.name.label}}: {{ group_user_form.name() }} {{ group_user_form.add_sub() }}
             </p>
         </form>
         <hr>

@@ -69,7 +69,8 @@ siteMap = {'index': 'index.html',
            'administrate_users': 'users.html',
            'administrate_user': 'user.html',
            'change_password': 'change_password.html',
-           'logs': 'action.html'}
+           'logs': 'action.html',
+           'access_list': 'access_list.html'}
 
 
 def check_auth(username, password, client_ip):
@@ -445,9 +446,12 @@ def edit_host(host_id):
 @app.route('/host/<host_id>')
 @weblib.authorization(session, request, webParameters)
 def host(host_id):
+    if not weblib.check_host(webParameters, host_id):
+        return redirect(url_for('hosts', directory_id=host_id))
     search_field = forms.Search()
     form = forms.AddHostGroup()
     form.name.choices = [(t.id, t.name) for t in weblib.get_group_host(webParameters)]
+    content_host = weblib.get_content_host(webParameters, host_id)
     if access.check_access(webParameters,
                            'ShowHostInformation',
                            h_object=weblib.get_host(webParameters, host_id=host_id)):
@@ -457,7 +461,7 @@ def host(host_id):
                                                                        'EditHostInformation',
                                                                        h_object=weblib.get_host(webParameters,
                                                                                                 host_id=host_id)),
-                               content=weblib.get_content_host(webParameters, host_id),
+                               content=content_host,
                                form=form,
                                search=search_field
                                )
@@ -530,6 +534,34 @@ def administrate():
         siteMap['administrate'],
         admin=access.check_access(webParameters, 'Administrate'),
         search=search_field
+    )
+
+
+@app.route('/administrate/access', methods=['GET', 'POST'])
+@weblib.authorization(session, request, webParameters)
+def administrate_access():
+    search_field = forms.Search()
+    add_access_form = forms.AddAccess()
+    add_access_form.user_group.choices = [(t.id, t.name) for t in weblib.get_group_user(webParameters)]
+    add_access_form.host_group.choices = [(0, "ALL")] + [(t.id, t.name) for t in weblib.get_group_host(webParameters)]
+    if request.method == 'POST' and add_access_form.validate_on_submit():
+        a = schema.AccessList(
+            t_subject=1,
+            subject=add_access_form.user_group.data,
+            t_object=1,
+            object=add_access_form.host_group.data,
+            date_disable=add_access_form.date.data,
+            note=add_access_form.note.data
+        )
+        weblib.add_access(webParameters, a)
+
+    access_list = weblib.get_access_list(webParameters)
+    return render_template(
+        siteMap['access_list'],
+        admin=access.check_access(webParameters, 'Administrate'),
+        search=search_field,
+        form=add_access_form,
+        access_list=access_list
     )
 
 
@@ -662,12 +694,12 @@ def administrate_user_change_password(uid):
 @weblib.authorization(session, request, webParameters)
 def administrate_user(uid):
     search_field = forms.Search()
-    group_form = forms.AddUserGroup()
+    group_user_form = forms.AddUserGroup()
     prefix_form = forms.ChangePrefix()
-    group_form.name.choices = [(t.id, t.name) for t in weblib.get_group_user(webParameters)]
+    group_user_form.name.choices = [(t.id, t.name) for t in weblib.get_group_user(webParameters)]
     prefix_form.prefix.choices = [(t.id, t.name) for t in weblib.get_prefix(webParameters)]
-    if request.method == 'POST' and group_form.add_sub.data:
-        weblib.add_user_group(webParameters, uid, group_form.name.data)
+    if request.method == 'POST' and group_user_form.validate_on_submit():
+        weblib.add_user_group(webParameters, uid, group_user_form.name.data)
     if request.method == 'POST' and prefix_form.sub.data and prefix_form.validate_on_submit():
         prefix = None
         for t in weblib.get_prefix(webParameters):
@@ -677,7 +709,7 @@ def administrate_user(uid):
         weblib.set_user_prefix(webParameters, prefix, uid)
     return render_template(siteMap['administrate_user'],
                            content=weblib.get_user(webParameters, uid),
-                           group_form=group_form,
+                           group_user_form=group_user_form,
                            prefix_form=prefix_form,
                            cur_date=datetime.datetime.now(),
                            admin=access.check_access(webParameters, 'Administrate'),

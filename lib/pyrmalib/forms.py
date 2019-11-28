@@ -133,12 +133,12 @@ class ChangePermission(FlaskForm):
 
 
 class AddUserGroup(FlaskForm):
-    name = SelectField('Имя группы', coerce=int)
+    name = SelectField('Группа пользоватлей', coerce=int)
     add_sub = SubmitField('Добавить')
 
 
 class AddHostGroup(FlaskForm):
-    name = SelectField('Имя группы', coerce=int)
+    name = SelectField('Группа улов', coerce=int)
     add_sub = SubmitField('Добавить')
 
 
@@ -171,3 +171,11 @@ class ShowLog(FlaskForm):
 class ChangePrefix(FlaskForm):
     prefix = SelectField('Префикс', coerce=int)
     sub = SubmitField('Сохранить')
+
+
+class AddAccess(FlaskForm):
+    user_group = SelectField('Группа пользователей', coerce=int)
+    host_group = SelectField('Группа хостов', coerce=int)
+    date = DateField(format='%Y-%m-%d', default=date.today(), validators=[DataRequired()])
+    note = StringField("Описание")
+    sub = SubmitField('Добавить')

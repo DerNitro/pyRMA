@@ -18,19 +18,6 @@ from pyrmalib import schema, error, parameters
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy import or_, and_
 
-
-"""
-Модуль контроля и проверки правил доступа.
-Режимы(приоритет от наименьшего к наибольшему.):
-    1.  Общий режим группы пользователей 
-    2.  Общий режим группы хостов
-    3.  Общий режим пользователя
-    4.  Группа пользователей -> Група хостов
-    5.  Группа пользователей -> Хост
-    6.  Пользователь -> Группа хостов
-    7.  Пользователь -> Хост
-"""
-
 user_access_map = {
     'ShowHostInformation': 0,       # Просмотр информации об узле
     'EditHostInformation': 1,       # Редактировать хосты
@@ -52,90 +39,7 @@ connection_access_map = {
 }
 
 
-def get_permission(app_param: parameters.Parameters, subj, t_subj=0, obj=None, t_obj=None):
-    # Пользователь -> Хост
-    # global permission
-    if t_subj == 0 and t_obj == 2:
-        with schema.db_select(app_param.engine) as db:
-            try:
-                permission = db.query(schema.Permission) \
-                    .filter(schema.Permission.subject == subj) \
-                    .filter(schema.Permission.t_subject == t_subj) \
-                    .filter(schema.Permission.object == obj) \
-                    .filter(schema.Permission.t_object == t_obj) \
-                    .one()
-                return permission
-            except NoResultFound:
-                pass
-            except MultipleResultsFound:
-                raise error.QueryError("Multiple Results Found schema.Permission: U: {0} H: {1}".format(subj, obj))
-
-    # Пользователь -> Группа хостов
-    if t_subj == 0 and (t_obj == 2 or t_obj == 1):
-        with schema.db_select(app_param.engine) as db:
-            try:
-                host_groups = db.query(schema.GroupHost.group) \
-                    .filter(schema.GroupHost.host == obj) \
-                    .group_by(schema.GroupHost.group).subquery()
-
-                permission = db.query(schema.Permission) \
-                    .filter(schema.Permission.t_object == 2) \
-                    .filter(schema.Permission.object.in_(host_groups)) \
-                    .filter(schema.Permission.t_subject == t_subj) \
-                    .filter(schema.Permission.subject == subj).all()
-            except NoResultFound:
-                pass
-
-            if len(permission) != 0:
-                return permission
-
-    # Группа пользователей -> Хост
-    if (t_subj == 0 or t_subj == 1) and t_obj == 2:
-        with schema.db_select(app_param.engine) as db:
-            try:
-                user_groups = db.query(schema.GroupUser.group) \
-                    .filter(schema.GroupUser.user == subj) \
-                    .group_by(schema.GroupUser.group).subquery()
-
-                permission = db.query(schema.Permission) \
-                    .filter(schema.Permission.t_object == t_obj) \
-                    .filter(schema.Permission.subject.in_(user_groups)) \
-                    .filter(schema.Permission.t_subject == 1) \
-                    .filter(schema.Permission.subject == subj).all()
-            except NoResultFound:
-                pass
-
-            if len(permission) != 0:
-                return permission
-        pass
-    # Группа пользователей -> Група хостов
-    if (t_subj == 0 or t_subj == 1) and (t_obj == 2 or t_obj == 1):
-        with schema.db_select(app_param.engine) as db:
-            try:
-                user_groups = db.query(schema.GroupUser.group) \
-                    .filter(schema.GroupUser.user == subj) \
-                    .group_by(schema.GroupUser.group).subquery()
-
-                host_groups = db.query(schema.GroupHost.group) \
-                    .filter(schema.GroupHost.host == obj) \
-                    .group_by(schema.GroupHost.group).subquery()
-
-                permission = db.query(schema.Permission) \
-                    .filter(schema.Permission.t_object == 1) \
-                    .filter(schema.Permission.t_subject == 1) \
-                    .filter(schema.Permission.subject.in_(user_groups)) \
-                    .filter(schema.Permission.object.in_(host_groups)) \
-                    .filter(schema.Permission.subject == subj).all()
-            except NoResultFound:
-                pass
-
-            if len(permission) != 0:
-                return permission
-        pass
-
-    # Общий режим пользователя
-    # Общий режим группы хостов
-    # Общий режим группы пользователей
+def get_permission(app_param: parameters.Parameters, subj):
     # select p.* from "permission" p
     # where
     #   (p.subject = subj and p.t_subject = 0)
@@ -238,7 +142,7 @@ def check_access(app_param: parameters.Parameters, access, h_object=None, check_
     if check_permission:
         perm = check_permission
     else:
-        perm = get_permission(app_param, app_param.user_info.login, obj=obj, t_obj=t_obj)
+        perm = get_permission(app_param, app_param.user_info.login)
 
     if user_access_map.get(access) is not None:
         if isinstance(perm, list):

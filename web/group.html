@@ -78,50 +78,11 @@
 </div>
 {% else %}
 <h4>Группа хостов - {{ content['group'].name }}</h4>
-<div class="changePermission">
-    <details>
-        <summary>Права доступа</summary>
-        <form action="/administrate/group/{{ content['group'].id }}" method="POST" name="change_permission">
-            {{ form.csrf_token }}
-            <table>
-                <tr>
-                    <td>{{ form.ShowLogin.label }}</td>
-                    <td>{{ form.ShowLogin() }}</td>
-                </tr>
-                <tr>
-                    <td>{{ form.ShowPassword.label }}</td>
-                    <td>{{ form.ShowPassword() }}</td>
-                </tr>
-                <tr>
-                    <td>{{ form.Connection.label }}</td>
-                    <td>{{ form.Connection() }}</td>
-                </tr>
-                <tr>
-                    <td>{{ form.FileTransfer.label }}</td>
-                    <td>{{ form.FileTransfer() }}</td>
-                </tr>
-                <tr>
-                    <td>{{ form.ConnectionService.label }}</td>
-                    <td>{{ form.ConnectionService() }}</td>
-                </tr>
-                <tr>
-                    <td>{{ form.ConnectionOnlyService.label }}</td>
-                    <td>{{ form.ConnectionOnlyService() }}</td>
-                </tr>
-                <tr>
-                    <td>{{ form.ConnectionIlo.label }}</td>
-                    <td>{{ form.ConnectionIlo() }}</td>
-                </tr>
-            </table>
-            {{ form.edit_sub() }}
-        </form>
-        <hr>
-    </details>
 </div>
 {% endif %}
 
 {% if content['group'].type == 0 %}
-<table width="90%" border="1">
+<table width="90%" border="0">
 {% for group, user in content['users'] %}
     <tr>
         <td width="80%">
@@ -134,7 +95,7 @@
 {% endfor %}
 </table>
 {% else %}
-<table width="90%" border="1">
+<table width="90%" border="0">
 {% for group, host in content['hosts'] %}
     <tr>
         <td>
