@@ -455,16 +455,16 @@ def host(host_id):
     if access.check_access(webParameters,
                            'ShowHostInformation',
                            h_object=weblib.get_host(webParameters, host_id=host_id)):
-        return render_template(siteMap['host'],
-                               admin=access.check_access(webParameters, 'Administrate'),
-                               EditHostInformation=access.check_access(webParameters,
-                                                                       'EditHostInformation',
-                                                                       h_object=weblib.get_host(webParameters,
-                                                                                                host_id=host_id)),
-                               content=content_host,
-                               form=form,
-                               search=search_field
-                               )
+        return render_template(
+            siteMap['host'],
+            admin=access.check_access(webParameters, 'Administrate'),
+            EditHostInformation=access.check_access(webParameters,
+                                                    'EditHostInformation',
+                                                    h_object=weblib.get_host(webParameters, host_id=host_id)),
+            content=content_host,
+            form=form,
+            search=search_field
+        )
     else:
         return render_template(siteMap['access_denied'])
 
@@ -551,7 +551,8 @@ def administrate_access():
             t_object=1,
             object=add_access_form.host_group.data,
             date_disable=add_access_form.date.data,
-            note=add_access_form.note.data
+            note=add_access_form.note.data,
+            status=1
         )
         weblib.add_access(webParameters, a)
 
@@ -561,8 +562,16 @@ def administrate_access():
         admin=access.check_access(webParameters, 'Administrate'),
         search=search_field,
         form=add_access_form,
-        access_list=access_list
+        access_list=access_list,
+        cur_date=datetime.datetime.now()
     )
+
+
+@app.route('/administrate/access/delete/<aid>')
+@weblib.authorization(session, request, webParameters)
+def administrate_access_delete(aid):
+    weblib.del_access(webParameters, aid)
+    return redirect(request.referrer)
 
 
 @app.route('/administrate/group', methods=['GET', 'POST'])

@@ -468,6 +468,9 @@ class Permission(Base):
 class AccessList(Base):
     """
     Таблица разрешеных доступов
+    status:
+        0 - Не подтверждено
+        1 - Подтверждено
     """
     __tablename__ = 'access_list'
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
@@ -477,6 +480,12 @@ class AccessList(Base):
     object = sqlalchemy.Column(sqlalchemy.Integer)
     date_disable = sqlalchemy.Column(sqlalchemy.DateTime)
     note = sqlalchemy.Column(sqlalchemy.Text)
+    conn_access = sqlalchemy.Column(sqlalchemy.Integer)
+    user_access = sqlalchemy.Column(sqlalchemy.Integer)
+    status = sqlalchemy.Column(sqlalchemy.Integer)
+
+    def __repr__(self):
+        return "{0}".format(self.__dict__)
 
 
 class PasswordList(Base):

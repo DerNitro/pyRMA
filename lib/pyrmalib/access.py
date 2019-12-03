@@ -14,9 +14,7 @@
    limitations under the License.
 """
 
-from pyrmalib import schema, error, parameters
-from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
-from sqlalchemy import or_, and_
+from pyrmalib import schema, error, parameters, weblib
 
 user_access_map = {
     'ShowHostInformation': 0,       # Просмотр информации об узле
@@ -37,32 +35,6 @@ connection_access_map = {
     'ConnectionOnlyService': 3,     # Подключение только сервисов
     'ConnectionIlo': 4              # Подключение к интерфейсу управления сервером.
 }
-
-
-def get_permission(app_param: parameters.Parameters, subj):
-    # select p.* from "permission" p
-    # where
-    #   (p.subject = subj and p.t_subject = 0)
-    #   or (p.subject in (select gu."group" from group_user gu where gu."user" = subj) and p.t_subject = 1);
-    with schema.db_select(app_param.engine) as db:
-        try:
-            user_groups = db.query(schema.GroupUser.group) \
-                .filter(schema.GroupUser.user == subj) \
-                .group_by(schema.GroupUser.group).subquery()
-
-            permission = db.query(schema.Permission)\
-                .filter(or_(
-                            and_(schema.Permission.subject == subj, schema.Permission.t_subject == 0),
-                            and_(schema.Permission.subject.in_(user_groups), schema.Permission.t_subject == 1)
-                            )
-                        ).all()
-            return permission
-        except NoResultFound:
-            pass
-        except MultipleResultsFound:
-            pass
-
-    return False
 
 
 class Access:
@@ -123,26 +95,24 @@ def check_access(app_param: parameters.Parameters, access, h_object=None, check_
     :param check_permission: Строка или Список schema.Permission
     :param app_param: Настроки приложения.
     :param access: Правило доступа из access_map
-    :param h_object: группа/хост
+    :param h_object: хост
     :return: bool
     """
-
-    if h_object is None:
-        obj = None
-        t_obj = None
-    elif isinstance(h_object, schema.Host):
-        obj = h_object.id
-        t_obj = 2
-    elif isinstance(h_object, schema.GroupHost):
-        obj = h_object.group
-        t_obj = 1
-    else:
-        raise error.WTF('не корректно указан host_object!')
-
     if check_permission:
         perm = check_permission
+    elif h_object:
+        user_access = weblib.get_user_access(app_param, app_param.user_info.login, hid=h_object.id)
+        if user_access:
+            perm = {'conn_access': user_access.conn_access, 'user_access': user_access.user_access}
+        else:
+            user_group = weblib.get_user_group(app_param, app_param.user_info.login)
+            host_group = weblib.get_host_group(app_param, h_object.id) + [0]
+            access_list = weblib.get_group_access(app_param, user_group, host_group)
+            if not access_list:
+                return False
+            perm = weblib.get_group_permission(app_param, [t.subject for t in access_list])
     else:
-        perm = get_permission(app_param, app_param.user_info.login)
+        perm = weblib.get_user_permission(app_param, app_param.user_info.login)
 
     if user_access_map.get(access) is not None:
         if isinstance(perm, list):
@@ -152,6 +122,8 @@ def check_access(app_param: parameters.Parameters, access, h_object=None, check_
             return False
         elif isinstance(perm, schema.Permission):
             return UserAccess(perm.user_access).get(access)
+        elif isinstance(perm, dict):
+            return UserAccess(perm['user_access']).get(access)
         elif not perm:
             return False
         else:
@@ -165,6 +137,8 @@ def check_access(app_param: parameters.Parameters, access, h_object=None, check_
             return False
         elif isinstance(perm, schema.Permission):
             return ConnectionAccess(perm.conn_access).get(access)
+        elif isinstance(perm, dict):
+            return UserAccess(perm['conn_access']).get(access)
         elif not perm:
             return False
         else:

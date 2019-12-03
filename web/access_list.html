@@ -25,7 +25,7 @@
 <table border="1" width="95%">
     <tbody>
 {% for id, date_disable, note, subject, subject_id, t_subject, object, object_id, t_object in access_list %}
-    <tr>
+    {% if date_disable < cur_date %} <tr bgcolor="#ff807a"> {% else %} <tr> {% endif %}
         {% if t_subject == 1 %}
         <td><a href="/administrate/group/{{subject_id}}">{{ subject }}</a></td>
         {% else %}

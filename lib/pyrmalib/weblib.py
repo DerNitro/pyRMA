@@ -170,11 +170,11 @@ def get_access_list(param: parameters.WebParameters):
     return access_list
 
 
-def get_access_request(param: parameters.WebParameters, user):
+def get_access_request(param: parameters.WebParameters):
     return []
 
 
-def get_connection(param: parameters.WebParameters, user):
+def get_connection(param: parameters.WebParameters):
     return []
 
 
@@ -255,8 +255,8 @@ def get_admin_content_dashboard(param: parameters.WebParameters):
     with schema.db_select(param.engine) as db:
         connection_count = db.query(schema.Connection).filter(schema.Connection.status == 1).count()
         storage_dir = db.query(schema.Parameter).filter(schema.Parameter.name == 'STORAGE_DIR').one()
-    content = {'access_request': get_access_request(param.engine, param.user_info),
-               'connection': get_connection(param.engine, param.user_info),
+    content = {'access_request': get_access_request(param.engine),
+               'connection': get_connection(param.engine),
                'connection_count': connection_count,
                'la': os.getloadavg()[2],
                'free': psutil.virtual_memory().percent,
@@ -506,6 +506,112 @@ def get_user(param: parameters.WebParameters, uid):
             .order_by(schema.Connection.date_start.desc()).limit(10).all()
     content['group'] = ", ".join([t.name for i, t in get_group_list(param, user=uid)])
     return content
+
+
+def get_user_group(param: parameters.Parameters, uid):
+    with schema.db_select(param.engine) as db:
+        group = db.query(schema.GroupUser).filter(schema.GroupUser.user == uid).all()
+    return [t.group for t in group]
+
+
+def get_user_access(param: parameters.Parameters, uid, hid=None):
+    with schema.db_select(param.engine) as db:
+        if hid:
+            try:
+                user_access = db.query(schema.AccessList).filter(
+                    schema.AccessList.status == 1,
+                    schema.AccessList.t_subject == 0,
+                    schema.AccessList.subject == uid,
+                    schema.AccessList.t_object == 0,
+                    schema.AccessList.object == hid,
+                    schema.AccessList.date_disable > datetime.datetime.now()
+                ).one()
+            except NoResultFound:
+                return None
+            except MultipleResultsFound:
+                raise error.WTF('Дубли в аксес листах!!!')
+        else:
+            user_access = db.query(schema.AccessList).filter(
+                schema.AccessList.status == 1,
+                schema.AccessList.t_subject == 0,
+                schema.AccessList.subject == uid,
+                schema.AccessList.date_disable > datetime.datetime.now()
+            ).all()
+            if len(user_access) == 0:
+                return None
+    return user_access
+
+
+def get_group_access(param: parameters.Parameters, u_gid: list, h_gid: list):
+    with schema.db_select(param.engine) as db:
+        group_access = db.query(schema.AccessList).filter(
+            schema.AccessList.date_disable > datetime.datetime.now(),
+            schema.AccessList.status == 1,
+            schema.AccessList.t_object == 1,
+            schema.AccessList.t_subject == 1,
+            schema.AccessList.subject.in_(u_gid),
+            schema.AccessList.object.in_(h_gid)
+        ).all()
+
+    if len(group_access) == 0:
+        return None
+    return group_access
+
+
+def get_user_permission(app_param: parameters.Parameters, subj):
+    # select p.* from "permission" p
+    # where
+    #   (p.subject = subj and p.t_subject = 0)
+    #   or (p.subject in (select gu."group" from group_user gu where gu."user" = subj) and p.t_subject = 1);
+    with schema.db_select(app_param.engine) as db:
+        user_groups = db.query(schema.GroupUser.group) \
+            .filter(schema.GroupUser.user == subj) \
+            .group_by(schema.GroupUser.group).subquery()
+
+        permission = db.query(schema.Permission)\
+            .filter(or_(
+                        and_(schema.Permission.subject == subj, schema.Permission.t_subject == 0),
+                        and_(schema.Permission.subject.in_(user_groups), schema.Permission.t_subject == 1)
+                        )
+                    ).all()
+    if len(permission) == 0:
+        return None
+
+    return permission
+
+
+def get_group_permission(app_param: parameters.Parameters, group: list):
+    with schema.db_select(app_param.engine) as db:
+        permission = db.query(schema.Permission).filter(
+            schema.Permission.t_subject == 1,
+            schema.Permission.subject.in_(group)
+        ).all()
+
+    if len(permission) == 0:
+        return None
+
+    return permission
+
+
+def get_host_group(param: parameters.Parameters, hid):
+    h_list = [hid]
+    while True:
+        parent = get_parent_host(param, h_list[-1])
+        if parent == 0:
+            break
+        else:
+            h_list.append(parent)
+
+    with schema.db_select(param.engine) as db:
+        group = db.query(schema.GroupHost).filter(schema.GroupHost.host.in_(h_list)).all()
+
+    return [t.group for t in group]
+
+
+def get_parent_host(param: parameters.Parameters, hid):
+    with schema.db_select(param.engine) as db:
+        host = db.query(schema.Host).filter(schema.Host.id == hid).one()
+    return host.parent
 
 
 def get_action(param: parameters.WebParameters, uid, date):
@@ -1107,6 +1213,26 @@ def del_group(param: parameters.WebParameters, group=None):
         db.add(action)
         db.flush()
 
+    return True
+
+
+def del_access(param: parameters.WebParameters, access):
+    """
+    Удаление правил доступа
+    :param param: WebParameters
+    :param access: schema.AccessList.id
+    :return: True
+    """
+    with schema.db_edit(param.engine) as db:
+        db.query(schema.AccessList).filter(schema.AccessList.id == access).delete()
+        action = schema.Action(
+            user=param.user_info.login,
+            action_type=31,
+            date=datetime.datetime.now(),
+            message="Удаление правила доступа: id={}".format(access)
+        )
+        db.add(action)
+        db.flush()
     return True
 
 
