@@ -23,7 +23,7 @@ import hashlib
 import textwrap
 from datetime import timedelta, datetime
 
-P_NAME = 'pyFakeCreateLic'
+P_NAME = 'pyRMACreateLic'
 P_VER = '0.1'
 
 arg = argparse.ArgumentParser(

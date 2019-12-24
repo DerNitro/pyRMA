@@ -51,6 +51,10 @@
                     <td>{{ form.ShowAllGroupSession()}}</td>
                 </tr>
                 <tr>
+                    <td>{{ form.Administrate.label }}</td>
+                    <td>{{ form.Administrate()}}</td>
+                </tr>
+                <tr>
                     <td>{{ form.Connection.label }}</td>
                     <td>{{ form.Connection()}}</td>
                     </tr>
@@ -78,7 +82,6 @@
 </div>
 {% else %}
 <h4>Группа хостов - {{ content['group'].name }}</h4>
-</div>
 {% endif %}
 
 {% if content['group'].type == 0 %}

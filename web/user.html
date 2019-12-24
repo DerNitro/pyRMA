@@ -10,6 +10,7 @@
 
 {% block content %}
 <hr>
+{% if group_user_form %}
 <div class="addGroup">
     <details>
         <summary>Добавить в группу</summary>
@@ -23,7 +24,8 @@
     </details>
 </div>
 <hr>
-<div class="addGroup">
+{% endif %}
+<div class="changePrefix">
     <details>
         <summary>Сменить префикс</summary>
         <form action="/administrate/user/{{ content['aaa_user'].uid }}" method="POST">

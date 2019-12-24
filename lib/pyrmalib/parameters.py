@@ -22,7 +22,7 @@ from pyrmalib import log
 import configparser
 import os
 
-pathConfigFile = '/home/sergey/PycharmProjects/pyRMA/etc/pyrma/pyrma.conf'
+pathConfigFile = '/etc/pyrma/pyrma.conf'
 
 
 def check_config(config):
@@ -87,8 +87,10 @@ class AppParameters(Parameters):
         self.rec_folder = self.conf.get('Main', 'path_env', fallback='filerecord')
         self.license = self.conf.get('Main', 'license', fallback=None)
         self.modules = self.conf.get('Main', 'modules', fallback='/etc/pyrma/mod.d')
-        self.log_param = {'level': self.conf.get('Main', 'log_level', fallback='INFO'),
-                          'facility': self.conf.get('Main', 'log_facility', fallback='local0')}
+        self.log_param = {
+            'level': self.conf.get('Main', 'log_level', fallback='INFO'),
+            'filename': 'pyrma_' + self.user_name + '.log'
+        }
         self.log = log.Log(self.user_name, **self.log_param)
 
 
@@ -101,9 +103,12 @@ class WebParameters(Parameters):
         super().__init__()
         self.ip = self.conf.get('Web', 'ip')
         self.port = self.conf.get('Web', 'port')
-        self.log_param = {'level': self.conf.get('Web', 'log_level', fallback='INFO'),
-                          'facility': self.conf.get('Web', 'log_facility', fallback='local0')}
+        self.log_param = {
+            'level': self.conf.get('Web', 'log_level', fallback='INFO'),
+            'filename': 'pyrma_web.log'
+        }
         self.template = self.conf.get('Web', 'template')
+        self.log = log.Log('pyrma_web', **self.log_param)
 
 
 class PamParameters(Parameters):

@@ -179,3 +179,7 @@ class AddAccess(FlaskForm):
     date = DateField(format='%Y-%m-%d', default=date.today(), validators=[DataRequired()])
     note = StringField("Описание")
     sub = SubmitField('Добавить')
+
+
+class DelButton(FlaskForm):
+    sub = SubmitField('Удалить')

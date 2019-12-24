@@ -13,6 +13,7 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 """
+import textwrap
 
 import sqlalchemy
 from sqlalchemy import create_engine
@@ -20,6 +21,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.schema import Sequence
 import datetime
+import argparse
 from contextlib import contextmanager
 
 Base = declarative_base()
@@ -40,7 +42,7 @@ action_type = {
     31: "Удаление правила доступа",
     32: "Запрос доступа",
     33: "Подтверждение доступа",
-    34: "От",
+    34: "Запрет доступа",
     50: "Восстановление пароля",
     51: "Изменение правил доступа",
     52: "Добавление группы",
@@ -52,6 +54,22 @@ action_type = {
     58: "Включение пользователя",
     59: "Смена пароля"
 }
+
+default_parameter = [
+    {"name": "EMAIL_TYPE", "value": "SMTP", "description": ""},
+    {"name": "EMAIL_HOST", "value": "127.0.0.1", "description": ""},
+    {"name": "EMAIL_PORT", "value": "25", "description": ""},
+    {"name": "EMAIL_FROM", "value": "root@localhost", "description": ""},
+    {"name": "EMAIL_CC", "value": "", "description": ""},
+    {"name": "AUTO_EXTENSION", "value": "1", "description": "Автоматическое продление доступа"},
+    {"name": "EXTENSION_DAYS", "value": "21", "description": "Колличество дней для продления доступа"},
+    {"name": "ENABLE_ROUTE_MAP", "value": "1", "description": "Включение подключения через промежуточные хосты"},
+    {"name": "CHECK_IP",        "value": "0", "description": "Проверка IP адреса клиента"},
+    {"name": "STORAGE_DIR",     "value": "/data/pyRMA/", "description": "Директория хранения данных"},
+    {"name": "FORWARD_TCP_PORT_DISABLE", "value": "22;23", "description": ""},
+    {"name": "FORWARD_TCP_PORT_RANGE",
+     "value": "10000;15000", "description": "Диапозон портов для подключения сервисов"}
+]
 
 
 @contextmanager
@@ -504,17 +522,101 @@ class PasswordList(Base):
 
 
 if __name__ == '__main__':
-    engine = create_engine('{0}://{1}:{2}@{3}:{4}/{5}'.format('postgresql',
-                                                              'acs',
-                                                              'acs',
-                                                              'localhost',
-                                                              '5432',
-                                                              'acs'
-                                                              ))
-    # AccessList.__table__.create(bind=engine)
-    # for key, value in action_type.items():
-    #     with db_edit(engine) as db:
-    #         db.add(ActionType(id=key, name=value))
-    # with db_edit(engine) as db:
-    #     db.add(AAAUser(username='administrator', password='e10adc3949ba59abbe56e057f20f883e'))
-    #     db.add(AAAUser(username='sergey', password='298b5acec4518ad08d53fee1d3f413e7'))
+    arg = argparse.ArgumentParser(
+        epilog='schema.py (C) "Sergey Utkin" mailto:utkins01@gmail.com',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description=textwrap.dedent('''\
+        Управление БД.
+        '''))
+    arg.add_argument('--user', help='Пользователь', default='pyrma', type=str)
+    arg.add_argument('--password', help='Пароль', default='pyrma', type=str)
+    arg.add_argument('--db', help='База Данных', default='pyrma', type=str)
+    arg.add_argument('--host', help='Адрес узла', default='localhost', type=str)
+    arg.add_argument('--port', help='Порт подключения', default='5432', type=str)
+
+    sub_parser = arg.add_subparsers(help=u'Команды', dest='command')
+    sub_install = sub_parser.add_parser('install')
+    sub_update = sub_parser.add_parser('update')
+
+    pars = arg.parse_args()
+
+    engine = create_engine('{0}://{1}:{2}@{3}:{4}/{5}'.format(
+        'postgresql', pars.user, pars.password, pars.host, pars.port, pars.db
+    ))
+
+    if pars.command == 'install':
+        AAAGroup.__table__.create(bind=engine)
+        AAAGroupList.__table__.create(bind=engine)
+        AAAUser.__table__.create(bind=engine)
+        AccessList.__table__.create(bind=engine)
+        Action.__table__.create(bind=engine)
+        ActionType.__table__.create(bind=engine)
+        Connection.__table__.create(bind=engine)
+        ConnectionType.__table__.create(bind=engine)
+        FileTransferType.__table__.create(bind=engine)
+        Group.__table__.create(bind=engine)
+        GroupHost.__table__.create(bind=engine)
+        GroupUser.__table__.create(bind=engine)
+        Host.__table__.create(bind=engine)
+        IloType.__table__.create(bind=engine)
+        Parameter.__table__.create(bind=engine)
+        PasswordList.__table__.create(bind=engine)
+        Permission.__table__.create(bind=engine)
+        Prefix.__table__.create(bind=engine)
+        RequestAccess.__table__.create(bind=engine)
+        RestorePassword.__table__.create(bind=engine)
+        RouteMap.__table__.create(bind=engine)
+        Service.__table__.create(bind=engine)
+        ServiceType.__table__.create(bind=engine)
+        User.__table__.create(bind=engine)
+
+        for key, value in action_type.items():
+            with db_edit(engine) as db:
+                db.add(ActionType(id=key, name=value))
+
+        # Дефолтные значения для Parameter
+        for param in default_parameter:
+            with db_edit(engine) as db:
+                db.add(Parameter(name=param["name"], value=param["value"], description=param["description"]))
+
+        with db_edit(engine) as db:
+            db.add(
+                Prefix(
+                    name='DEFAULT',
+                    note='Префикс по умолчанию'
+                )
+            )
+            db.add(
+                Group(
+                    id=0,
+                    name='ALL'
+                )
+            )
+            db.flush()
+
+        with db_edit(engine) as db:
+            aaa_group = AAAGroup(gid=5000, name='acs')
+            db.add(aaa_group)
+            db.flush()
+            aaa = AAAUser(username='admin', password='21232f297a57a5a743894a0e4a801fc3')
+            db.add(aaa)
+            db.flush()
+            db.refresh(aaa)
+            user = User(login=aaa.uid,
+                        full_name='Super Administrator',
+                        date_create=datetime.datetime.now(),
+                        disable=False,
+                        date_disable=datetime.datetime.now() + datetime.timedelta(days=365*10),
+                        ip='0.0.0.0/0',
+                        email='root@localhost',
+                        check=1)
+            db.add(user)
+            db.flush()
+            perm = Permission(
+                t_subject=0,
+                subject=aaa.uid,
+                conn_access=29,
+                user_access=511
+            )
+            db.add(perm)
+            db.flush()

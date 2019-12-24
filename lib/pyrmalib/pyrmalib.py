@@ -847,36 +847,38 @@ def user_change_password(param: parameters.WebParameters, uid, password):
 
 def restore_password(username, engine, request):
     with schema.db_select(engine) as db:
-        user_id = db.query(schema.User.login).join(schema.AAAUser, schema.User.login == schema.AAAUser.uid). \
+        user, aaa_user = db.query(schema.User).join(schema.AAAUser, schema.User.login == schema.AAAUser.uid). \
             filter(sqlalchemy.or_(schema.AAAUser.username == username, schema.User.email == username)).all()
 
-    if len(user_id) != 1:
+    if len(user) != 1:
         return False
 
     # TODO: добавить отключение старых запросов.
 
     key = ''.join(random.choice(string.ascii_letters + string.punctuation + string.digits) for _ in range(256))
     key = hashlib.md5(key.encode()).hexdigest()
-    user_id = user_id[0][0]
 
     with schema.db_edit(engine) as db:
-        db.add(schema.RestorePassword(user=user_id,
+        db.add(schema.RestorePassword(user=user.login,
                                       status=1,
                                       date=datetime.datetime.now(),
                                       key=key))
-        db.add(schema.Action(user=user_id,
+        db.add(schema.Action(user=user.login,
                              action_type=50,
                              date=datetime.datetime.now()))
     host = request.host_url
-    email.send_mail(engine,
-                    template.restore_password(),
-                    user_id,
-                    {
-                        'username': 'Test User',
-                        'url_recovery': '{0}{1}'.format(host, "restore/" + key),
-                        'url_deny': '{0}{1}'.format(host, "restore/deny/" + key),
-                        'user': user_id
-                    })
+    email.send_mail(
+        engine,
+        'Восстановление пароля - {}({})'.format(aaa_user.username, user.full_name),
+        template.restore_password(),
+        user.login,
+        {
+            'username': user.full_name,
+            'url_recovery': '{0}{1}'.format(host, "restore/" + key),
+            'url_deny': '{0}{1}'.format(host, "restore/deny/" + key),
+            'user': user.login
+        }
+    )
 
     return True
 
@@ -907,7 +909,10 @@ def reset_password(key, engine, password=False, check=False):
         db.query(schema.AAAUser). \
             filter(schema.AAAUser.uid == restore.user). \
             update({schema.AAAUser.password: hashlib.md5(str(password).encode()).hexdigest()})
-    email.send_mail(engine, template.restore_password_access(), aaa_user.uid, {'login': aaa_user.username})
+    email.send_mail(
+        engine,
+        'Восстановление пароля - {}'.format(aaa_user.username),
+        template.restore_password_access(), aaa_user.uid, {'login': aaa_user.username})
     return True
 
 
@@ -930,7 +935,13 @@ def user_registration(reg_data, engine):
         db.flush()
 
     aaa, user = user_info(reg_data['username'], engine)
-    email.send_mail(engine, template.registration_user(), aaa.uid, {'username': user.full_name}, admin=True)
+    email.send_mail(
+        engine,
+        'Регистрация нового пользователя - {}'.format(user.full_name),
+        template.registration_user(),
+        aaa.uid,
+        {'username': user.full_name},
+        admin=True)
     return True
 
 
@@ -1323,4 +1334,4 @@ if __name__ == '__main__':
                                                          '5432',
                                                          'acs'
                                                          ))
-    pass
+    # print(hashlib.md5('admin'.encode()).hexdigest())

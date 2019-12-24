@@ -15,8 +15,7 @@
         <tr>
             <td>
                 <form action="/administrate/group/{{ group_id }}/delete" method="POST" name="delete_group">
-                    {{ form.csrf_token }}
-                    <input class="delete_group" type="submit" value="Удалить"/>
+                    {{ del_button.csrf_token }} {{ del_button.sub() }}
                 </form>
             </td>
             <td>

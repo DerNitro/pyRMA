@@ -22,27 +22,32 @@ from logging import handlers, Formatter
 
 
 class Log:
-    def __init__(self, name, level='INFO', facility='local0'):
-        self.logger = logging.getLogger(name)
-        self.logger.setLevel(level)
-        self.handler = handlers.SysLogHandler(address='/dev/log', facility=facility)
-        log_format = Formatter('[{0:<10}] [%(levelname)-8s] - %(message)s'.format(name))
-        self.handler.setFormatter(log_format)
-        self.logger.addHandler(self.handler)
+    def __init__(self, name, level='INFO', filename='pyrma.log'):
+        self.log = logging.getLogger(name)
+        if not self.log.handlers:
+            self.log.setLevel(level)
+            self.handler = handlers.RotatingFileHandler(
+                '/var/log/pyRMA/' + filename,
+                maxBytes=1024*1024*1024,
+                backupCount=10)
+            log_format = Formatter('[{0:<10}] [%(levelname)-8s] [%(asctime)s] - %(message)s' 
+                                   '[in %(pathname)s:%(lineno)d]'.format(name))
+            self.handler.setFormatter(log_format)
+            self.log.addHandler(self.handler)
 
     def error(self, text, pr=False):
         if pr:
             print(text)
-        self.logger.error(text)
+        self.log.error(text)
 
     def info(self, text):
-        self.logger.info(text)
+        self.log.info(text)
 
     def warning(self, text):
-        self.logger.warning(text)
+        self.log.warning(text)
 
     def debug(self, text):
-        self.logger.debug(text)
+        self.log.debug(text)
 
     def critical(self, text):
-        self.logger.critical(text)
+        self.log.critical(text)

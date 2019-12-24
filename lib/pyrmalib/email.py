@@ -16,12 +16,16 @@
 
 import sqlalchemy.orm
 from pyrmalib import schema
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 
 class Mail:
     mail_from = None
     mail_to = None
     mail_cc = None
+    subject = '[pyRMA] '
 
     def __init__(self, engine):
         with schema.db_select(engine) as db:
@@ -40,23 +44,30 @@ class Mail:
             try:
                 self.mail_from = db.query(schema.Parameter.value).filter(schema.Parameter.name == 'EMAIL_FROM').one()[0]
             except sqlalchemy.orm.exc.NoResultFound:
-                self.mail_from = 'pyrmalib@localhost'
+                self.mail_from = 'pyrma@localhost'
             try:
                 self.mail_cc = db.query(schema.Parameter.value).filter(schema.Parameter.name == 'EMAIL_CC').one()[0]
             except sqlalchemy.orm.exc.NoResultFound:
                 self.mail_cc = ''
 
     def send(self, template, **data):
-        if self.host:
-            pass
-        print(template.format(**data))
+        msg = MIMEMultipart('text/plain')
+        # msg['Subject'] = "New Movies Kinokopilka"
+        # msg['From'] = emailFrom
+        # msg['To'] = emailTo
+        # part = MIMEText(htmlCode, 'html', 'utf-8')
+        # msg.attach(part)
+        # s = smtplib.SMTP(emailServer)
+        # s.sendmail(emailFrom, emailTo.split(','), msg.as_string())
+        # s.quit()
 
     def __repr__(self):
         return "{0}".format(self.__dict__)
 
 
-def send_mail(engine, template, user_id, data, admin=False):
+def send_mail(engine, subject, template, user_id, data, admin=False):
     mail = Mail(engine)
+    mail.subject += subject
     with schema.db_select(engine) as db:
         mail.mail_to = db.query(schema.User.email).filter(schema.User.login == user_id).one()[0]
     if admin:

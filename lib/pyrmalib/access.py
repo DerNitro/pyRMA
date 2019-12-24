@@ -14,7 +14,7 @@
    limitations under the License.
 """
 
-from pyrmalib import schema, error, parameters, weblib
+from pyrmalib import schema, error, parameters, pyrmalib
 
 user_access_map = {
     'ShowHostInformation': 0,       # Просмотр информации об узле
@@ -95,24 +95,24 @@ def check_access(app_param: parameters.Parameters, access, h_object=None, check_
     :param check_permission: Строка или Список schema.Permission
     :param app_param: Настроки приложения.
     :param access: Правило доступа из access_map
-    :param h_object: хост
+    :param h_object: хост schema.Host
     :return: bool
     """
     if check_permission:
         perm = check_permission
     elif h_object:
-        user_access = weblib.get_user_access(app_param, app_param.user_info.login, hid=h_object.id)
+        user_access = pyrmalib.get_user_access(app_param, app_param.user_info.login, hid=h_object.id)
         if user_access:
             perm = {'conn_access': user_access.conn_access, 'user_access': user_access.user_access}
         else:
-            user_group = weblib.get_user_group(app_param, app_param.user_info.login)
-            host_group = weblib.get_host_group(app_param, h_object.id) + [0]
-            access_list = weblib.get_group_access(app_param, user_group, host_group)
+            user_group = pyrmalib.get_user_group(app_param, app_param.user_info.login)
+            host_group = pyrmalib.get_host_group(app_param, h_object.id) + [0]
+            access_list = pyrmalib.get_group_access(app_param, user_group, host_group)
             if not access_list:
                 return False
-            perm = weblib.get_group_permission(app_param, [t.subject for t in access_list])
+            perm = pyrmalib.get_group_permission(app_param, [t.subject for t in access_list])
     else:
-        perm = weblib.get_user_permission(app_param, app_param.user_info.login)
+        perm = pyrmalib.get_user_permission(app_param, app_param.user_info.login)
 
     if user_access_map.get(access) is not None:
         if isinstance(perm, list):
