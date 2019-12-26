@@ -1,24 +1,6 @@
-{% extends "main.html" %}
-{% from "menu.html" import show_menu %}
-{% from "search.html" import show_search %}
+{% extends "admin.html" %}
 
-{% block header %}
-{{ show_menu(Admin=admin, Active='administrate') }}
-{{ show_search(search) }}
-{{ super() }}
-{% endblock %}
-
-{% block content %}
-<hr>
-<div class="admin_add_button">
-    <ul class="admin_add_button">
-        <li class="admin_add_button"> <a class="admin_add_button" href="/administrate/group">Группы</a> </li>
-        <li class="admin_add_button"> <a class="admin_add_button" href="/administrate/users">Пользователи</a> </li>
-        <li class="admin_add_button"> <a class="admin_add_button" href="/administrate/logs">Логи</a> </li>
-        <li class="admin_add_button"> <a class="admin_add_button" href="/administrate/session">Сессии</a> </li>
-    </ul>
-</div>
-<hr>
+{% block admin %}
 <div class="admin_group">
     <div class="addGroupe">
         <details>

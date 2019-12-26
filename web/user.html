@@ -1,15 +1,6 @@
-{% extends "main.html" %}
-{% from "menu.html" import show_menu %}
-{% from "search.html" import show_search %}
+{% extends "admin.html" %}
 
-{% block header %}
-{{ show_menu(Admin=admin, Active='administrate') }}
-{{ show_search(search) }}
-{{ super() }}
-{% endblock %}
-
-{% block content %}
-<hr>
+{% block admin %}
 {% if group_user_form %}
 <div class="addGroup">
     <details>
@@ -20,7 +11,6 @@
                 {{group_user_form.name.label}}: {{ group_user_form.name() }} {{ group_user_form.add_sub() }}
             </p>
         </form>
-        <hr>
     </details>
 </div>
 <hr>

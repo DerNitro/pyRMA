@@ -1,14 +1,6 @@
-{% extends "main.html" %}
-{% from "menu.html" import show_menu %}
-{% from "search.html" import show_search %}
+{% extends "admin.html" %}
 
-{% block header %}
-{{ show_menu(Admin=admin, Active='administrate') }}
-{{ show_search(search) }}
-{{ super() }}
-{% endblock %}
-
-{% block content %}
+{% block admin %}
 <form action="/administrate/logs" method="POST" name="set_day">
     {{ form.csrf_token }} {{ form.date(type='date') }} {{ form.user() }} {{ form.sub() }}
 </form>

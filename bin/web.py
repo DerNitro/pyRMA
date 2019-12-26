@@ -90,7 +90,8 @@ def root():
     return render_template(siteMap['index'],
                            admin=access.check_access(webParameters, 'Administrate'),
                            content=content,
-                           search=search_field)
+                           search=search_field,
+                           username=webParameters.aaa_user.username)
 
 
 @app.route('/search', methods=['POST'])
@@ -105,7 +106,8 @@ def search():
                            admin=admin,
                            host_list=host_list,
                            Search=query,
-                           search=form)
+                           search=form,
+                           username=webParameters.aaa_user.username)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -137,7 +139,8 @@ def settings():
     return render_template(
         siteMap['settings'],
         admin=access.check_access(webParameters, 'Administrate'),
-        search=search_field
+        search=search_field,
+        username=webParameters.aaa_user.username
     )
 
 
@@ -162,7 +165,8 @@ def logs(date=None):
         admin=access.check_access(webParameters, 'Administrate'),
         search=search_field,
         form=form,
-        action_list=action_list
+        action_list=action_list,
+        username=webParameters.aaa_user.username
     )
 
 
@@ -188,7 +192,8 @@ def route(host_id):
                            admin=access.check_access(webParameters, 'Administrate'),
                            host_id=host_id,
                            routes=pyrmalib.get_routes(webParameters, host_id),
-                           search=search_field)
+                           search=search_field,
+                           username=webParameters.aaa_user.username)
 
 
 @app.route('/hosts')
@@ -232,7 +237,8 @@ def hosts(directory_id=None):
                            group=group,
                            directory_id=directory_id,
                            EditHostInformation=edit_host_information,
-                           EditDirectory=edit_directory)
+                           EditDirectory=edit_directory,
+                           username=webParameters.aaa_user.username)
 
 
 @app.route('/hosts/<directory_id>/add_folder', methods=['GET', 'POST'])
@@ -269,7 +275,8 @@ def add_folder(directory_id):
                            form=form,
                            error=error,
                            status=status,
-                           search=search_field)
+                           search=search_field,
+                           username=webParameters.aaa_user.username)
 
 
 @app.route('/hosts/<directory_id>/edit_folder', methods=['GET', 'POST'])
@@ -319,7 +326,8 @@ def edit_folder(directory_id):
                            error=error,
                            status=status,
                            form=form,
-                           search=search_field)
+                           search=search_field,
+                           username=webParameters.aaa_user.username)
 
 
 @app.route('/hosts/<directory_id>/add_host', methods=['GET', 'POST'])
@@ -377,7 +385,8 @@ def add_host(directory_id):
                            error=error,
                            status=status,
                            form=form,
-                           search=search_field)
+                           search=search_field,
+                           username=webParameters.aaa_user.username)
 
 
 @app.route('/host/<host_id>/edit', methods=['GET', 'POST'])
@@ -445,7 +454,8 @@ def edit_host(host_id):
                            error=error,
                            status=status,
                            form=form,
-                           search=search_field)
+                           search=search_field,
+                           username=webParameters.aaa_user.username)
 
 
 @app.route('/host/<host_id>')
@@ -471,7 +481,8 @@ def host(host_id):
                                                     h_object=pyrmalib.get_host(webParameters, host_id=host_id)),
             content=content_host,
             form=form,
-            search=search_field
+            search=search_field,
+            username=webParameters.aaa_user.username
         )
     else:
         return render_template(siteMap['access_denied'])
@@ -488,7 +499,8 @@ def del_service(service_id):
     return render_template(siteMap['delete_service'],
                            admin=access.check_access(webParameters, 'Administrate'),
                            service=service,
-                           search=search_field)
+                           search=search_field,
+                           username=webParameters.aaa_user.username)
 
 
 @app.route('/host/<host_id>/add_service', methods=['GET', 'POST'])
@@ -529,7 +541,8 @@ def add_service(host_id):
                                status=status,
                                admin=admin,
                                host_id=host_id,
-                               search=search_field)
+                               search=search_field,
+                               username=webParameters.aaa_user.username)
     else:
         return render_template(siteMap['access_denied'])
 
@@ -541,7 +554,8 @@ def administrate():
     return render_template(
         siteMap['administrate'],
         admin=access.check_access(webParameters, 'Administrate'),
-        search=search_field
+        search=search_field,
+        username=webParameters.aaa_user.username
     )
 
 
@@ -577,7 +591,8 @@ def administrate_access():
         search=search_field,
         form=add_access_form,
         access_list=access_list,
-        cur_date=datetime.datetime.now()
+        cur_date=datetime.datetime.now(),
+        username=webParameters.aaa_user.username
     )
 
 
@@ -605,7 +620,8 @@ def administrate_group():
                            form=form,
                            group_user=pyrmalib.get_group_user(webParameters),
                            group_host=pyrmalib.get_group_host(webParameters),
-                           search=search_field)
+                           search=search_field,
+                           username=webParameters.aaa_user.username)
 
 
 @app.route('/administrate/group/<group_id>', methods=['GET', 'POST'])
@@ -653,7 +669,8 @@ def administrate_group_show(group_id):
                            content=content,
                            form=form,
                            admin=access.check_access(webParameters, 'Administrate'),
-                           search=search_field)
+                           search=search_field,
+                           username=webParameters.aaa_user.username)
 
 
 @app.route('/administrate/group/<group_id>/delete', methods=['GET', 'POST'])
@@ -668,7 +685,8 @@ def administrate_group_delete(group_id):
                            admin=access.check_access(webParameters, 'Administrate'),
                            del_button=del_button,
                            group_id=group_id,
-                           search=search_field)
+                           search=search_field,
+                           username=webParameters.aaa_user.username)
 
 
 @app.route('/administrate/users')
@@ -680,7 +698,8 @@ def administrate_users():
                            content=content,
                            cur_date=datetime.datetime.now(),
                            admin=access.check_access(webParameters, 'Administrate'),
-                           search=search_field)
+                           search=search_field,
+                           username=webParameters.aaa_user.username)
 
 
 @app.route('/administrate/user/<uid>/enable')
@@ -712,7 +731,8 @@ def administrate_user_change_password(uid):
                            form=form,
                            user=user_info,
                            admin=access.check_access(webParameters, 'Administrate'),
-                           search=search_field)
+                           search=search_field,
+                           username=webParameters.aaa_user.username)
 
 
 @app.route('/administrate/user/<uid>', methods=['GET', 'POST'])
@@ -725,7 +745,6 @@ def administrate_user(uid):
         group_user_form.name.choices = [(t.id, t.name) for t in pyrmalib.get_group_user(webParameters)]
     else:
         group_user_form = False
-    print(pyrmalib.get_group_user(webParameters), group_user_form)
     prefix_form.prefix.choices = [(t.id, t.name) for t in pyrmalib.get_prefix(webParameters)]
     if pyrmalib.get_group_user(webParameters):
         if request.method == 'POST' and group_user_form.validate_on_submit():
@@ -743,7 +762,8 @@ def administrate_user(uid):
                            prefix_form=prefix_form,
                            cur_date=datetime.datetime.now(),
                            admin=access.check_access(webParameters, 'Administrate'),
-                           search=search_field)
+                           search=search_field,
+                           username=webParameters.aaa_user.username)
 
 
 @app.route('/administrate/user/<user>/group/<group>/delete')

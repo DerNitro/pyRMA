@@ -1,4 +1,4 @@
-{% macro show_menu(Admin=False, Active='home') %}
+{% macro show_menu(username, Admin=False, Active='home') %}
 
 <div class="menu">
     <ul class="menu">
@@ -44,6 +44,7 @@
                 <li class="menu" style="float:right"><a href="/administrate">Администрирование</a></li>
             {% endif %}
         {% endif %}
+        <li class="menu" style="float:right"><div>{{ username }}</div></li>
     </ul>
 </div>
 {% endmacro %}

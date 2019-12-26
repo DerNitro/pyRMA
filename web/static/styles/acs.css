@@ -44,6 +44,14 @@ li.menu a {
     text-decoration: none;
 }
 
+li.menu div {
+    display: block;
+    color: white;
+    text-align: center;
+    padding: 14px 16px;
+    text-decoration: none;
+}
+
 li.menu a:hover:not(.active) {
     background-color: #111;
 }

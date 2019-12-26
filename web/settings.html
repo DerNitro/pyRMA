@@ -3,7 +3,7 @@
 {% from "search.html" import show_search %}
 
 {% block header %}
-{{ show_menu(Admin=admin, Active='settings') }}
+{{ show_menu(username, Admin=admin, Active='settings') }}
 {{ show_search(search) }}
 {{ super() }}
 {% endblock %}
