@@ -13,4 +13,27 @@
 <div class="settings">
     settings
 </div>
+<div class="prefix">
+    <h3>Префиксы</h3>
+    <details>
+        <summary>Добавить</summary>
+        <form action="/settings" method="POST">
+            {{ form_add_prefix.csrf_token }}
+            <p>
+                {{ form_add_prefix.name.label }} {{ form_add_prefix.name }} {{ form_add_prefix.describe.label }} {{ form_add_prefix.describe }} {{ form_add_prefix.sub }}
+            </p>
+        </form>
+    </details>
+    <table width="95%">
+        <tbody>
+        {% for p in prefix %}
+        <tr>
+            <td>{{ p.name }}</td>
+            <td>{{ p.note}} </td>
+            <td><a href="/settings/delete/prefix/{{p.id}}"><button>Delete</button></a></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
 {% endblock %}

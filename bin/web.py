@@ -72,7 +72,8 @@ siteMap = {'index': 'index.html',
            'change_password': 'change_password.html',
            'logs': 'action.html',
            'access_list': 'access_list.html',
-           'error': 'error.html'}
+           'error': 'error.html',
+           'settings_del_prefix': 'del_prefix.html'}
 
 
 def check_auth(username, password, client_ip):
@@ -140,6 +141,27 @@ def settings():
         siteMap['settings'],
         admin=access.check_access(webParameters, 'Administrate'),
         search=search_field,
+        username=webParameters.aaa_user.username,
+        prefix=prefix,
+        form_add_prefix=form_add_prefix
+    )
+
+
+@app.route('/settings/delete/prefix/<prefix_id>', methods=['GET', 'POST'])
+@pyrmalib.authorization(session, request, webParameters)
+def settings_prefix_delete(prefix_id):
+    prefix = pyrmalib.get_prefix(webParameters, prefix_id=prefix_id)
+    del_button = forms.DelButton()
+    search_field = forms.Search()
+    if request.method == 'POST' and del_button.validate_on_submit():
+        pyrmalib.del_prefix(webParameters, prefix_id)
+        return redirect('/settings')
+    return render_template(
+        siteMap['settings_del_prefix'],
+        admin=access.check_access(webParameters, 'Administrate'),
+        del_button=del_button,
+        search=search_field,
+        prefix=prefix,
         username=webParameters.aaa_user.username
     )
 

@@ -637,9 +637,12 @@ def get_action(param: parameters.WebParameters, uid, date):
     return actions
 
 
-def get_prefix(param: parameters.WebParameters):
+def get_prefix(param: parameters.WebParameters, prefix_id=None):
     with schema.db_select(param.engine) as db:
-        prefix = db.query(schema.Prefix).order_by(schema.Prefix.name).all()
+        if prefix_id:
+            prefix = db.query(schema.Prefix).filter(schema.Prefix.id == prefix_id).one()
+        else:
+            prefix = db.query(schema.Prefix).order_by(schema.Prefix.name).all()
     return prefix
 
 
@@ -695,6 +698,27 @@ def add_host_group(param: parameters.WebParameters, host_id, gid):
             action_type=54,
             date=datetime.datetime.now(),
             message="Добавлена группа: {group.group} - host={group.host}({group})".format(group=r)
+        )
+        db.add(action)
+        db.flush()
+    return True
+
+
+def add_prefix(param: parameters.WebParameters, name, describe):
+    with schema.db_edit(param.engine) as db:
+        p = schema.Prefix(
+            name=name,
+            note=describe
+        )
+        db.add(p)
+        db.flush()
+        db.refresh(p)
+
+        action = schema.Action(
+            user=param.user_info.login,
+            action_type=3,
+            date=datetime.datetime.now(),
+            message="Добавлен префикс ({prefix})".format(prefix=p)
         )
         db.add(action)
         db.flush()
@@ -1308,6 +1332,20 @@ def del_service(param: parameters.WebParameters, host=None, service=None):
             )
             db.add(action)
             db.flush()
+    return True
+
+
+def del_prefix(param: parameters.WebParameters, prefix):
+    with schema.db_edit(param.engine) as db:
+        db.query(schema.Prefix).filter(schema.Prefix.id == prefix).delete()
+        action = schema.Action(
+            user=param.user_info.login,
+            action_type=4,
+            date=datetime.datetime.now(),
+            message="Удаление префикса: {id}".format(id=prefix)
+        )
+        db.add(action)
+        db.flush()
     return True
 
 

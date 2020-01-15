@@ -64,5 +64,3 @@ class ConnectionModules(Modules):
         :return: Возвращает код завершения
         """
         pass
-
-
