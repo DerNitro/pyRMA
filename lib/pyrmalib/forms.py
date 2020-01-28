@@ -39,6 +39,17 @@ def ip_net_check(form, field):
         raise ValidationError('Не корректное значение IP адреса!!!')
 
 
+def port_list_check(form, field):
+    for port in str(field.data).split(','):
+        try:
+            if 0 < int(port) <= 65535:
+                pass
+            else:
+                raise ValidationError('Не корректное значение TCP Порта!!!')
+        except ValueError:
+            raise ValidationError('Не корректное значение TCP Порта!!!')
+
+
 class Login(FlaskForm):
     username = StringField('Имя пользователя', validators=[DataRequired()], )
     password = PasswordField('Пароль', validators=[DataRequired()])

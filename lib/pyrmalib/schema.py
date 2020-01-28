@@ -28,6 +28,12 @@ Base = declarative_base()
 
 action_type = {
     1: "Вход в систему доступа",
+    2: "Изменение параметров",
+    3: "Создание префикса",
+    4: "Удаление префикса",
+    5: "Добавление IPMI",
+    6: "Изменениение IPMI",
+    7: "Удаление IPMI",
     10: "Создание директории",
     11: "Редактирование директории",
     12: "Удаление директории",
@@ -52,7 +58,9 @@ action_type = {
     56: "Удаление группы у хоста",
     57: "Отключение пользователя",
     58: "Включение пользователя",
-    59: "Смена пароля"
+    59: "Смена пароля",
+    60: "Смена префикса",
+    61: "Смена прав доступа"
 }
 
 default_parameter = [
@@ -269,7 +277,7 @@ class Host(Base):
         return "{0}".format(self.__dict__)
 
 
-class IloType(Base):
+class IPMIType(Base):
     """
     Типы подключений удаленного управления серверами
     Например:
@@ -522,21 +530,22 @@ class PasswordList(Base):
 
 
 if __name__ == '__main__':
+    # TODO: Привести к порядку
     arg = argparse.ArgumentParser(
         epilog='schema.py (C) "Sergey Utkin" mailto:utkins01@gmail.com',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=textwrap.dedent('''\
         Управление БД.
         '''))
-    arg.add_argument('--user', help='Пользователь', default='pyrma', type=str)
-    arg.add_argument('--password', help='Пароль', default='pyrma', type=str)
-    arg.add_argument('--db', help='База Данных', default='pyrma', type=str)
+    arg.add_argument('--user', help='Пользователь', default='acs', type=str)
+    arg.add_argument('--password', help='Пароль', default='acs', type=str)
+    arg.add_argument('--db', help='База Данных', default='acs', type=str)
     arg.add_argument('--host', help='Адрес узла', default='localhost', type=str)
     arg.add_argument('--port', help='Порт подключения', default='5432', type=str)
 
-    sub_parser = arg.add_subparsers(help=u'Команды', dest='command')
-    sub_install = sub_parser.add_parser('install')
-    sub_update = sub_parser.add_parser('update')
+    # sub_parser = arg.add_subparsers(help=u'Команды', dest='command')
+    # sub_install = sub_parser.add_parser('install')
+    # sub_update = sub_parser.add_parser('update')
 
     pars = arg.parse_args()
 
@@ -558,7 +567,7 @@ if __name__ == '__main__':
         GroupHost.__table__.create(bind=engine)
         GroupUser.__table__.create(bind=engine)
         Host.__table__.create(bind=engine)
-        IloType.__table__.create(bind=engine)
+        IPMIType.__table__.create(bind=engine)
         Parameter.__table__.create(bind=engine)
         PasswordList.__table__.create(bind=engine)
         Permission.__table__.create(bind=engine)
@@ -619,4 +628,19 @@ if __name__ == '__main__':
                 user_access=511
             )
             db.add(perm)
+            db.flush()
+            db.add(
+                ConnectionType(
+                    name='SSH',
+                    default_port=22,
+                    plugin='SSH'
+                )
+            )
+            db.add(
+                ConnectionType(
+                    name='TELNET',
+                    default_port=23,
+                    plugin='TELNET'
+                )
+            )
             db.flush()

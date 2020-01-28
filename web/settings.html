@@ -1,6 +1,7 @@
 {% extends "main.html" %}
 {% from "menu.html" import show_menu %}
 {% from "search.html" import show_search %}
+{% from "_formhelpers.html" import render_field %}
 
 {% block header %}
 {{ show_menu(username, Admin=admin, Active='settings') }}
@@ -11,13 +12,29 @@
 {% block content %}
 <hr>
 <div class="settings">
-    settings
+    <h3>Настройки приложения</h3>
+    <form action="/settings" method="POST" name="change_settings">
+        <dl>
+            {{ parameters_form.csrf_token }}
+            {{ render_field(parameters_form.email_host) }}
+            {{ render_field(parameters_form.email_port) }}
+            {{ render_field(parameters_form.email_from) }}
+            {{ render_field(parameters_form.email_cc) }}
+            {{ render_field(parameters_form.auto_extension) }}
+            {{ render_field(parameters_form.extension_days) }}
+            {{ render_field(parameters_form.enable_route_map) }}
+            {{ render_field(parameters_form.check_ip) }}
+            {{ render_field(parameters_form.forward_tcp_port_disable) }}
+            {{ render_field(parameters_form.forward_tcp_port_range) }}
+        </dl>
+        <p>{{ parameters_form.sub }}
+    </form>
 </div>
 <div class="prefix">
     <h3>Префиксы</h3>
     <details>
         <summary>Добавить</summary>
-        <form action="/settings" method="POST">
+        <form action="/settings/add/prefix" method="POST">
             {{ form_add_prefix.csrf_token }}
             <p>
                 {{ form_add_prefix.name.label }} {{ form_add_prefix.name }} {{ form_add_prefix.describe.label }} {{ form_add_prefix.describe }} {{ form_add_prefix.sub }}
@@ -26,11 +43,45 @@
     </details>
     <table width="95%">
         <tbody>
+        <tr>
+            <th align="left">Имя</th>
+            <th align="left">Описание</th>
+        </tr>
         {% for p in prefix %}
         <tr>
             <td>{{ p.name }}</td>
             <td>{{ p.note}} </td>
-            <td><a href="/settings/delete/prefix/{{p.id}}"><button>Delete</button></a></td>
+            <td align="right"><a href="/settings/delete/prefix/{{p.id}}"><button>Delete</button></a></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+<div class="ipmi">
+    <h3>Типы IPMI</h3>
+    <details>
+        <summary>Добавить</summary>
+        <form action="/settings/add/ipmi" method="POST">
+            {{ form_add_ipmi.csrf_token }}
+            <p>
+                {{ form_add_ipmi.name.label }} {{ form_add_ipmi.name }} {{ form_add_ipmi.vendor.label }} {{ form_add_ipmi.vendor }} {{ form_add_ipmi.ports.label }} {{ form_add_ipmi.ports }} {{ form_add_ipmi.sub }}
+            </p>
+        </form>
+    </details>
+    <table width="95%">
+        <tbody>
+        <tr>
+            <th align="left">Имя</th>
+            <th align="left">Вендор</th>
+            <th align="left">Порты</th>
+        </tr>
+        {% for p in ipmi %}
+        <tr>
+            <td>{{ p.name }}</td>
+            <td>{{ p.vendor}} </td>
+            <td>{{ p.ports}} </td>
+            <td><a href="/settings/change/ipmi/{{p.id}}"><button>Change</button></a></td>
+            <td align="right"><a href="/settings/delete/ipmi/{{p.id}}"><button>Delete</button></a></td>
         </tr>
         {% endfor %}
         </tbody>

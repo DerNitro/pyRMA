@@ -87,6 +87,30 @@ def check_ip_net(ip, network):
     return utils.check_ip_network(ip, network)
 
 
+def change_ipmi(param: parameters.WebParameters, ipmi_id, data):
+    with schema.db_edit(param.engine) as db:
+        try:
+            ipmi = db.query(schema.IPMIType).filter(schema.IPMIType.id == ipmi_id).one()
+        except NoResultFound:
+            raise error.WTF('Данные не найдены')
+        except MultipleResultsFound:
+            raise error.WTF('Данные не найдены')
+        ipmi.name = data['name']
+        ipmi.vendor = data['vendor']
+        ipmi.ports = data['ports']
+        db.flush()
+        db.refresh(ipmi)
+
+        action = schema.Action(
+            user=param.user_info.login,
+            action_type=6,
+            date=datetime.datetime.now(),
+            message="Изменение IPMI{ipmi}".format(ipmi=ipmi)
+        )
+        db.add(action)
+        db.flush()
+
+
 def check_host(param: parameters.WebParameters, hid):
     with schema.db_select(param.engine) as db:
         try:
@@ -235,8 +259,8 @@ def get_content_host(param: parameters.WebParameters, host_id):
         except NoResultFound:
             content['parent'] = None
         try:
-            content['ilo_type'] = db.query(schema.IloType).\
-                filter(schema.IloType.id == host.ilo_type).one().name
+            content['ilo_type'] = db.query(schema.IPMIType).\
+                filter(schema.IPMIType.id == host.ilo_type).one().name
         except NoResultFound:
             content['ilo_type'] = None
 
@@ -362,11 +386,17 @@ def get_file_transfer_type(param: parameters.WebParameters):
     return [(t.id, t.name) for t in file_transfer_type]
 
 
-def get_ilo_type(param: parameters.WebParameters):
+def get_ilo_type(param: parameters.WebParameters, ipmi_id=None, raw=False):
     with schema.db_select(param.engine) as db:
-        ilo_type = db.query(schema.IloType).all()
+        if ipmi_id:
+            ilo_type = db.query(schema.IPMIType).filter(schema.IPMIType.id == ipmi_id).one()
+        else:
+            ilo_type = db.query(schema.IPMIType).all()
 
-    return [(t.id, t.name) for t in ilo_type]
+    if raw or ipmi_id:
+        return ilo_type
+    else:
+        return [(t.id, t.name) for t in ilo_type]
 
 
 def get_service_type(param: parameters.WebParameters):
@@ -486,6 +516,13 @@ def get_users(param: parameters.WebParameters):
             .order_by(schema.User.full_name).all()
         content['users'] = users
     return content
+
+
+def get_parameters(param: parameters.WebParameters):
+    with schema.db_select(param.engine) as db:
+        p = db.query(schema.Parameter).all()
+
+    return p
 
 
 def get_user(param: parameters.WebParameters, uid):
@@ -725,6 +762,28 @@ def add_prefix(param: parameters.WebParameters, name, describe):
     return True
 
 
+def add_ipmi(param: parameters.WebParameters, name, vendor, ports):
+    with schema.db_edit(param.engine) as db:
+        i = schema.IPMIType(
+            name=name,
+            vendor=vendor,
+            ports=ports
+        )
+        db.add(i)
+        db.flush()
+        db.refresh(i)
+
+        action = schema.Action(
+            user=param.user_info.login,
+            action_type=5,
+            date=datetime.datetime.now(),
+            message="Добавлен IPMI ({ipmi})".format(ipmi=i)
+        )
+        db.add(action)
+        db.flush()
+    return True
+
+
 def set_group_permission(param: parameters.WebParameters, group_id, form: forms.ChangePermission):
     user_access = access.UserAccess(0)
     user_access.change('ShowHostInformation', set_access=form.ShowHostInformation.data)
@@ -763,6 +822,19 @@ def set_group_permission(param: parameters.WebParameters, group_id, form: forms.
         except MultipleResultsFound:
             raise error.WTF("Дубли default Permission в таблице Permission!!!")
 
+        action = schema.Action(
+            user=param.user_info.login,
+            action_type=61,
+            date=datetime.datetime.now(),
+            message="Смена прав доступа для группы {group_id}({user_access}, {connection_access})".format(
+                group_id=group_id,
+                user_access=user_access.get_int(),
+                connection_access=connection_access.get_int()
+            )
+        )
+        db.add(action)
+        db.flush()
+
 
 def set_user_prefix(param: parameters.WebParameters, prefix, uid):
     with schema.db_edit(param.engine) as db:
@@ -770,6 +842,34 @@ def set_user_prefix(param: parameters.WebParameters, prefix, uid):
         user.prefix = prefix
         db.flush()
         db.refresh(user)
+        action = schema.Action(
+            user=param.user_info.login,
+            action_type=60,
+            date=datetime.datetime.now(),
+            message="Смена префикса пользователя - {user.full_name}({user.prefix})".format(user=user)
+        )
+        db.add(action)
+        db.flush()
+
+    return True
+
+
+def set_parameters(param: parameters.WebParameters, name: str, value: str):
+    with schema.db_edit(param.engine) as db:
+        p = db.query(schema.Parameter).filter(schema.Parameter.name == name).one()
+        if value != p.value:
+            p.value = value
+            db.flush()
+            db.refresh(p)
+
+            action = schema.Action(
+                user=param.user_info.login,
+                action_type=2,
+                date=datetime.datetime.now(),
+                message="Изменение параметров - {param}".format(param=p)
+            )
+            db.add(action)
+            db.flush()
 
     return True
 
@@ -1066,8 +1166,8 @@ def add_hosts_file(param: parameters.WebParameters, filepath: str, parent=0):
             elif str(i).upper() == 'Vendor'.upper():
                 with schema.db_select(param.engine) as db:
                     try:
-                        n_host.ilo_type = db.query(schema.IloType).\
-                            filter(func.upper(schema.IloType.vendor) == func.upper(h[i])).one().id
+                        n_host.ilo_type = db.query(schema.IPMIType).\
+                            filter(func.upper(schema.IPMIType.vendor) == func.upper(h[i])).one().id
                     except sqlalchemy.orm.exc.NoResultFound:
                         n_host.ilo_type = None
             elif str(i).split(':')[0].upper() == 'Note'.upper():
@@ -1083,8 +1183,8 @@ def add_hosts_file(param: parameters.WebParameters, filepath: str, parent=0):
                     order_by(schema.FileTransferType.id).first().id
         if not n_host.ilo_type:
             with schema.db_select(param.engine) as db:
-                n_host.ilo_type = db.query(schema.IloType).\
-                    order_by(schema.IloType.id).first().id
+                n_host.ilo_type = db.query(schema.IPMIType).\
+                    order_by(schema.IPMIType.id).first().id
         add_host(param, n_host, password=password, parent=parent)
         del n_host
     return True
@@ -1343,6 +1443,20 @@ def del_prefix(param: parameters.WebParameters, prefix):
             action_type=4,
             date=datetime.datetime.now(),
             message="Удаление префикса: {id}".format(id=prefix)
+        )
+        db.add(action)
+        db.flush()
+    return True
+
+
+def del_ipmi(param: parameters.WebParameters, ipmi):
+    with schema.db_edit(param.engine) as db:
+        db.query(schema.IPMIType).filter(schema.IPMIType.id == ipmi).delete()
+        action = schema.Action(
+            user=param.user_info.login,
+            action_type=7,
+            date=datetime.datetime.now(),
+            message="Удаление IPMI: {id}".format(id=ipmi)
         )
         db.add(action)
         db.flush()
