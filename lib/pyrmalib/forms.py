@@ -99,7 +99,7 @@ class EditHost(FlaskForm):
     upload_sub = SubmitField('Загрузить')
 
 
-class AddService(FlaskForm):
+class AddServiceHost(FlaskForm):
     type = SelectField('Тип подключения')
     remote_port = IntegerField('Порт', validators=[NumberRange(min=0, max=65536)])
     remote_ip = StringField('Адрес назначения', validators=[IPAddress()])

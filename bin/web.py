@@ -75,7 +75,11 @@ siteMap = {'index': 'index.html',
            'error': 'error.html',
            'settings_del_prefix': 'del_prefix.html',
            'change_ipmi': 'change_ipmi.html',
-           'settings_del_ipmi': 'del_ipmi.html'}
+           'settings_del_ipmi': 'del_ipmi.html',
+           'settings_ipmi': 'settings_ipmi.html',
+           'settings_prefix': 'settings_prefix.html',
+           'settings_service': 'settings_service.html',
+           'settings_del_service': 'del_service_type.html',}
 
 
 def check_auth(username, password, client_ip):
@@ -140,8 +144,6 @@ def logout():
 def settings():
     search_field = forms.Search()
     parameters_form = forms.Parameters()
-    form_add_prefix = forms.AddPrefix()
-    form_add_ipmi = forms.IPMI()
     if request.method == 'POST' and parameters_form.validate_on_submit():
         pyrmalib.set_parameters(webParameters, 'EMAIL_HOST', str(parameters_form.email_host.data))
         pyrmalib.set_parameters(webParameters, 'EMAIL_PORT', str(parameters_form.email_port.data))
@@ -170,9 +172,6 @@ def settings():
             'FORWARD_TCP_PORT_RANGE',
             str(parameters_form.forward_tcp_port_range.data)
         )
-
-    prefix = pyrmalib.get_prefix(webParameters)
-    ipmi = pyrmalib.get_ilo_type(webParameters, raw=True)
     parameters_table = pyrmalib.get_parameters(webParameters)
     parameters_form.email_host.data = list(filter(lambda x: x.name == 'EMAIL_HOST', parameters_table))[0].value
     parameters_form.email_port.data = list(filter(lambda x: x.name == 'EMAIL_PORT', parameters_table))[0].value
@@ -198,11 +197,55 @@ def settings():
         parameters_form=parameters_form,
         admin=access.check_access(webParameters, 'Administrate'),
         search=search_field,
-        username=webParameters.aaa_user.username,
+        username=webParameters.aaa_user.username
+    )
+
+
+@app.route('/settings/service', methods=['GET'])
+@pyrmalib.authorization(session, request, webParameters)
+def settings_service():
+    search_field = forms.Search()
+    form_add_service = forms.AddService()
+    service = pyrmalib.get_service_type(webParameters, raw=True)
+    return render_template(
+        siteMap['settings_service'],
+        admin=access.check_access(webParameters, 'Administrate'),
+        search=search_field,
+        service=service,
+        form_add_service=form_add_service,
+        username=webParameters.aaa_user.username
+    )
+
+
+@app.route('/settings/prefix', methods=['GET'])
+@pyrmalib.authorization(session, request, webParameters)
+def settings_prefix():
+    search_field = forms.Search()
+    form_add_prefix = forms.AddPrefix()
+    prefix = pyrmalib.get_prefix(webParameters)
+    return render_template(
+        siteMap['settings_prefix'],
+        admin=access.check_access(webParameters, 'Administrate'),
+        search=search_field,
         prefix=prefix,
-        ipmi=ipmi,
         form_add_prefix=form_add_prefix,
-        form_add_ipmi=form_add_ipmi
+        username=webParameters.aaa_user.username
+    )
+
+
+@app.route('/settings/ipmi', methods=['GET'])
+@pyrmalib.authorization(session, request, webParameters)
+def settings_ipmi():
+    search_field = forms.Search()
+    form_add_ipmi = forms.IPMI()
+    ipmi = pyrmalib.get_ilo_type(webParameters, raw=True)
+    return render_template(
+        siteMap['settings_ipmi'],
+        admin=access.check_access(webParameters, 'Administrate'),
+        search=search_field,
+        ipmi=ipmi,
+        form_add_ipmi=form_add_ipmi,
+        username=webParameters.aaa_user.username
     )
 
 
@@ -217,7 +260,7 @@ def settings_ipmi_add():
             form_add_ipmi.vendor.data,
             form_add_ipmi.ports.data
         )
-    return redirect('/settings')
+    return redirect('/settings/ipmi')
 
 
 @app.route('/settings/add/prefix', methods=['GET', 'POST'])
@@ -230,7 +273,7 @@ def settings_prefix_add():
             form_add_prefix.name.data,
             form_add_prefix.describe.data
         )
-    return redirect('/settings')
+    return redirect('/settings/prefix')
 
 
 @app.route('/settings/delete/ipmi/<ipmi_id>', methods=['GET', 'POST'])
@@ -241,7 +284,7 @@ def settings_ipmi_delete(ipmi_id):
     ipmi = pyrmalib.get_ilo_type(webParameters, ipmi_id=ipmi_id, raw=True)
     if request.method == 'POST' and del_button.validate_on_submit():
         pyrmalib.del_ipmi(webParameters, ipmi_id)
-        return redirect('/settings')
+        return redirect('/settings/ipmi')
     return render_template(
         siteMap['settings_del_ipmi'],
         admin=access.check_access(webParameters, 'Administrate'),
@@ -260,7 +303,7 @@ def settings_prefix_delete(prefix_id):
     search_field = forms.Search()
     if request.method == 'POST' and del_button.validate_on_submit():
         pyrmalib.del_prefix(webParameters, prefix_id)
-        return redirect('/settings')
+        return redirect('/settings/prefix')
     return render_template(
         siteMap['settings_del_prefix'],
         admin=access.check_access(webParameters, 'Administrate'),
@@ -271,9 +314,29 @@ def settings_prefix_delete(prefix_id):
     )
 
 
+@app.route('/settings/delete/service/<service_id>', methods=['GET', 'POST'])
+@pyrmalib.authorization(session, request, webParameters)
+def settings_service_delete(service_id):
+    service = pyrmalib.get_service_type(webParameters, service_type_id=service_id)
+    del_button = forms.DelButton()
+    search_field = forms.Search()
+    if request.method == 'POST' and del_button.validate_on_submit():
+        pyrmalib.del_service_type(webParameters, service_id)
+        return redirect('/settings/service')
+    return render_template(
+        siteMap['settings_del_service'],
+        admin=access.check_access(webParameters, 'Administrate'),
+        del_button=del_button,
+        search=search_field,
+        service=service,
+        username=webParameters.aaa_user.username
+    )
+
+
+
 @app.route('/settings/change/ipmi/<ipmi_id>', methods=['GET', 'POST'])
 @pyrmalib.authorization(session, request, webParameters)
-def settings_change_ipmi(ipmi_id):
+def settings_ipmi_change(ipmi_id):
     search_field = forms.Search()
     ipmi = pyrmalib.get_ilo_type(webParameters, ipmi_id=ipmi_id, raw=True)
     form = forms.IPMI()
@@ -285,7 +348,7 @@ def settings_change_ipmi(ipmi_id):
         }
         print(data)
         pyrmalib.change_ipmi(webParameters, ipmi_id, data)
-        return redirect('/settings')
+        return redirect('/settings/ipmi')
     form.name.data = ipmi.name
     form.vendor.data = ipmi.vendor
     form.ports.data = ipmi.ports
@@ -670,7 +733,7 @@ def add_service(host_id):
     status = None
 
     if edit_host_information or admin:
-        form = forms.AddService()
+        form = forms.AddServiceHost()
         form.type.choices = pyrmalib.get_service_type(webParameters)
 
         if request.method == 'POST' and form.add_sub.data:

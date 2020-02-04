@@ -1,15 +1,6 @@
-{% extends "main.html" %}
-{% from "menu.html" import show_menu %}
-{% from "search.html" import show_search %}
-{% from "_formhelpers.html" import render_field %}
+{% extends "settings_header.html" %}
 
-{% block header %}
-{{ show_menu(username, Admin=admin, Active='settings') }}
-{{ show_search(search) }}
-{{ super() }}
-{% endblock %}
-
-{% block content %}
+{% block settings %}
 <hr>
 <div class="settings">
     <h3>Настройки приложения</h3>
@@ -29,62 +20,5 @@
         </dl>
         <p>{{ parameters_form.sub }}
     </form>
-</div>
-<div class="prefix">
-    <h3>Префиксы</h3>
-    <details>
-        <summary>Добавить</summary>
-        <form action="/settings/add/prefix" method="POST">
-            {{ form_add_prefix.csrf_token }}
-            <p>
-                {{ form_add_prefix.name.label }} {{ form_add_prefix.name }} {{ form_add_prefix.describe.label }} {{ form_add_prefix.describe }} {{ form_add_prefix.sub }}
-            </p>
-        </form>
-    </details>
-    <table width="95%">
-        <tbody>
-        <tr>
-            <th align="left">Имя</th>
-            <th align="left">Описание</th>
-        </tr>
-        {% for p in prefix %}
-        <tr>
-            <td>{{ p.name }}</td>
-            <td>{{ p.note}} </td>
-            <td align="right"><a href="/settings/delete/prefix/{{p.id}}"><button>Delete</button></a></td>
-        </tr>
-        {% endfor %}
-        </tbody>
-    </table>
-</div>
-<div class="ipmi">
-    <h3>Типы IPMI</h3>
-    <details>
-        <summary>Добавить</summary>
-        <form action="/settings/add/ipmi" method="POST">
-            {{ form_add_ipmi.csrf_token }}
-            <p>
-                {{ form_add_ipmi.name.label }} {{ form_add_ipmi.name }} {{ form_add_ipmi.vendor.label }} {{ form_add_ipmi.vendor }} {{ form_add_ipmi.ports.label }} {{ form_add_ipmi.ports }} {{ form_add_ipmi.sub }}
-            </p>
-        </form>
-    </details>
-    <table width="95%">
-        <tbody>
-        <tr>
-            <th align="left">Имя</th>
-            <th align="left">Вендор</th>
-            <th align="left">Порты</th>
-        </tr>
-        {% for p in ipmi %}
-        <tr>
-            <td>{{ p.name }}</td>
-            <td>{{ p.vendor}} </td>
-            <td>{{ p.ports}} </td>
-            <td><a href="/settings/change/ipmi/{{p.id}}"><button>Change</button></a></td>
-            <td align="right"><a href="/settings/delete/ipmi/{{p.id}}"><button>Delete</button></a></td>
-        </tr>
-        {% endfor %}
-        </tbody>
-    </table>
 </div>
 {% endblock %}

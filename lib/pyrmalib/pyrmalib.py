@@ -399,11 +399,17 @@ def get_ilo_type(param: parameters.WebParameters, ipmi_id=None, raw=False):
         return [(t.id, t.name) for t in ilo_type]
 
 
-def get_service_type(param: parameters.WebParameters):
+def get_service_type(param: parameters.WebParameters, service_type_id=None, raw=False):
     with schema.db_select(param.engine) as db:
-        service_type = db.query(schema.ServiceType).all()
+        if service_type_id:
+            service_type = db.query(schema.ServiceType).filter(schema.ServiceType.id == service_type_id).one()
+        else:
+            service_type = db.query(schema.ServiceType).all()
 
-    return [(t.id, t.name) for t in service_type]
+    if raw or service_type_id:
+        return service_type
+    else:
+        return [(t.id, t.name) for t in service_type]
 
 
 def get_local_port(param: parameters.WebParameters):
@@ -1443,6 +1449,21 @@ def del_prefix(param: parameters.WebParameters, prefix):
             action_type=4,
             date=datetime.datetime.now(),
             message="Удаление префикса: {id}".format(id=prefix)
+        )
+        db.add(action)
+        db.flush()
+    return True
+
+
+def del_service_type(param: parameters.WebParameters, service):
+    with schema.db_edit(param.engine) as db:
+        s = db.query(schema.ServiceType).filter(schema.ServiceType.id == service).one()
+        db.query(schema.ServiceType).filter(schema.ServiceType.id == service).delete()
+        action = schema.Action(
+            user=param.user_info.login,
+            action_type=9,
+            date=datetime.datetime.now(),
+            message="Удаление сервиса: {service.name}({service.id})".format(service=s)
         )
         db.add(action)
         db.flush()

@@ -1,0 +1,32 @@
+{% extends "settings_header.html" %}
+
+{% block settings %}
+<hr>
+<div class="service">
+    <h3>Сервисы</h3>
+    <details>
+        <summary>Добавить</summary>
+        <form action="/settings/add/service" method="POST">
+            {{ form_add_service.csrf_token }}
+            <p>
+                {{ form_add_service.name.label }} {{ form_add_service.name }} {{ form_add_service.default_port.label }} {{ form_add_service.default_port }} {{ form_add_service.sub }}
+            </p>
+        </form>
+    </details>
+    <table width="95%">
+        <tbody>
+        <tr>
+            <th align="left">Имя</th>
+            <th align="left">Порт по умолчанию</th>
+        </tr>
+        {% for p in service %}
+        <tr>
+            <td>{{ p.name }}</td>
+            <td>{{ p.default_port}} </td>
+            <td align="right"><a href="/settings/delete/service/{{p.id}}"><button>Delete</button></a></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
