@@ -194,3 +194,36 @@ class AddAccess(FlaskForm):
 
 class DelButton(FlaskForm):
     sub = SubmitField('Удалить')
+
+
+class Parameters(FlaskForm):
+    email_host = StringField('Адрес EMAIL Сервера', validators=[IPAddress()])
+    email_port = IntegerField('Порт EMAIL Сервера', validators=[NumberRange(min=1, max=65535)])
+    email_from = StringField('Email отправителя', validators=[DataRequired()])
+    email_cc = StringField('Получатели копии email сообщений')
+    auto_extension = BooleanField('Автопродление доступа')
+    extension_days = IntegerField('Колличество дней для автопродления', validators=[NumberRange(min=1, max=365)])
+    enable_route_map = BooleanField('Включение маршрутизации')
+    check_ip = BooleanField('Включение проверки пользовательских IP адресов')
+    forward_tcp_port_disable = StringField('Запрещенные порты для проброса(Разделитель ;)')
+    forward_tcp_port_range = StringField('Диапазон портов для форвардинга(Разделитель ;)')
+    sub = SubmitField('Сохранить')
+
+
+class AddPrefix(FlaskForm):
+    name = StringField('Имя', validators=[DataRequired()])
+    describe = StringField('Описание')
+    sub = SubmitField('Добавить')
+
+
+class IPMI(FlaskForm):
+    name = StringField('Имя', validators=[DataRequired()])
+    vendor = StringField('Вендор')
+    ports = StringField('Порты', validators=[DataRequired(), port_list_check])
+    sub = SubmitField('Добавить')
+
+
+class AddService(FlaskForm):
+    name = StringField('Имя', validators=[DataRequired()])
+    default_port = StringField('Порт по умолчанию')
+    sub = SubmitField('Добавить')

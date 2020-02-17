@@ -31,10 +31,12 @@
 <!--        {% else %}-->
 <!--        <li class="menu"><a href="/statistic">Статистика</a></li>-->
 <!--        {% endif %}-->
-        {% if Active == "settings" %}
-        <li class="menu"><a class="active" href="/settings">Настройки</a></li>
-        {% else %}
-        <li class="menu"><a href="/settings">Настройки</a></li>
+        {% if Admin %}
+            {% if Active == "settings" %}
+            <li class="menu"><a class="active" href="/settings">Настройки</a></li>
+            {% else %}
+            <li class="menu"><a href="/settings">Настройки</a></li>
+            {% endif %}
         {% endif %}
         <li class="menu" style="float:right"><a href="/logout">Выход</a></li>
         {% if Admin %}

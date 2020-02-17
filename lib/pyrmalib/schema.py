@@ -144,7 +144,7 @@ class AAAUser(Base):
     gid = sqlalchemy.Column(sqlalchemy.Integer, default=5000)
     gecos = sqlalchemy.Column(sqlalchemy.String(128))
     homedir = sqlalchemy.Column(sqlalchemy.String(255), default='/home/acs/')
-    shell = sqlalchemy.Column(sqlalchemy.String(64), default='/bin/sh')
+    shell = sqlalchemy.Column(sqlalchemy.String(64), default='/opt/pyRMA/bin/pyrma.sh')
     password = sqlalchemy.Column(sqlalchemy.String(34))
     lstchg = sqlalchemy.Column(sqlalchemy.BIGINT)
     min = sqlalchemy.Column(sqlalchemy.BIGINT, default=0)
