@@ -545,9 +545,9 @@ if __name__ == '__main__':
     arg.add_argument('--host', help='Адрес узла', default='localhost', type=str)
     arg.add_argument('--port', help='Порт подключения', default='5432', type=str)
 
-    # sub_parser = arg.add_subparsers(help=u'Команды', dest='command')
-    # sub_install = sub_parser.add_parser('install')
-    # sub_update = sub_parser.add_parser('update')
+    sub_parser = arg.add_subparsers(help=u'Команды', dest='command')
+    sub_install = sub_parser.add_parser('install')
+    sub_update = sub_parser.add_parser('update')
 
     pars = arg.parse_args()
 
