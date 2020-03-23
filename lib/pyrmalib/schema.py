@@ -75,7 +75,6 @@ default_parameter = [
     {"name": "EXTENSION_DAYS", "value": "21", "description": "Колличество дней для продления доступа"},
     {"name": "ENABLE_ROUTE_MAP", "value": "1", "description": "Включение подключения через промежуточные хосты"},
     {"name": "CHECK_IP",        "value": "0", "description": "Проверка IP адреса клиента"},
-    {"name": "STORAGE_DIR",     "value": "/data/pyRMA/", "description": "Директория хранения данных"},
     {"name": "FORWARD_TCP_PORT_DISABLE", "value": "22;23", "description": ""},
     {"name": "FORWARD_TCP_PORT_RANGE",
      "value": "10000;15000", "description": "Диапозон портов для подключения сервисов"}
@@ -364,6 +363,27 @@ class Connection(Base):
     date_end = sqlalchemy.Column(sqlalchemy.DateTime)
     error = sqlalchemy.Column(sqlalchemy.String)
     termination = sqlalchemy.Column(sqlalchemy.Integer)
+    session = sqlalchemy.Column(sqlalchemy.Integer)
+
+    def __repr__(self):
+        return "{0}".format(self.__dict__)
+
+
+class Session(Base):
+    """
+    Таблица подключений к pyRMA
+    """
+    __tablename__ = 'session'
+    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
+    user = sqlalchemy.Column(sqlalchemy.Integer)
+    date_start = sqlalchemy.Column(sqlalchemy.DateTime, nullable=False)
+    date_end = sqlalchemy.Column(sqlalchemy.DateTime)
+    pid = sqlalchemy.Column(sqlalchemy.Integer)
+    ppid = sqlalchemy.Column(sqlalchemy.Integer)
+    ip = sqlalchemy.Column(sqlalchemy.String)
+    status = sqlalchemy.Column(sqlalchemy.Integer, default=0)
+    termination = sqlalchemy.Column(sqlalchemy.Integer)
+    ttyrec = sqlalchemy.Column(sqlalchemy.String)
 
     def __repr__(self):
         return "{0}".format(self.__dict__)
@@ -579,6 +599,7 @@ if __name__ == '__main__':
         RouteMap.__table__.create(bind=engine)
         Service.__table__.create(bind=engine)
         ServiceType.__table__.create(bind=engine)
+        Session.__table__.create(bind=engine)
         User.__table__.create(bind=engine)
 
         for key, value in action_type.items():
@@ -646,3 +667,5 @@ if __name__ == '__main__':
                 )
             )
             db.flush()
+    elif pars.command == 'update':
+        Session.__table__.create(bind=engine)

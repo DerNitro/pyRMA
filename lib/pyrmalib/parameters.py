@@ -45,6 +45,7 @@ class Parameters:
     version = None
     aaa_user = None
     user_info = None
+    data_dir = None
     log_param = {}
     log = None
 
@@ -57,11 +58,14 @@ class Parameters:
         check_config(self.conf)
 
         self.dbase = self.conf.get('DataBase', 'provider', fallback='postgresql')
-        self.dbase_param = [self.conf.get('DataBase', 'dbhost', fallback='localhost'),
-                            self.conf.get('DataBase', 'dbport', fallback=5432),
-                            self.conf.get('DataBase', 'dbuser', fallback='pyrmalib'),
-                            self.conf.get('DataBase', 'dbpass', fallback='pyrmalib'),
-                            self.conf.get('DataBase', 'dbname', fallback='pyrmalib')]
+        self.dbase_param = {
+            "host":     self.conf.get('DataBase', 'dbhost', fallback='localhost'),
+            "port":     self.conf.get('DataBase', 'dbport', fallback=5432),
+            "user":     self.conf.get('DataBase', 'dbuser', fallback='pyrmalib'),
+            "password": self.conf.get('DataBase', 'dbpass', fallback='pyrmalib'),
+            "database": self.conf.get('DataBase', 'dbname', fallback='pyrmalib')
+        }
+        self.data_dir = self.conf.get('Main', 'data_dir', fallback='/data/pyRMA')
 
     def check_user(self):
         if not self.user_info:
@@ -78,6 +82,7 @@ class AppParameters(Parameters):
     license = None
     table_parameter = {}
     modules = ''
+    session = None
 
     def __init__(self):
         super().__init__()

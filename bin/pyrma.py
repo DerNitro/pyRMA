@@ -21,7 +21,7 @@
 
 import sys
 import traceback
-from pyrmalib import parameters, interface, schema
+from pyrmalib import parameters, interface, schema, error
 import sqlalchemy.orm
 from sqlalchemy import create_engine
 from pyrmalib.utils import *
@@ -65,12 +65,16 @@ else:
 if appParameters.dbase in ['postgresql', 'mysql', 'oracle']:
     if appParameters.dbase == 'mysql':
         appParameters.dbase += '+pymysql'
-    engine = create_engine('{0}://{1}:{2}@{3}:{4}/{5}'.format(appParameters.dbase,
-                                                              appParameters.dbase_param[2],
-                                                              appParameters.dbase_param[3],
-                                                              appParameters.dbase_param[0],
-                                                              appParameters.dbase_param[1],
-                                                              appParameters.dbase_param[4]))
+    engine = create_engine(
+        '{0}://{1}:{2}@{3}:{4}/{5}'.format(
+            appParameters.dbase,
+            appParameters.dbase_param["user"],
+            appParameters.dbase_param["password"],
+            appParameters.dbase_param["host"],
+            appParameters.dbase_param["port"],
+            appParameters.dbase_param["database"]
+        )
+    )
 else:
     appParameters.log.error('Некорректные параметры подключения к БД.', pr=True)
     sys.exit(12)
@@ -82,8 +86,8 @@ try:
         appParameters.table_parameter = db.query(schema.Parameter).all()
         appParameters.log.debug(appParameters.table_parameter)
 except sqlalchemy.orm.exc.NoResultFound:
-    # TODO: Заполнить таблицу дефолтными значениями.
-    pass
+    error.WTF("Ошибка инициализации приложения")
+    sys.exit(15)
 
 try:
     with schema.db_select(engine) as db:
@@ -94,21 +98,23 @@ try:
         appParameters.log.debug(user_info)
         appParameters.aaa_user = aaa_user
         appParameters.user_info = user_info
-        # appParameters.user_info.permissions = access.UserAccess(appParameters.user_info.permissions)
 except sqlalchemy.orm.exc.NoResultFound:
     appParameters.log.error("Пользователь не существует.", pr=True)
     sys.exit(13)
 
 # Проверка соответсвия IP адреса с адресом подключения.
 if list(filter(lambda x: x.name == 'CHECK_IP', appParameters.table_parameter))[0].value == '0':
-    appParameters.log.info("Проверка IP отключена")
+    appParameters.log.debug("Проверка IP отключена")
 else:
     if not check_ip(os.environ.get('SSH_CLIENT').split()[0], user_info.ip):
         appParameters.log.error("Подключение с неразрешеного IP адрес", pr=True)
         sys.exit(14)
     else:
-        appParameters.log.info("Подключение пользователя {0} с IP: {1}.". \
-                               format(aaa_user.username, os.environ.get('SSH_CLIENT').split()[0]))
+        appParameters.log.info(
+            "Подключение пользователя {0} с IP: {1}.".format(
+                aaa_user.username, os.environ.get('SSH_CLIENT').split()[0]
+            )
+        )
 
 # Проверка блокироваки уч. записи, с автоматическим продлением даты блокировки.
 if user_info.date_disable < datetime.datetime.now() or user_info.disable:
@@ -132,6 +138,21 @@ with schema.db_edit(engine) as db:
                          date=datetime.datetime.now(),
                          message="Успешное подключение к системе."))
 
+with schema.db_edit(engine) as db:
+    session = schema.Session(
+            user=aaa_user.uid,
+            date_start=datetime.datetime.now(),
+            pid=os.getpid(),
+            ppid=os.getppid(),
+            ip=os.environ.get('SSH_CLIENT').split()[0],
+            ttyrec=os.path.join(os.environ.get('file_path').split()[0], os.environ.get('file_rec').split()[0])
+        )
+
+    db.add(session)
+    db.flush()
+    db.refresh(session)
+    appParameters.session = session.id
+
 load_modules(appParameters.modules, appParameters.log)
 
 # Запуск интерфейса.
@@ -139,4 +160,16 @@ appParameters.log.debug("Запуск графического интерфей�
 App = interface.Interface(appParameters)
 result = App.run()
 appParameters.log.info('Выход из приложения.')
+
+with schema.db_edit(engine) as db:
+    db.query(schema.Session).filter(
+        schema.Session.id == appParameters.session
+    ).update(
+        {
+            schema.Session.status: 1,
+            schema.Session.date_end: datetime.datetime.now(),
+            schema.Session.termination: 0
+        }
+    )
+
 sys.exit(0)

@@ -23,7 +23,10 @@ import socket
 import platform
 import hashlib
 
-host_id = os.popen("hostid").read().strip()
+process_hostid = os.popen('hostid')
+host_id = process_hostid.read().strip()
+process_hostid.close()
+
 host_name = socket.gethostname()
 platform = platform.system()
 

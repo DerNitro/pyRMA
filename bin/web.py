@@ -28,13 +28,16 @@ from sqlalchemy import create_engine
 from werkzeug.utils import secure_filename
 
 webParameters = parameters.WebParameters()
-webParameters.engine = create_engine('{0}://{1}:{2}@{3}:{4}/{5}'.format(webParameters.dbase,
-                                                                        webParameters.dbase_param[2],
-                                                                        webParameters.dbase_param[3],
-                                                                        webParameters.dbase_param[0],
-                                                                        webParameters.dbase_param[1],
-                                                                        webParameters.dbase_param[4]
-                                                                        ))
+webParameters.engine = create_engine(
+        '{0}://{1}:{2}@{3}:{4}/{5}'.format(
+            webParameters.dbase,
+            webParameters.dbase_param["user"],
+            webParameters.dbase_param["password"],
+            webParameters.dbase_param["host"],
+            webParameters.dbase_param["port"],
+            webParameters.dbase_param["database"]
+        )
+)
 app = Flask(__name__,
             template_folder=webParameters.template,
             static_folder=os.path.join(webParameters.template, 'static'))

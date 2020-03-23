@@ -47,15 +47,19 @@ def check_license(lic):
     allhash, idhost, hostname, platform, days = str(f.readline()).split()
     f.close()
 
+    process_hostid = os.popen('hostid')
+    host_id = process_hostid.read()
+    process_hostid.close()
+
     if not system() == platform:
         return False
-    if not hashlib.md5(os.popen('hostid').read().strip().encode()).hexdigest() == idhost:
+    if not hashlib.md5(host_id.strip().encode()).hexdigest() == idhost:
         return False
     if not gethostname() == hostname:
         return False
     if not datetime.datetime.now() < datetime.datetime.strptime(days, '%d/%m/%Y'):
         return False
-    if not allhash == hashlib.md5(str(hashlib.md5(os.popen('hostid').read().strip().encode()).hexdigest()).encode() \
+    if not allhash == hashlib.md5(str(hashlib.md5(host_id.strip().encode()).hexdigest()).encode() \
                                   + str(gethostname()).encode() \
                                   + str(system()).encode() \
                                   + str(days).encode()).hexdigest():

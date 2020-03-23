@@ -278,13 +278,12 @@ def get_admin_content_dashboard(param: parameters.WebParameters):
     """
     with schema.db_select(param.engine) as db:
         connection_count = db.query(schema.Connection).filter(schema.Connection.status == 1).count()
-        storage_dir = db.query(schema.Parameter).filter(schema.Parameter.name == 'STORAGE_DIR').one()
     content = {'access_request': get_access_request(param.engine),
                'connection': get_connection(param.engine),
                'connection_count': connection_count,
                'la': os.getloadavg()[2],
                'free': psutil.virtual_memory().percent,
-               'disk': psutil.disk_usage(storage_dir.value).percent,
+               'disk': psutil.disk_usage(param.data_dir).percent,
                'new_user': get_new_user(param)}
     return content
 

@@ -188,6 +188,14 @@ pyRMA
     -session   optional     pam_reauthorize.so prepare
 
 
+Установка ini-file
+------------------
+::
+
+    git clone https://github.com/DerNitro/ini-file
+    cd ini-file
+    python3 setup.py install
+
 Подготовка к запуску
 --------------------
 ::

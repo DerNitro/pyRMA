@@ -6,8 +6,9 @@ umask 0002
 
 TTYREC=/opt/pyRMA/bin/ttyrec
 
+data_dir=$(ini-file --section Main --key data_dir /etc/pyrma/pyrma.conf)
 file_rec=$(id -u -n)_$(date +%Y-%m-%d_%H:%M:%S.%s)
-file_path=/data/pyRMA/filerecords/$(date +%Y/%m/%d)
+file_path=$data_dir/filerecords/$(date +%Y/%m/%d)
 
 export file_rec file_path
 
