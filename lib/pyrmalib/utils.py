@@ -186,11 +186,6 @@ def password(passwd, magic, mask):
     return result
 
 
-def load_modules(path, log):
-    log.debug('load_modules: {0}'.format(path))
-    pass
-
-
 def date_to_datetime(d):
     if isinstance(d, datetime):
         return d

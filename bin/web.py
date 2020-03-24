@@ -24,7 +24,7 @@ from flask import Flask, render_template, request, redirect, session, url_for
 from flask_wtf.csrf import CSRFProtect
 from pyrmalib import schema, parameters, pyrmalib, access, forms, error as rma_error
 import os.path
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, sql
 from werkzeug.utils import secure_filename
 
 webParameters = parameters.WebParameters()
@@ -571,12 +571,12 @@ def add_host(directory_id):
         h = schema.Host(
             name=form.name.data,
             ip=form.ip.data,
-            tcp_port=form.port.data,
+            tcp_port=form.port.data if form.port.data else sql.null(),
             connection_type=form.connection_type.data,
             file_transfer_type=form.file_transfer_type.data,
             describe=form.describe.data,
             ilo=form.ilo.data,
-            ilo_type=form.ilo_type.data,
+            ilo_type=form.ilo_type.data if form.ilo_type.data != 'None' else sql.null(),
             default_login=form.default_login.data,
             default_password=form.default_password.data,
             note=form.note.data,

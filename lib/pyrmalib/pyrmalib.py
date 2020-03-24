@@ -395,7 +395,7 @@ def get_ilo_type(param: parameters.WebParameters, ipmi_id=None, raw=False):
     if raw or ipmi_id:
         return ilo_type
     else:
-        return [(t.id, t.name) for t in ilo_type]
+        return [(None, 'Нет')] + [(t.id, t.name) for t in ilo_type]
 
 
 def get_service_type(param: parameters.WebParameters, service_type_id=None, raw=False):

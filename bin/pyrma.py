@@ -87,7 +87,7 @@ try:
         appParameters.log.debug(appParameters.table_parameter)
 except sqlalchemy.orm.exc.NoResultFound:
     error.WTF("Ошибка инициализации приложения")
-    sys.exit(15)
+    sys.exit(13)
 
 try:
     with schema.db_select(engine) as db:
@@ -100,26 +100,30 @@ try:
         appParameters.user_info = user_info
 except sqlalchemy.orm.exc.NoResultFound:
     appParameters.log.error("Пользователь не существует.", pr=True)
-    sys.exit(13)
+    sys.exit(14)
 
 # Проверка соответсвия IP адреса с адресом подключения.
+try:
+    ssh_client_ip = os.environ.get('SSH_CLIENT').split()[0]
+except AttributeError:
+    ssh_client_ip = '127.0.0.1'
 if list(filter(lambda x: x.name == 'CHECK_IP', appParameters.table_parameter))[0].value == '0':
     appParameters.log.debug("Проверка IP отключена")
 else:
-    if not check_ip(os.environ.get('SSH_CLIENT').split()[0], user_info.ip):
+    if not check_ip(ssh_client_ip, user_info.ip):
         appParameters.log.error("Подключение с неразрешеного IP адрес", pr=True)
-        sys.exit(14)
+        sys.exit(15)
     else:
         appParameters.log.info(
             "Подключение пользователя {0} с IP: {1}.".format(
-                aaa_user.username, os.environ.get('SSH_CLIENT').split()[0]
+                aaa_user.username, ssh_client_ip
             )
         )
 
 # Проверка блокироваки уч. записи, с автоматическим продлением даты блокировки.
 if user_info.date_disable < datetime.datetime.now() or user_info.disable:
     appParameters.log.error("Учетная запись заблокирована.", pr=True)
-    sys.exit(15)
+    sys.exit(16)
 else:
     if list(filter(lambda x: x.name == 'AUTO_EXTENSION', appParameters.table_parameter))[0].value == '1' \
             and user_info.date_disable < datetime.datetime.now() + datetime.timedelta(days=15):
@@ -132,11 +136,11 @@ else:
         else:
             appParameters.log.warning("Huston we have problem!!!")
 
-with schema.db_edit(engine) as db:
-    db.add(schema.Action(action_type=1,
-                         user=aaa_user.uid,
-                         date=datetime.datetime.now(),
-                         message="Успешное подключение к системе."))
+try:
+    ttyrec_file = os.path.join(os.environ.get('file_path').split()[0], os.environ.get('file_rec').split()[0])
+except AttributeError:
+    appParameters.log.error("Ошибка записи сессии.", pr=True)
+    sys.exit(17)
 
 with schema.db_edit(engine) as db:
     session = schema.Session(
@@ -144,8 +148,8 @@ with schema.db_edit(engine) as db:
             date_start=datetime.datetime.now(),
             pid=os.getpid(),
             ppid=os.getppid(),
-            ip=os.environ.get('SSH_CLIENT').split()[0],
-            ttyrec=os.path.join(os.environ.get('file_path').split()[0], os.environ.get('file_rec').split()[0])
+            ip=ssh_client_ip,
+            ttyrec=ttyrec_file
         )
 
     db.add(session)
@@ -153,7 +157,11 @@ with schema.db_edit(engine) as db:
     db.refresh(session)
     appParameters.session = session.id
 
-load_modules(appParameters.modules, appParameters.log)
+with schema.db_edit(engine) as db:
+    db.add(schema.Action(action_type=1,
+                         user=aaa_user.uid,
+                         date=datetime.datetime.now(),
+                         message="Успешное подключение к системе."))
 
 # Запуск интерфейса.
 appParameters.log.debug("Запуск графического интерфейса.")

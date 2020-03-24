@@ -666,6 +666,13 @@ if __name__ == '__main__':
                     plugin='TELNET'
                 )
             )
+            db.add(
+                FileTransferType(
+                    name='SFTP',
+                    default_port=22,
+                    plugin='SFTP'
+                )
+            )
             db.flush()
     elif pars.command == 'update':
-        Session.__table__.create(bind=engine)
+        pass
