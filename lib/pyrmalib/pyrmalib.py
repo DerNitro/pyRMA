@@ -351,7 +351,7 @@ def get_host_list(param: parameters.WebParameters, level=None):
     return host_list
 
 
-def get_service(param: parameters.WebParameters, host=None, service=None):
+def get_service(param: parameters.Parameters, host=None, service=None):
     """
     Запрос сервисов
     :param param: WebParameters
@@ -382,7 +382,7 @@ def get_file_transfer_type(param: parameters.WebParameters):
     with schema.db_select(param.engine) as db:
         file_transfer_type = db.query(schema.FileTransferType).all()
 
-    return [(t.id, t.name) for t in file_transfer_type]
+    return [(None, 'Нет')] + [(t.id, t.name) for t in file_transfer_type]
 
 
 def get_ilo_type(param: parameters.WebParameters, ipmi_id=None, raw=False):
@@ -398,7 +398,7 @@ def get_ilo_type(param: parameters.WebParameters, ipmi_id=None, raw=False):
         return [(None, 'Нет')] + [(t.id, t.name) for t in ilo_type]
 
 
-def get_service_type(param: parameters.WebParameters, service_type_id=None, raw=False):
+def get_service_type(param: parameters.Parameters, service_type_id=None, raw=False):
     with schema.db_select(param.engine) as db:
         if service_type_id:
             service_type = db.query(schema.ServiceType).filter(schema.ServiceType.id == service_type_id).one()
@@ -1129,6 +1129,26 @@ def add_service(param: parameters.WebParameters, service: schema.Service):
             action_type=23,
             date=datetime.datetime.now(),
             message="Добавление сервиса: {service.host} - id={service.id}({service})".format(service=service)
+        )
+        db.add(action)
+        db.flush()
+        return True
+
+
+def add_service_type(param: parameters.WebParameters, name, default_port):
+    with schema.db_edit(param.engine) as db:
+        service_type = schema.ServiceType(
+            name=name,
+            default_port=default_port
+        )
+        db.add(service_type)
+        db.flush()
+        db.refresh(service_type)
+        action = schema.Action(
+            user=param.user_info.login,
+            action_type=8,
+            date=datetime.datetime.now(),
+            message="Добавление сервиса: id={service.id}({service})".format(service=service_type)
         )
         db.add(action)
         db.flush()

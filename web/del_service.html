@@ -15,8 +15,7 @@
         <tr>
             <td>
                 <form action="/delete_service/{{ service.id }}" method="POST" name="delete_service">
-                    {{ form.csrf_token }}
-                    <input class="delete_service" type="submit" value="Удалить"/>
+                    {{ del_button.csrf_token }} {{ del_button.sub() }}
                 </form>
             </td>
             <td>

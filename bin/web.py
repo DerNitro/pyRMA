@@ -29,14 +29,14 @@ from werkzeug.utils import secure_filename
 
 webParameters = parameters.WebParameters()
 webParameters.engine = create_engine(
-        '{0}://{1}:{2}@{3}:{4}/{5}'.format(
-            webParameters.dbase,
-            webParameters.dbase_param["user"],
-            webParameters.dbase_param["password"],
-            webParameters.dbase_param["host"],
-            webParameters.dbase_param["port"],
-            webParameters.dbase_param["database"]
-        )
+    '{0}://{1}:{2}@{3}:{4}/{5}'.format(
+        webParameters.dbase,
+        webParameters.dbase_param["user"],
+        webParameters.dbase_param["password"],
+        webParameters.dbase_param["host"],
+        webParameters.dbase_param["port"],
+        webParameters.dbase_param["database"]
+    )
 )
 app = Flask(__name__,
             template_folder=webParameters.template,
@@ -82,7 +82,7 @@ siteMap = {'index': 'index.html',
            'settings_ipmi': 'settings_ipmi.html',
            'settings_prefix': 'settings_prefix.html',
            'settings_service': 'settings_service.html',
-           'settings_del_service': 'del_service_type.html',}
+           'settings_del_service': 'del_service_type.html', }
 
 
 def check_auth(username, password, client_ip):
@@ -279,6 +279,19 @@ def settings_prefix_add():
     return redirect('/settings/prefix')
 
 
+@app.route('/settings/add/service', methods=['GET', 'POST'])
+@pyrmalib.authorization(session, request, webParameters)
+def settings_service_add():
+    form_add_service = forms.AddService()
+    if request.method == 'POST' and form_add_service.validate_on_submit():
+        pyrmalib.add_service_type(
+            webParameters,
+            form_add_service.name.data,
+            form_add_service.default_port.data
+        )
+    return redirect('/settings/service')
+
+
 @app.route('/settings/delete/ipmi/<ipmi_id>', methods=['GET', 'POST'])
 @pyrmalib.authorization(session, request, webParameters)
 def settings_ipmi_delete(ipmi_id):
@@ -334,7 +347,6 @@ def settings_service_delete(service_id):
         service=service,
         username=webParameters.aaa_user.username
     )
-
 
 
 @app.route('/settings/change/ipmi/<ipmi_id>', methods=['GET', 'POST'])
@@ -573,7 +585,7 @@ def add_host(directory_id):
             ip=form.ip.data,
             tcp_port=form.port.data if form.port.data else sql.null(),
             connection_type=form.connection_type.data,
-            file_transfer_type=form.file_transfer_type.data,
+            file_transfer_type=form.file_transfer_type.data if form.file_transfer_type.data != 'None' else sql.null(),
             describe=form.describe.data,
             ilo=form.ilo.data,
             ilo_type=form.ilo_type.data if form.ilo_type.data != 'None' else sql.null(),
@@ -641,19 +653,21 @@ def edit_host(host_id):
             form.ilo_type.process_data(h.ilo_type)
 
     if request.method == 'POST' and form.edit_sub.data:
-        d = {'name': form.name.data,
-             'ip': form.ip.data,
-             'port': form.port.data,
-             'connection_type': form.connection_type.data,
-             'file_transfer_type': form.file_transfer_type.data,
-             'describe': form.describe.data,
-             'ilo': form.ilo.data,
-             'ilo_type': form.ilo_type.data,
-             'default_login': form.default_login.data,
-             'default_password': form.default_password.data,
-             'note': form.note.data,
-             'proxy': form.proxy.data
-             }
+        d = {
+            'name': form.name.data,
+            'ip': form.ip.data,
+            'port': form.port.data,
+            'connection_type': form.connection_type.data,
+            'file_transfer_type': form.file_transfer_type.data if form.file_transfer_type.data != 'None'
+            else sql.null(),
+            'describe': form.describe.data,
+            'ilo': form.ilo.data,
+            'ilo_type': form.ilo_type.data if form.ilo_type.data != 'None' else sql.null(),
+            'default_login': form.default_login.data,
+            'default_password': form.default_password.data,
+            'note': form.note.data,
+            'proxy': form.proxy.data
+        }
         check_folder = pyrmalib.get_host(webParameters, name=form.name.data, parent=h.parent)
         if check_folder:
             if int(check_folder.id) != int(host_id):
@@ -713,13 +727,15 @@ def host(host_id):
 @pyrmalib.authorization(session, request, webParameters)
 def del_service(service_id):
     search_field = forms.Search()
+    del_button = forms.DelButton()
     service = pyrmalib.get_service(webParameters, service=service_id)
-    if request.method == 'POST':
+    if request.method == 'POST' and del_button.validate_on_submit():
         pyrmalib.del_service(webParameters, service=service_id)
         return redirect('/host/{service.host}'.format(service=service))
     return render_template(siteMap['delete_service'],
                            admin=access.check_access(webParameters, 'Administrate'),
                            service=service,
+                           del_button=del_button,
                            search=search_field,
                            username=webParameters.aaa_user.username)
 
@@ -740,6 +756,9 @@ def add_service(host_id):
         form.type.choices = pyrmalib.get_service_type(webParameters)
 
         if request.method == 'POST' and form.add_sub.data:
+            if not form.remote_port.data:
+                service_type = pyrmalib.get_service_type(webParameters, service_type_id=form.type.data)
+                form.remote_port.data = service_type.default_port
             s = schema.Service(
                 type=form.type.data,
                 host=host_id,

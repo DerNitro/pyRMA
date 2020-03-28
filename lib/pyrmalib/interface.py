@@ -18,7 +18,7 @@
 import weakref
 import npyscreen
 import curses.ascii
-from pyrmalib import schema, template, access, parameters, utils
+from pyrmalib import schema, template, access, parameters, utils, pyrmalib
 
 
 class MultiLineEditableBoxed(npyscreen.BoxTitle):
@@ -251,6 +251,8 @@ class ConnectionForm(npyscreen.Popup):
         super().__init__(*args, **keywords)
         self.host = keywords['host']  # type: schema.Host
         self.name = 'Подключение к узлу: {0}'.format(self.host.name)
+        self.add_handlers({'^Q': self.exit_editing})
+        self.fill_values()
 
     def create(self):
         super(ConnectionForm, self).create()
@@ -259,7 +261,7 @@ class ConnectionForm(npyscreen.Popup):
         self.description = self.add(npyscreen.TitleFixedText, name='Описание')
         self.login = self.add(npyscreen.TitleText, name='Login')
         self.password = self.add(npyscreen.TitlePassword, name='Password')
-        self.save_pass = self.add(npyscreen.MultiSelectFixed, max_height=2, values=["Сохранить пароль?"])
+        self.save_pass = self.add(npyscreen.MultiSelect, max_height=2, values=["Сохранить пароль?"])
         self.service = self.add(npyscreen.BoxTitle, name='Service', max_height=7)
         self.add(npyscreen.FixedText)
         self.add(npyscreen.ButtonPress, name='Подключение',
@@ -287,12 +289,27 @@ class ConnectionForm(npyscreen.Popup):
             self.login.value = self.host.default_login
             if self.host.default_password is not None:
                 self.password.value = '*' * len(self.host.default_password)
+        services = pyrmalib.get_service(appParameters, self.host.id)
+        service_types = pyrmalib.get_service_type(appParameters, raw=True)
+        if len(services) > 0:
+            service_string_list = []
+            for s in services:
+                service_type = None
+                for st in service_types:
+                    if s.type == st.id:
+                        service_type = st.name
+                        break
+                service_string_list.append(
+                    '{service_type}: {s.local_port} -> {s.remote_ip}:{s.remote_port} {s.describe}'.format(
+                        s=s,
+                        service_type=service_type
+                    )
+                )
+            self.service.values = service_string_list
         self.DISPLAY()
         pass
 
     def while_editing(self, *args, **keywords):
-        self.add_handlers({'^Q': self.exit_editing})
-        self.fill_values()
         pass
 
     def connection(self):
@@ -354,6 +371,23 @@ class InformationForm(npyscreen.Form):
         else:
             self.login.value = '*' * 10
             self.password.value = '*' * 10
+        services = pyrmalib.get_service(appParameters, self.host.id)
+        service_types = pyrmalib.get_service_type(appParameters, raw=True)
+        if len(services) > 0:
+            service_string_list = []
+            for s in services:
+                service_type = None
+                for st in service_types:
+                    if s.type == st.id:
+                        service_type = st.name
+                        break
+                service_string_list.append(
+                    '{service_type}: {s.local_port} -> {s.remote_ip}:{s.remote_port} {s.describe}'.format(
+                        s=s,
+                        service_type=service_type
+                    )
+                )
+            self.service.values = service_string_list
         self.note.values = template.information_host(self.host.note).split('\n')
         self.DISPLAY()
         pass
