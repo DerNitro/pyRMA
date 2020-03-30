@@ -21,6 +21,13 @@ import curses.ascii
 from pyrmalib import schema, template, access, parameters, utils, pyrmalib
 
 
+def echo_form(text):
+    # Для ддебага форма.
+    f = npyscreen.Popup()
+    f.add(npyscreen.FixedText, value=text)
+    f.edit()
+
+
 class MultiLineEditableBoxed(npyscreen.BoxTitle):
     _contained_widget = npyscreen.MultiLineEditable
 
@@ -244,7 +251,11 @@ class ConnectionForm(npyscreen.Popup):
     login = None
     password = None
     service = None
+    login_password = None
     save_pass = None
+    btn_connection = None
+    btn_file_transfer = None
+    btn_ipmi = None
     button_line_relx = 0
 
     def __init__(self, *args, **keywords):
@@ -264,33 +275,44 @@ class ConnectionForm(npyscreen.Popup):
         self.save_pass = self.add(npyscreen.MultiSelect, max_height=2, values=["Сохранить пароль?"])
         self.service = self.add(npyscreen.BoxTitle, name='Service', max_height=7)
         self.add(npyscreen.FixedText)
-        self.add(npyscreen.ButtonPress, name='Подключение',
-                 when_pressed_function=self.connection)
+        self.btn_connection = self.add(
+            npyscreen.ButtonPress, name='Подключение',
+            when_pressed_function=self.connection
+        )
         self.button_line_relx += self._widgets__[-1].label_width + 2
-        self.add(npyscreen.ButtonPress, name='Передача файлов',
-                 rely=self._widgets__[-1].rely,
-                 relx=self.button_line_relx,
-                 when_pressed_function=self.file_transfer)
+        self.btn_file_transfer = self.add(
+            npyscreen.ButtonPress, name='Передача файлов',
+            rely=self._widgets__[-1].rely,
+            relx=self.button_line_relx,
+            when_pressed_function=self.file_transfer,
+            hidden=True
+        )
         self.button_line_relx += self._widgets__[-1].label_width + 2
-        self.add(npyscreen.ButtonPress, name='iLo|IPMI',
-                 rely=self._widgets__[-1].rely,
-                 relx=self.button_line_relx,
-                 when_pressed_function=self.connection_ilo)
+        self.btn_ipmi = self.add(
+            npyscreen.ButtonPress, name='iLo|IPMI',
+            rely=self._widgets__[-1].rely,
+            relx=self.button_line_relx,
+            when_pressed_function=self.connection_ilo,
+            hidden=True)
         pass
 
     def fill_values(self):
         self.ip_address.value = self.host.ip
         self.description.value = self.host.describe
-        login_password = access.get_password(appParameters, appParameters.user_info.login, self.host.id)
-        if isinstance(login_password, schema.PasswordList):
-            self.login.value = login_password.login
-            self.password.value = '*' * len(login_password.password)
+        self.login_password = pyrmalib.get_password(appParameters, self.host.id)
+        if isinstance(self.login_password, schema.PasswordList):
+            self.login.value = self.login_password.login
+            self.password.value = '*' * len(self.login_password.password)
         else:
             self.login.value = self.host.default_login
             if self.host.default_password is not None:
                 self.password.value = '*' * len(self.host.default_password)
         services = pyrmalib.get_service(appParameters, self.host.id)
         service_types = pyrmalib.get_service_type(appParameters, raw=True)
+        if self.host.ilo_type:
+            self.btn_ipmi.hidden = False
+        if self.host.file_transfer_type:
+            self.btn_file_transfer.hidden = False
         if len(services) > 0:
             service_string_list = []
             for s in services:
@@ -309,11 +331,9 @@ class ConnectionForm(npyscreen.Popup):
         self.DISPLAY()
         pass
 
-    def while_editing(self, *args, **keywords):
-        pass
-
     def connection(self):
-        pass
+        if len(self.save_pass.value) > 0:
+            pyrmalib.save_password(appParameters, self.host.id, self.login.value, self.password.value)
 
     def file_transfer(self):
         pass

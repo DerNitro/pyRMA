@@ -142,7 +142,7 @@ def check_ip_network(ip, network):
         return False
 
 
-def password(passwd, magic, mask):
+def password(passwd, magic, mask=True):
     """
     Функция маскировки/демаскировки пароля
 

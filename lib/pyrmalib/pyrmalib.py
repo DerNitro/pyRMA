@@ -250,10 +250,13 @@ def get_content_host(param: parameters.WebParameters, host_id):
         try:
             content['connection_type'] = db.query(schema.ConnectionType).\
                 filter(schema.ConnectionType.id == host.connection_type).one()
-            content['file_transfer_type'] = db.query(schema.FileTransferType).\
-                filter(schema.FileTransferType.id == host.file_transfer_type).one()
         except NoResultFound:
             raise error.WTF('Не указан тип подклчюения')
+        try:
+            content['file_transfer_type'] = db.query(schema.FileTransferType). \
+                filter(schema.FileTransferType.id == host.file_transfer_type).one()
+        except NoResultFound:
+            content['file_transfer_type'] = None
         try:
             content['parent'] = db.query(schema.Host).filter(schema.Host.id == host.parent).one().name
         except NoResultFound:
@@ -1047,19 +1050,23 @@ def reset_password(key, engine, password=False, check=False):
 
 def user_registration(reg_data, engine):
     with schema.db_edit(engine) as db:
-        aaa = schema.AAAUser(username=reg_data['username'],
-                             password=hashlib.md5(reg_data['password'].encode()).hexdigest())
+        aaa = schema.AAAUser(
+            username=reg_data['username'],
+            password=hashlib.md5(reg_data['password'].encode()).hexdigest()
+        )
         db.add(aaa)
         db.flush()
         db.refresh(aaa)
-        user = schema.User(login=aaa.uid,
-                           full_name=reg_data['full_name'],
-                           date_create=datetime.datetime.now(),
-                           disable=False,
-                           date_disable=datetime.datetime.now() + datetime.timedelta(days=365),
-                           ip=reg_data['ip'],
-                           email=reg_data['email'],
-                           check=0)
+        user = schema.User(
+            login=aaa.uid,
+            full_name=reg_data['full_name'],
+            date_create=datetime.datetime.now(),
+            disable=False,
+            date_disable=datetime.datetime.now() + datetime.timedelta(days=365),
+            ip=reg_data['ip'],
+            email=reg_data['email'],
+            check=0
+        )
         db.add(user)
         db.flush()
 
@@ -1516,6 +1523,58 @@ def clear_routes(param: parameters.WebParameters, host_id):
         db.flush()
 
     return True
+
+
+def get_password(app_param: parameters.Parameters, host):
+    """
+    Возвращает schema.Password
+    :param app_param: Настроки приложения.
+    :param host: Идентификатор хоста
+    :return: None or schema.Password
+    """
+    with schema.db_select(app_param.engine) as db:
+        try:
+            login_password = db.query(schema.PasswordList).filter(
+                schema.PasswordList.user == app_param.user_info.login,
+                schema.PasswordList.host == host
+            ).one()
+        except sqlalchemy.orm.exc.NoResultFound:
+            login_password = None
+
+    return login_password
+
+
+def save_password(app_param: parameters.AppParameters, host_id, user, password):
+    """
+    Сохранение пользовательских паролей для узлов сети.
+    :param app_param: Настройки приложения
+    :param host_id: ID узла
+    :param user: Логин пользователя
+    :param password: Пароль пользователя
+    :return: None
+    """
+    with schema.db_edit(app_param.engine) as db:
+        try:
+            login_password = db.query(schema.PasswordList).filter(
+                schema.PasswordList.user == app_param.user_info.login,
+                schema.PasswordList.host == host_id
+            ).one()
+        except sqlalchemy.orm.exc.NoResultFound:
+            login_password = None
+        if login_password:
+            login_password.login = user
+            login_password.password = utils.password(password, host_id)
+        else:
+            db.add(
+                schema.PasswordList(
+                    user=app_param.user_info.login,
+                    host=host_id,
+                    login=user,
+                    password=utils.password(password, host_id)
+                )
+            )
+        db.flush()
+
 
 
 if __name__ == '__main__':

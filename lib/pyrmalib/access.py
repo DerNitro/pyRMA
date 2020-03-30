@@ -148,17 +148,6 @@ def check_access(app_param: parameters.Parameters, access, h_object=None, check_
         raise error.WTF("check_access - not user and not conn!")
 
 
-def get_password(app_param: parameters.Parameters, user, host):
-    """
-    Возвращает schema.Password
-    :param app_param: Настроки приложения.
-    :param user: Идентификатор пользователя
-    :param host: Идентификатор хоста
-    :return: False or schema.Password
-    """
-    pass
-
-
 if __name__ == '__main__':
     user = UserAccess(0)
     print(user)
