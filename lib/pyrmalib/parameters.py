@@ -18,7 +18,7 @@
 """
 
 import getpass
-from pyrmalib import log
+from pyrmalib import log, schema
 import configparser
 import os
 
@@ -43,8 +43,8 @@ class Parameters:
     engine = None
     program = None
     version = None
-    aaa_user = None
-    user_info = None
+    aaa_user = None     # type: schema.AAAUser
+    user_info = None    # type: schema.User
     data_dir = None
     log_param = {}
     log = None

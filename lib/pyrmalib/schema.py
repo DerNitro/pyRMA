@@ -192,7 +192,7 @@ class Action(Base):
     __tablename__ = 'action'
 
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
-    user = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
+    user = sqlalchemy.Column(sqlalchemy.Integer)
     action_type = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
     date = sqlalchemy.Column(sqlalchemy.DateTime, nullable=False)
     message = sqlalchemy.Column(sqlalchemy.Text())
@@ -438,8 +438,6 @@ class RestorePassword(Base):
     1 - Запрос смены пароля
     2 - Запрос выполнен
     """
-    # TODO: в демон добавить контроль активных запросов.
-
     __tablename__ = 'restore_password'
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
     user = sqlalchemy.Column(sqlalchemy.Integer, nullable=False, primary_key=True)

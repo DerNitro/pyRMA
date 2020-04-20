@@ -22,7 +22,7 @@ import json
 
 from flask import Flask, render_template, request, redirect, session, url_for
 from flask_wtf.csrf import CSRFProtect
-from pyrmalib import schema, parameters, pyrmalib, access, forms, error as rma_error
+from pyrmalib import schema, parameters, applib, access, forms, error as rma_error
 import os.path
 from sqlalchemy import create_engine, sql
 from werkzeug.utils import secure_filename
@@ -86,17 +86,17 @@ siteMap = {'index': 'index.html',
 
 
 def check_auth(username, password, client_ip):
-    return pyrmalib.login_access(username=username, password=password, engine=webParameters.engine, ip=client_ip)
+    return applib.login_access(username=username, password=password, engine=webParameters.engine, ip=client_ip)
 
 
 @app.route('/', methods=['GET'])
-@pyrmalib.authorization(session, request, webParameters)
+@applib.authorization(session, request, webParameters)
 def root():
     search_field = forms.Search()
     if access.check_access(webParameters, 'Administrate'):
-        content = pyrmalib.get_admin_content_dashboard(webParameters)
+        content = applib.get_admin_content_dashboard(webParameters)
     else:
-        content = pyrmalib.get_user_content_dashboard(webParameters)
+        content = applib.get_user_content_dashboard(webParameters)
     return render_template(siteMap['index'],
                            admin=access.check_access(webParameters, 'Administrate'),
                            content=content,
@@ -105,11 +105,11 @@ def root():
 
 
 @app.route('/search', methods=['POST'])
-@pyrmalib.authorization(session, request, webParameters)
+@applib.authorization(session, request, webParameters)
 def search():
     form = forms.Search()
     query = form.search.data
-    host_list = pyrmalib.search(webParameters, query)
+    host_list = applib.search(webParameters, query)
     admin = access.check_access(webParameters, 'Administrate')
 
     return render_template(siteMap['hosts'],
@@ -125,10 +125,10 @@ def login():
     error = None
     form = forms.Login(meta={'csrf_context': str(request.remote_addr)})
     if request.method == 'POST' and form.validate_on_submit():
-        if pyrmalib.login_access(request.form['username'],
-                                 request.form['password'],
-                                 request.remote_addr,
-                                 webParameters.engine):
+        if applib.login_access(request.form['username'],
+                               request.form['password'],
+                               request.remote_addr,
+                               webParameters.engine):
             session['username'] = request.form['username']
             return redirect(url_for('root'))
         else:
@@ -143,39 +143,39 @@ def logout():
 
 
 @app.route('/settings', methods=['GET', 'POST'])
-@pyrmalib.authorization(session, request, webParameters)
+@applib.authorization(session, request, webParameters)
 def settings():
     search_field = forms.Search()
     parameters_form = forms.Parameters()
     if request.method == 'POST' and parameters_form.validate_on_submit():
-        pyrmalib.set_parameters(webParameters, 'EMAIL_HOST', str(parameters_form.email_host.data))
-        pyrmalib.set_parameters(webParameters, 'EMAIL_PORT', str(parameters_form.email_port.data))
-        pyrmalib.set_parameters(webParameters, 'EMAIL_FROM', str(parameters_form.email_from.data))
-        pyrmalib.set_parameters(webParameters, 'EMAIL_CC', str(parameters_form.email_cc.data))
+        applib.set_parameters(webParameters, 'EMAIL_HOST', str(parameters_form.email_host.data))
+        applib.set_parameters(webParameters, 'EMAIL_PORT', str(parameters_form.email_port.data))
+        applib.set_parameters(webParameters, 'EMAIL_FROM', str(parameters_form.email_from.data))
+        applib.set_parameters(webParameters, 'EMAIL_CC', str(parameters_form.email_cc.data))
         if parameters_form.auto_extension.data:
-            pyrmalib.set_parameters(webParameters, 'AUTO_EXTENSION', '1')
+            applib.set_parameters(webParameters, 'AUTO_EXTENSION', '1')
         else:
-            pyrmalib.set_parameters(webParameters, 'AUTO_EXTENSION', '0')
-        pyrmalib.set_parameters(webParameters, 'EXTENSION_DAYS', str(parameters_form.extension_days.data))
+            applib.set_parameters(webParameters, 'AUTO_EXTENSION', '0')
+        applib.set_parameters(webParameters, 'EXTENSION_DAYS', str(parameters_form.extension_days.data))
         if parameters_form.enable_route_map.data:
-            pyrmalib.set_parameters(webParameters, 'ENABLE_ROUTE_MAP', '1')
+            applib.set_parameters(webParameters, 'ENABLE_ROUTE_MAP', '1')
         else:
-            pyrmalib.set_parameters(webParameters, 'ENABLE_ROUTE_MAP', '0')
+            applib.set_parameters(webParameters, 'ENABLE_ROUTE_MAP', '0')
         if parameters_form.check_ip.data:
-            pyrmalib.set_parameters(webParameters, 'CHECK_IP', '1')
+            applib.set_parameters(webParameters, 'CHECK_IP', '1')
         else:
-            pyrmalib.set_parameters(webParameters, 'CHECK_IP', '0')
-        pyrmalib.set_parameters(
+            applib.set_parameters(webParameters, 'CHECK_IP', '0')
+        applib.set_parameters(
             webParameters,
             'FORWARD_TCP_PORT_DISABLE',
             str(parameters_form.forward_tcp_port_disable.data)
         )
-        pyrmalib.set_parameters(
+        applib.set_parameters(
             webParameters,
             'FORWARD_TCP_PORT_RANGE',
             str(parameters_form.forward_tcp_port_range.data)
         )
-    parameters_table = pyrmalib.get_parameters(webParameters)
+    parameters_table = applib.get_parameters(webParameters)
     parameters_form.email_host.data = list(filter(lambda x: x.name == 'EMAIL_HOST', parameters_table))[0].value
     parameters_form.email_port.data = list(filter(lambda x: x.name == 'EMAIL_PORT', parameters_table))[0].value
     parameters_form.email_from.data = list(filter(lambda x: x.name == 'EMAIL_FROM', parameters_table))[0].value
@@ -205,11 +205,11 @@ def settings():
 
 
 @app.route('/settings/service', methods=['GET'])
-@pyrmalib.authorization(session, request, webParameters)
+@applib.authorization(session, request, webParameters)
 def settings_service():
     search_field = forms.Search()
     form_add_service = forms.AddService()
-    service = pyrmalib.get_service_type(webParameters, raw=True)
+    service = applib.get_service_type(webParameters, raw=True)
     return render_template(
         siteMap['settings_service'],
         admin=access.check_access(webParameters, 'Administrate'),
@@ -221,11 +221,11 @@ def settings_service():
 
 
 @app.route('/settings/prefix', methods=['GET'])
-@pyrmalib.authorization(session, request, webParameters)
+@applib.authorization(session, request, webParameters)
 def settings_prefix():
     search_field = forms.Search()
     form_add_prefix = forms.AddPrefix()
-    prefix = pyrmalib.get_prefix(webParameters)
+    prefix = applib.get_prefix(webParameters)
     return render_template(
         siteMap['settings_prefix'],
         admin=access.check_access(webParameters, 'Administrate'),
@@ -237,11 +237,11 @@ def settings_prefix():
 
 
 @app.route('/settings/ipmi', methods=['GET'])
-@pyrmalib.authorization(session, request, webParameters)
+@applib.authorization(session, request, webParameters)
 def settings_ipmi():
     search_field = forms.Search()
     form_add_ipmi = forms.IPMI()
-    ipmi = pyrmalib.get_ilo_type(webParameters, raw=True)
+    ipmi = applib.get_ilo_type(webParameters, raw=True)
     return render_template(
         siteMap['settings_ipmi'],
         admin=access.check_access(webParameters, 'Administrate'),
@@ -253,11 +253,11 @@ def settings_ipmi():
 
 
 @app.route('/settings/add/ipmi', methods=['GET', 'POST'])
-@pyrmalib.authorization(session, request, webParameters)
+@applib.authorization(session, request, webParameters)
 def settings_ipmi_add():
     form_add_ipmi = forms.IPMI()
     if request.method == 'POST' and form_add_ipmi.validate_on_submit():
-        pyrmalib.add_ipmi(
+        applib.add_ipmi(
             webParameters,
             form_add_ipmi.name.data,
             form_add_ipmi.vendor.data,
@@ -267,11 +267,11 @@ def settings_ipmi_add():
 
 
 @app.route('/settings/add/prefix', methods=['GET', 'POST'])
-@pyrmalib.authorization(session, request, webParameters)
+@applib.authorization(session, request, webParameters)
 def settings_prefix_add():
     form_add_prefix = forms.AddPrefix()
     if request.method == 'POST' and form_add_prefix.validate_on_submit():
-        pyrmalib.add_prefix(
+        applib.add_prefix(
             webParameters,
             form_add_prefix.name.data,
             form_add_prefix.describe.data
@@ -280,11 +280,11 @@ def settings_prefix_add():
 
 
 @app.route('/settings/add/service', methods=['GET', 'POST'])
-@pyrmalib.authorization(session, request, webParameters)
+@applib.authorization(session, request, webParameters)
 def settings_service_add():
     form_add_service = forms.AddService()
     if request.method == 'POST' and form_add_service.validate_on_submit():
-        pyrmalib.add_service_type(
+        applib.add_service_type(
             webParameters,
             form_add_service.name.data,
             form_add_service.default_port.data
@@ -293,13 +293,13 @@ def settings_service_add():
 
 
 @app.route('/settings/delete/ipmi/<ipmi_id>', methods=['GET', 'POST'])
-@pyrmalib.authorization(session, request, webParameters)
+@applib.authorization(session, request, webParameters)
 def settings_ipmi_delete(ipmi_id):
     del_button = forms.DelButton()
     search_field = forms.Search()
-    ipmi = pyrmalib.get_ilo_type(webParameters, ipmi_id=ipmi_id, raw=True)
+    ipmi = applib.get_ilo_type(webParameters, ipmi_id=ipmi_id, raw=True)
     if request.method == 'POST' and del_button.validate_on_submit():
-        pyrmalib.del_ipmi(webParameters, ipmi_id)
+        applib.del_ipmi(webParameters, ipmi_id)
         return redirect('/settings/ipmi')
     return render_template(
         siteMap['settings_del_ipmi'],
@@ -312,13 +312,13 @@ def settings_ipmi_delete(ipmi_id):
 
 
 @app.route('/settings/delete/prefix/<prefix_id>', methods=['GET', 'POST'])
-@pyrmalib.authorization(session, request, webParameters)
+@applib.authorization(session, request, webParameters)
 def settings_prefix_delete(prefix_id):
-    prefix = pyrmalib.get_prefix(webParameters, prefix_id=prefix_id)
+    prefix = applib.get_prefix(webParameters, prefix_id=prefix_id)
     del_button = forms.DelButton()
     search_field = forms.Search()
     if request.method == 'POST' and del_button.validate_on_submit():
-        pyrmalib.del_prefix(webParameters, prefix_id)
+        applib.del_prefix(webParameters, prefix_id)
         return redirect('/settings/prefix')
     return render_template(
         siteMap['settings_del_prefix'],
@@ -331,13 +331,13 @@ def settings_prefix_delete(prefix_id):
 
 
 @app.route('/settings/delete/service/<service_id>', methods=['GET', 'POST'])
-@pyrmalib.authorization(session, request, webParameters)
+@applib.authorization(session, request, webParameters)
 def settings_service_delete(service_id):
-    service = pyrmalib.get_service_type(webParameters, service_type_id=service_id)
+    service = applib.get_service_type(webParameters, service_type_id=service_id)
     del_button = forms.DelButton()
     search_field = forms.Search()
     if request.method == 'POST' and del_button.validate_on_submit():
-        pyrmalib.del_service_type(webParameters, service_id)
+        applib.del_service_type(webParameters, service_id)
         return redirect('/settings/service')
     return render_template(
         siteMap['settings_del_service'],
@@ -350,10 +350,10 @@ def settings_service_delete(service_id):
 
 
 @app.route('/settings/change/ipmi/<ipmi_id>', methods=['GET', 'POST'])
-@pyrmalib.authorization(session, request, webParameters)
+@applib.authorization(session, request, webParameters)
 def settings_ipmi_change(ipmi_id):
     search_field = forms.Search()
-    ipmi = pyrmalib.get_ilo_type(webParameters, ipmi_id=ipmi_id, raw=True)
+    ipmi = applib.get_ilo_type(webParameters, ipmi_id=ipmi_id, raw=True)
     form = forms.IPMI()
     if request.method == 'POST' and form.validate_on_submit():
         data = {
@@ -362,7 +362,7 @@ def settings_ipmi_change(ipmi_id):
             'ports': form.ports.data
         }
         print(data)
-        pyrmalib.change_ipmi(webParameters, ipmi_id, data)
+        applib.change_ipmi(webParameters, ipmi_id, data)
         return redirect('/settings/ipmi')
     form.name.data = ipmi.name
     form.vendor.data = ipmi.vendor
@@ -378,12 +378,12 @@ def settings_ipmi_change(ipmi_id):
 
 
 @app.route('/administrate/logs', methods=['GET', 'POST'])
-@pyrmalib.authorization(session, request, webParameters)
+@applib.authorization(session, request, webParameters)
 def logs(date=None):
     search_field = forms.Search()
     form = forms.ShowLog()
     form.user.choices = [(0, "Все")]
-    for aaa, user in pyrmalib.get_users(webParameters)['users']:
+    for aaa, user in applib.get_users(webParameters)['users']:
         form.user.choices.append((user.login, user.full_name))
 
     date = datetime.date.today()
@@ -391,7 +391,7 @@ def logs(date=None):
     if request.method == 'POST' and form.validate_on_submit():
         date = form.date.data
         user = form.user.data
-    action_list = pyrmalib.get_action(webParameters, user, date)
+    action_list = applib.get_action(webParameters, user, date)
 
     return render_template(
         siteMap['logs'],
@@ -404,51 +404,51 @@ def logs(date=None):
 
 
 @app.route('/route/<host_id>', methods=['GET', 'POST'])
-@pyrmalib.authorization(session, request, webParameters)
+@applib.authorization(session, request, webParameters)
 def route(host_id):
     form = forms.AddRoute()
     search_field = forms.Search()
-    form.route.choices = pyrmalib.get_route_host(webParameters)
+    form.route.choices = applib.get_route_host(webParameters)
 
     if request.method == 'POST' and form.add_sub.data:
         r = {
             'host': host_id,
             'route': form.route.data
         }
-        pyrmalib.add_route(webParameters, r)
+        applib.add_route(webParameters, r)
 
     if request.method == 'POST' and form.clear_sub.data:
-        pyrmalib.clear_routes(webParameters, host_id)
+        applib.clear_routes(webParameters, host_id)
 
     return render_template(siteMap['route'],
                            form=form,
                            admin=access.check_access(webParameters, 'Administrate'),
                            host_id=host_id,
-                           routes=pyrmalib.get_routes(webParameters, host_id),
+                           routes=applib.get_routes(webParameters, host_id),
                            search=search_field,
                            username=webParameters.aaa_user.username)
 
 
 @app.route('/hosts')
 @app.route('/hosts/<directory_id>')
-@pyrmalib.authorization(session, request, webParameters)
+@applib.authorization(session, request, webParameters)
 def hosts(directory_id=None):
     form = forms.AddHostGroup()
     search_field = forms.Search()
-    if pyrmalib.get_group_host(webParameters):
-        form.name.choices = [(t.id, t.name) for t in pyrmalib.get_group_host(webParameters)]
+    if applib.get_group_host(webParameters):
+        form.name.choices = [(t.id, t.name) for t in applib.get_group_host(webParameters)]
     else:
         form = False
     if directory_id:
         directory_id = int(directory_id)
         edit_host_information = access.check_access(webParameters, 'EditHostInformation',
-                                                    h_object=pyrmalib.get_host(webParameters, host_id=directory_id))
+                                                    h_object=applib.get_host(webParameters, host_id=directory_id))
         edit_directory = access.check_access(webParameters, 'EditDirectory',
-                                             h_object=pyrmalib.get_host(webParameters, host_id=directory_id))
+                                             h_object=applib.get_host(webParameters, host_id=directory_id))
         admin = access.check_access(webParameters, 'Administrate',
-                                    h_object=pyrmalib.get_host(webParameters, host_id=directory_id))
-        folder = pyrmalib.get_host(webParameters, host_id=directory_id)
-        group = ", ".join([t.name for i, t in pyrmalib.get_group_list(webParameters, host=directory_id)])
+                                    h_object=applib.get_host(webParameters, host_id=directory_id))
+        folder = applib.get_host(webParameters, host_id=directory_id)
+        group = ", ".join([t.name for i, t in applib.get_group_list(webParameters, host=directory_id)])
     else:
         directory_id = 0
         edit_host_information = access.check_access(webParameters, 'EditHostInformation')
@@ -456,7 +456,7 @@ def hosts(directory_id=None):
         admin = access.check_access(webParameters, 'Administrate')
         folder = None
         group = None
-    host_list = pyrmalib.get_host_list(webParameters, directory_id)
+    host_list = applib.get_host_list(webParameters, directory_id)
     if folder and folder.note:
         note = json.loads(folder.note)
     else:
@@ -475,14 +475,14 @@ def hosts(directory_id=None):
 
 
 @app.route('/hosts/<directory_id>/add_folder', methods=['GET', 'POST'])
-@pyrmalib.authorization(session, request, webParameters)
+@applib.authorization(session, request, webParameters)
 def add_folder(directory_id):
     form = forms.EditFolder()
     search_field = forms.Search()
     error = None
     status = None
     admin = access.check_access(webParameters, 'Administrate',
-                                h_object=pyrmalib.get_host(webParameters, host_id=directory_id))
+                                h_object=applib.get_host(webParameters, host_id=directory_id))
 
     if request.method == 'POST' and form.add_sub.data:
         folder = {
@@ -492,12 +492,12 @@ def add_folder(directory_id):
             'prefix': webParameters.user_info.prefix,
             'note': form.note.data
         }
-        check_folder = pyrmalib.get_host(webParameters, name=folder['name'], parent=directory_id)
+        check_folder = applib.get_host(webParameters, name=folder['name'], parent=directory_id)
         if check_folder:
             error = 'Имя уже существует'
 
         if not error:
-            if pyrmalib.add_folder(webParameters, folder):
+            if applib.add_folder(webParameters, folder):
                 status = 'Директория добавлена'
             else:
                 status = 'Ошибка создания директории'
@@ -513,11 +513,11 @@ def add_folder(directory_id):
 
 
 @app.route('/hosts/<directory_id>/edit_folder', methods=['GET', 'POST'])
-@pyrmalib.authorization(session, request, webParameters)
+@applib.authorization(session, request, webParameters)
 def edit_folder(directory_id):
     form = forms.EditFolder()
     search_field = forms.Search()
-    h = pyrmalib.get_host(webParameters, host_id=directory_id)
+    h = applib.get_host(webParameters, host_id=directory_id)
     error = None
     status = None
     admin = access.check_access(webParameters, 'Administrate', h_object=h)
@@ -538,19 +538,19 @@ def edit_folder(directory_id):
             'prefix': webParameters.user_info.prefix,
             'note': form.note.data
         }
-        check_folder = pyrmalib.get_host(webParameters, name=folder['name'], parent=h.parent)
+        check_folder = applib.get_host(webParameters, name=folder['name'], parent=h.parent)
         if check_folder:
             if int(check_folder.id) != int(directory_id):
                 error = 'Имя уже существует'
 
         if not error:
-            if pyrmalib.edit_folder(webParameters, folder, directory_id):
+            if applib.edit_folder(webParameters, folder, directory_id):
                 status = 'Директория отредактирована'
             else:
                 status = 'Ошибка редактирования директории'
 
     elif request.method == 'POST' and form.delete_sub.data:
-        pyrmalib.delete_folder(webParameters, directory_id)
+        applib.delete_folder(webParameters, directory_id)
         status = "Директория удалена"
 
     return render_template(siteMap['edit_folder'],
@@ -564,21 +564,20 @@ def edit_folder(directory_id):
 
 
 @app.route('/hosts/<directory_id>/add_host', methods=['GET', 'POST'])
-@pyrmalib.authorization(session, request, webParameters)
+@applib.authorization(session, request, webParameters)
 def add_host(directory_id):
     form = forms.EditHost()
     search_field = forms.Search()
-    folder = pyrmalib.get_host(webParameters, host_id=directory_id)
-    form.connection_type.choices = pyrmalib.get_connection_type(webParameters)
-    form.file_transfer_type.choices = pyrmalib.get_file_transfer_type(webParameters)
-    form.ilo_type.choices = pyrmalib.get_ilo_type(webParameters)
+    folder = applib.get_host(webParameters, host_id=directory_id)
+    form.connection_type.choices = applib.get_connection_type(webParameters)
+    form.file_transfer_type.choices = applib.get_file_transfer_type(webParameters)
+    form.ilo_type.choices = applib.get_ilo_type(webParameters)
     admin = access.check_access(webParameters, 'Administrate', h_object=folder)
     error = None
     status = None
 
     if request.method == 'GET':
         form.default_login.data = 'root'
-    # TODO: Проверка наличия в базе данных
     if request.method == 'POST' and form.add_sub.data:
         h = schema.Host(
             name=form.name.data,
@@ -595,7 +594,7 @@ def add_host(directory_id):
             type=1,
             proxy=form.proxy.data
         )
-        pyrmalib.add_host(webParameters, h, parent=directory_id, password=form.default_password.data)
+        applib.add_host(webParameters, h, parent=directory_id, password=form.default_password.data)
         status = "Хост добавлен"
 
     if request.method == 'POST' and form.upload_sub.data:
@@ -605,7 +604,7 @@ def add_host(directory_id):
             os.mkdir('/tmp/pyRMA')
         f.save(os.path.join('/tmp/pyRMA', filename))
         try:
-            pyrmalib.add_hosts_file(webParameters, os.path.join('/tmp/pyRMA', filename), parent=directory_id)
+            applib.add_hosts_file(webParameters, os.path.join('/tmp/pyRMA', filename), parent=directory_id)
             status = "Узлы добавлены"
         except rma_error.WTF as e:
             error = e
@@ -623,14 +622,14 @@ def add_host(directory_id):
 
 
 @app.route('/host/<host_id>/edit', methods=['GET', 'POST'])
-@pyrmalib.authorization(session, request, webParameters)
+@applib.authorization(session, request, webParameters)
 def edit_host(host_id):
     search_field = forms.Search()
     form = forms.EditHost()
-    h = pyrmalib.get_host(webParameters, host_id=host_id)
-    form.connection_type.choices = pyrmalib.get_connection_type(webParameters)
-    form.file_transfer_type.choices = pyrmalib.get_file_transfer_type(webParameters)
-    form.ilo_type.choices = pyrmalib.get_ilo_type(webParameters)
+    h = applib.get_host(webParameters, host_id=host_id)
+    form.connection_type.choices = applib.get_connection_type(webParameters)
+    form.file_transfer_type.choices = applib.get_file_transfer_type(webParameters)
+    form.ilo_type.choices = applib.get_ilo_type(webParameters)
     error = None
     status = None
     admin = access.check_access(webParameters, 'Administrate', h_object=h)
@@ -668,18 +667,18 @@ def edit_host(host_id):
             'note': form.note.data,
             'proxy': form.proxy.data
         }
-        check_folder = pyrmalib.get_host(webParameters, name=form.name.data, parent=h.parent)
+        check_folder = applib.get_host(webParameters, name=form.name.data, parent=h.parent)
         if check_folder:
             if int(check_folder.id) != int(host_id):
                 error = 'Имя уже существует'
         if not error:
-            if pyrmalib.edit_host(webParameters, d, host_id):
+            if applib.edit_host(webParameters, d, host_id):
                 return redirect(url_for('host', host_id=host_id))
             else:
                 status = 'Ошибка редактирования хоста'
 
     elif request.method == 'POST' and form.delete_sub.data:
-        pyrmalib.delete_host(webParameters, host_id)
+        applib.delete_host(webParameters, host_id)
         status = "Хост удален"
 
     return render_template(siteMap['edit_host'],
@@ -694,26 +693,26 @@ def edit_host(host_id):
 
 
 @app.route('/host/<host_id>')
-@pyrmalib.authorization(session, request, webParameters)
+@applib.authorization(session, request, webParameters)
 def host(host_id):
-    if not pyrmalib.check_host(webParameters, host_id):
+    if not applib.check_host(webParameters, host_id):
         return redirect(url_for('hosts', directory_id=host_id))
     search_field = forms.Search()
     form = forms.AddHostGroup()
-    if pyrmalib.get_group_host(webParameters):
-        form.name.choices = [(t.id, t.name) for t in pyrmalib.get_group_host(webParameters)]
+    if applib.get_group_host(webParameters):
+        form.name.choices = [(t.id, t.name) for t in applib.get_group_host(webParameters)]
     else:
         form = False
-    content_host = pyrmalib.get_content_host(webParameters, host_id)
+    content_host = applib.get_content_host(webParameters, host_id)
     if access.check_access(webParameters,
                            'ShowHostInformation',
-                           h_object=pyrmalib.get_host(webParameters, host_id=host_id)):
+                           h_object=applib.get_host(webParameters, host_id=host_id)):
         return render_template(
             siteMap['host'],
             admin=access.check_access(webParameters, 'Administrate'),
             EditHostInformation=access.check_access(webParameters,
                                                     'EditHostInformation',
-                                                    h_object=pyrmalib.get_host(webParameters, host_id=host_id)),
+                                                    h_object=applib.get_host(webParameters, host_id=host_id)),
             content=content_host,
             form=form,
             search=search_field,
@@ -724,13 +723,13 @@ def host(host_id):
 
 
 @app.route('/delete_service/<service_id>', methods=['GET', 'POST'])
-@pyrmalib.authorization(session, request, webParameters)
+@applib.authorization(session, request, webParameters)
 def del_service(service_id):
     search_field = forms.Search()
     del_button = forms.DelButton()
-    service = pyrmalib.get_service(webParameters, service=service_id)
+    service = applib.get_service(webParameters, service=service_id)
     if request.method == 'POST' and del_button.validate_on_submit():
-        pyrmalib.del_service(webParameters, service=service_id)
+        applib.del_service(webParameters, service=service_id)
         return redirect('/host/{service.host}'.format(service=service))
     return render_template(siteMap['delete_service'],
                            admin=access.check_access(webParameters, 'Administrate'),
@@ -741,38 +740,38 @@ def del_service(service_id):
 
 
 @app.route('/host/<host_id>/add_service', methods=['GET', 'POST'])
-@pyrmalib.authorization(session, request, webParameters)
+@applib.authorization(session, request, webParameters)
 def add_service(host_id):
     search_field = forms.Search()
     edit_host_information = access.check_access(webParameters, 'EditHostInformation',
-                                                h_object=pyrmalib.get_host(webParameters, host_id=host_id))
+                                                h_object=applib.get_host(webParameters, host_id=host_id))
     admin = access.check_access(webParameters, 'Administrate',
-                                h_object=pyrmalib.get_host(webParameters, host_id=host_id))
+                                h_object=applib.get_host(webParameters, host_id=host_id))
     error = None
     status = None
 
     if edit_host_information or admin:
         form = forms.AddServiceHost()
-        form.type.choices = pyrmalib.get_service_type(webParameters)
+        form.type.choices = applib.get_service_type(webParameters)
 
         if request.method == 'POST' and form.add_sub.data:
             if not form.remote_port.data:
-                service_type = pyrmalib.get_service_type(webParameters, service_type_id=form.type.data)
+                service_type = applib.get_service_type(webParameters, service_type_id=form.type.data)
                 form.remote_port.data = service_type.default_port
             s = schema.Service(
                 type=form.type.data,
                 host=host_id,
-                local_port=pyrmalib.get_local_port(webParameters),
+                local_port=applib.get_local_port(webParameters),
                 remote_port=form.remote_port.data,
                 remote_ip=form.remote_ip.data,
                 internal=form.internal.data,
                 describe=form.describe.data
             )
 
-            if pyrmalib.check_ip_net(form.remote_ip.data, '127.0.0.0/8') and not form.internal.data:
+            if applib.check_ip_net(form.remote_ip.data, '127.0.0.0/8') and not form.internal.data:
                 error = 'Не корректное значение "Адрес назначения" или "Внутренний"!!!'
             else:
-                if pyrmalib.add_service(webParameters, s):
+                if applib.add_service(webParameters, s):
                     status = 'Сервис добавлен'
 
         return render_template(siteMap['add_service'],
@@ -788,7 +787,7 @@ def add_service(host_id):
 
 
 @app.route('/administrate')
-@pyrmalib.authorization(session, request, webParameters)
+@applib.authorization(session, request, webParameters)
 def administrate():
     search_field = forms.Search()
     return render_template(
@@ -800,16 +799,16 @@ def administrate():
 
 
 @app.route('/administrate/access', methods=['GET', 'POST'])
-@pyrmalib.authorization(session, request, webParameters)
+@applib.authorization(session, request, webParameters)
 def administrate_access():
     search_field = forms.Search()
-    if not pyrmalib.get_group_user(webParameters):
+    if not applib.get_group_user(webParameters):
         return render_template(siteMap['error'], error="Не созданы группы пользователей!!!")
     add_access_form = forms.AddAccess()
-    add_access_form.user_group.choices = [(t.id, t.name) for t in pyrmalib.get_group_user(webParameters)]
-    if pyrmalib.get_group_host(webParameters):
+    add_access_form.user_group.choices = [(t.id, t.name) for t in applib.get_group_user(webParameters)]
+    if applib.get_group_host(webParameters):
         add_access_form.host_group.choices = [(0, "ALL")] + [(t.id, t.name)
-                                                             for t in pyrmalib.get_group_host(webParameters)]
+                                                             for t in applib.get_group_host(webParameters)]
     else:
         add_access_form.host_group.choices = [(0, "ALL")]
     if request.method == 'POST' and add_access_form.validate_on_submit():
@@ -822,9 +821,9 @@ def administrate_access():
             note=add_access_form.note.data,
             status=1
         )
-        pyrmalib.add_access(webParameters, a)
+        applib.add_access(webParameters, a)
 
-    access_list = pyrmalib.get_access_list(webParameters)
+    access_list = applib.get_access_list(webParameters)
     return render_template(
         siteMap['access_list'],
         admin=access.check_access(webParameters, 'Administrate'),
@@ -837,14 +836,14 @@ def administrate_access():
 
 
 @app.route('/administrate/access/delete/<aid>')
-@pyrmalib.authorization(session, request, webParameters)
+@applib.authorization(session, request, webParameters)
 def administrate_access_delete(aid):
-    pyrmalib.del_access(webParameters, aid)
+    applib.del_access(webParameters, aid)
     return redirect(request.referrer)
 
 
 @app.route('/administrate/group', methods=['GET', 'POST'])
-@pyrmalib.authorization(session, request, webParameters)
+@applib.authorization(session, request, webParameters)
 def administrate_group():
     search_field = forms.Search()
     form = forms.AddGroup()
@@ -854,25 +853,25 @@ def administrate_group():
             'type': form.type.data
         }
 
-        pyrmalib.add_group(webParameters, g)
+        applib.add_group(webParameters, g)
     return render_template(siteMap['admin_group'],
                            admin=access.check_access(webParameters, 'Administrate'),
                            form=form,
-                           group_user=pyrmalib.get_group_user(webParameters),
-                           group_host=pyrmalib.get_group_host(webParameters),
+                           group_user=applib.get_group_user(webParameters),
+                           group_host=applib.get_group_host(webParameters),
                            search=search_field,
                            username=webParameters.aaa_user.username)
 
 
 @app.route('/administrate/group/<group_id>', methods=['GET', 'POST'])
-@pyrmalib.authorization(session, request, webParameters)
+@applib.authorization(session, request, webParameters)
 def administrate_group_show(group_id):
     search_field = forms.Search()
     form = forms.ChangePermission()
     if request.method == 'POST' and form.edit_sub.data:
-        pyrmalib.set_group_permission(webParameters, group_id, form)
+        applib.set_group_permission(webParameters, group_id, form)
 
-    content = pyrmalib.get_group(webParameters, group_id)
+    content = applib.get_group(webParameters, group_id)
 
     if content['permission']:
         form.ShowHostInformation.data = \
@@ -889,8 +888,8 @@ def administrate_group_show(group_id):
             access.check_access(webParameters, 'ShowPassword', check_permission=content['permission'])
         form.ShowAllSession.data = \
             access.check_access(webParameters, 'ShowAllSession', check_permission=content['permission'])
-        form.ShowAllGroupSession.data = \
-            access.check_access(webParameters, 'ShowAllGroupSession', check_permission=content['permission'])
+        form.AccessRequest.data = \
+            access.check_access(webParameters, 'AccessRequest', check_permission=content['permission'])
         form.Administrate.data = \
             access.check_access(webParameters, 'Administrate', check_permission=content['permission'])
 
@@ -914,12 +913,12 @@ def administrate_group_show(group_id):
 
 
 @app.route('/administrate/group/<group_id>/delete', methods=['GET', 'POST'])
-@pyrmalib.authorization(session, request, webParameters)
+@applib.authorization(session, request, webParameters)
 def administrate_group_delete(group_id):
     search_field = forms.Search()
     del_button = forms.DelButton()
     if request.method == 'POST' and del_button.validate_on_submit():
-        pyrmalib.del_group(webParameters, group=group_id)
+        applib.del_group(webParameters, group=group_id)
         return redirect('/administrate/group')
     return render_template(siteMap['administrate_group_delete'],
                            admin=access.check_access(webParameters, 'Administrate'),
@@ -930,10 +929,10 @@ def administrate_group_delete(group_id):
 
 
 @app.route('/administrate/users')
-@pyrmalib.authorization(session, request, webParameters)
+@applib.authorization(session, request, webParameters)
 def administrate_users():
     search_field = forms.Search()
-    content = pyrmalib.get_users(webParameters)
+    content = applib.get_users(webParameters)
     return render_template(siteMap['administrate_users'],
                            content=content,
                            cur_date=datetime.datetime.now(),
@@ -943,27 +942,27 @@ def administrate_users():
 
 
 @app.route('/administrate/user/<uid>/enable')
-@pyrmalib.authorization(session, request, webParameters)
+@applib.authorization(session, request, webParameters)
 def administrate_user_enable(uid):
-    pyrmalib.user_disable(webParameters, uid, enable=True)
+    applib.user_disable(webParameters, uid, enable=True)
     return redirect(request.referrer)
 
 
 @app.route('/administrate/user/<uid>/disable')
-@pyrmalib.authorization(session, request, webParameters)
+@applib.authorization(session, request, webParameters)
 def administrate_user_disable(uid):
-    pyrmalib.user_disable(webParameters, uid, disable=True)
+    applib.user_disable(webParameters, uid, disable=True)
     return redirect(request.referrer)
 
 
 @app.route('/administrate/user/<uid>/change_password', methods=['GET', 'POST'])
-@pyrmalib.authorization(session, request, webParameters)
+@applib.authorization(session, request, webParameters)
 def administrate_user_change_password(uid):
     search_field = forms.Search()
     form = forms.UserChangePassword()
-    user_info = pyrmalib.get_user(webParameters, uid)['user']
+    user_info = applib.get_user(webParameters, uid)['user']
     if request.method == 'POST' and form.validate_on_submit():
-        pyrmalib.user_change_password(webParameters, uid, form.password.data)
+        applib.user_change_password(webParameters, uid, form.password.data)
         return redirect(url_for('administrate_user', uid=uid))
     print(form.is_submitted(), form.validate())
     print(form.errors)
@@ -976,28 +975,28 @@ def administrate_user_change_password(uid):
 
 
 @app.route('/administrate/user/<uid>', methods=['GET', 'POST'])
-@pyrmalib.authorization(session, request, webParameters)
+@applib.authorization(session, request, webParameters)
 def administrate_user(uid):
     search_field = forms.Search()
     prefix_form = forms.ChangePrefix()
-    if pyrmalib.get_group_user(webParameters):
+    if applib.get_group_user(webParameters):
         group_user_form = forms.AddUserGroup()
-        group_user_form.name.choices = [(t.id, t.name) for t in pyrmalib.get_group_user(webParameters)]
+        group_user_form.name.choices = [(t.id, t.name) for t in applib.get_group_user(webParameters)]
     else:
         group_user_form = False
-    prefix_form.prefix.choices = [(t.id, t.name) for t in pyrmalib.get_prefix(webParameters)]
-    if pyrmalib.get_group_user(webParameters):
+    prefix_form.prefix.choices = [(t.id, t.name) for t in applib.get_prefix(webParameters)]
+    if applib.get_group_user(webParameters):
         if request.method == 'POST' and group_user_form.validate_on_submit():
-            pyrmalib.add_user_group(webParameters, uid, group_user_form.name.data)
+            applib.add_user_group(webParameters, uid, group_user_form.name.data)
     if request.method == 'POST' and prefix_form.sub.data and prefix_form.validate_on_submit():
         prefix = None
-        for t in pyrmalib.get_prefix(webParameters):
+        for t in applib.get_prefix(webParameters):
             if t.id == prefix_form.prefix.data:
                 prefix = t.name
                 break
-        pyrmalib.set_user_prefix(webParameters, prefix, uid)
+        applib.set_user_prefix(webParameters, prefix, uid)
     return render_template(siteMap['administrate_user'],
-                           content=pyrmalib.get_user(webParameters, uid),
+                           content=applib.get_user(webParameters, uid),
                            group_user_form=group_user_form,
                            prefix_form=prefix_form,
                            cur_date=datetime.datetime.now(),
@@ -1007,25 +1006,25 @@ def administrate_user(uid):
 
 
 @app.route('/administrate/user/<user>/group/<group>/delete')
-@pyrmalib.authorization(session, request, webParameters)
+@applib.authorization(session, request, webParameters)
 def administrate_user_group_delete(user, group):
-    pyrmalib.del_group_user(webParameters, group=group, user=user)
+    applib.del_group_user(webParameters, group=group, user=user)
     return redirect(request.referrer)
 
 
 @app.route('/administrate/host/<host_id>/group/<group>/delete')
-@pyrmalib.authorization(session, request, webParameters)
+@applib.authorization(session, request, webParameters)
 def administrate_host_group_delete(host_id, group):
-    pyrmalib.del_group_host(webParameters, group=group, host=host_id)
+    applib.del_group_host(webParameters, group=group, host=host_id)
     return redirect(request.referrer)
 
 
 @app.route('/administrate/host/<host_id>', methods=['POST'])
-@pyrmalib.authorization(session, request, webParameters)
+@applib.authorization(session, request, webParameters)
 def administrate_host(host_id):
     form = forms.AddHostGroup()
     if request.method == 'POST' and form.add_sub.data:
-        pyrmalib.add_host_group(webParameters, host_id, form.name.data)
+        applib.add_host_group(webParameters, host_id, form.name.data)
     return redirect(request.referrer)
 
 
@@ -1040,7 +1039,7 @@ def registration():
                              'full_name': form.full_name.data,
                              'email': form.email.data,
                              'ip': form.ip.data}
-        if pyrmalib.user_registration(registration_data, webParameters.engine):
+        if applib.user_registration(registration_data, webParameters.engine):
             status = 'Пользователь создан.'
         else:
             error = 'Во время создания пользователя произошла ошибка!'
@@ -1052,7 +1051,7 @@ def registration():
 def get_restore():
     form = forms.ResetPassword()
     if request.method == 'POST' and form.validate_on_submit():
-        if pyrmalib.restore_password(form.login.data, webParameters.engine, request):
+        if applib.restore_password(form.login.data, webParameters.engine, request):
             status = "Инструкции отправлены"
             return render_template(siteMap['restore'], status=status)
         else:
@@ -1067,15 +1066,25 @@ def restore(key):
     form = forms.UserChangePassword()
     status = None
     if request.method == 'GET':
-        if not pyrmalib.reset_password(key, webParameters.engine, check=True):
+        if not applib.reset_password(key, webParameters.engine, check=True):
             render_template(siteMap['404']), 404
     elif request.method == 'POST':
         if form.validate_on_submit():
-            if pyrmalib.reset_password(key, webParameters.engine, password=request.form['password']):
+            if applib.reset_password(key, webParameters.engine, password=form.password.data):
                 status = 'Password reset'
             else:
                 status = 'Error reset'
     return render_template(siteMap['reset password'], key=key, form=form, status=status)
+
+
+@app.route('/restore/deny/<key>', methods=['GET'])
+def restore_deny(key):
+    if not applib.restore_deny_password(webParameters, key):
+        render_template(siteMap['404']), 404
+    else:
+        status = "Восстановение пароля отменено"
+        return render_template(siteMap['reset password'], status=status)
+
 
 
 if webParameters.template is not None:

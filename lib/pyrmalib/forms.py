@@ -26,8 +26,7 @@ from pyrmalib import utils
 
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileRequired
-from wtforms import StringField, SubmitField, TextAreaField, SelectField, IntegerField, BooleanField, PasswordField, \
-    SelectMultipleField
+from wtforms import StringField, SubmitField, TextAreaField, SelectField, IntegerField, BooleanField, PasswordField
 from wtforms.fields.html5 import DateField
 from wtforms.validators import DataRequired, IPAddress, NumberRange, EqualTo, Email, ValidationError
 
@@ -131,7 +130,7 @@ class ChangePermission(FlaskForm):
     ShowLogin = BooleanField('Отображение логина')
     ShowPassword = BooleanField('Отображение пароля')
     ShowAllSession = BooleanField('Просмотр сессии пользователя')
-    ShowAllGroupSession = BooleanField('Просмотр сессии своей группы')
+    AccessRequest = BooleanField('Согласование доступов')
     Administrate = BooleanField('Режим "бога"')
 
     Connection = BooleanField('Подключение к узлу')

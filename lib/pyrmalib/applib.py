@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+# encoding: utf-8
 """
        Copyright 2016 Sergey Utkin utkins01@gmail.com
 
@@ -14,8 +16,6 @@
    limitations under the License.
 """
 
-# -*- coding: utf-8 -*-
-# encoding: utf-8
 import json
 import psutil
 import os
@@ -23,7 +23,7 @@ import random
 
 from sqlalchemy.orm import aliased
 
-from pyrmalib import schema, utils, email, template, parameters, error, access, forms
+from pyrmalib import schema, utils, mail, template, parameters, error, access, forms
 from functools import wraps
 import hashlib
 import sqlalchemy
@@ -31,7 +31,7 @@ import datetime
 import string
 from flask import request, redirect, session
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
-from sqlalchemy import create_engine, func, or_, and_
+from sqlalchemy import create_engine, func, or_, and_, sql
 
 
 def authorization(web_session: session, req: request, param: parameters.WebParameters, ):
@@ -43,7 +43,9 @@ def authorization(web_session: session, req: request, param: parameters.WebParam
                 return function(*args, **kwargs)
             else:
                 return redirect('/login')
+
         return wrapper
+
     return decorator
 
 
@@ -171,9 +173,9 @@ def get_access_list(param: parameters.WebParameters):
             group_host.name,
             group_host.id,
             schema.AccessList.t_object
-        ).\
-            join(group_user, schema.AccessList.subject == group_user.id).\
-            join(group_host, schema.AccessList.object == group_host.id).\
+        ). \
+            join(group_user, schema.AccessList.subject == group_user.id). \
+            join(group_host, schema.AccessList.object == group_host.id). \
             filter(schema.AccessList.t_object == 1, schema.AccessList.t_subject == 1)
         user_access = db.query(
             schema.AccessList.id,
@@ -185,9 +187,9 @@ def get_access_list(param: parameters.WebParameters):
             schema.Host.name,
             schema.Host.id,
             schema.AccessList.t_object
-        ).\
-            join(schema.User, schema.AccessList.subject == schema.User.login).\
-            join(schema.Host, schema.AccessList.object == schema.Host.id).\
+        ). \
+            join(schema.User, schema.AccessList.subject == schema.User.login). \
+            join(schema.Host, schema.AccessList.object == schema.Host.id). \
             filter(schema.AccessList.t_object == 0, schema.AccessList.t_subject == 0)
         access_list = group_access.union(user_access).all()
 
@@ -248,7 +250,7 @@ def get_content_host(param: parameters.WebParameters, host_id):
 
     with schema.db_select(param.engine) as db:
         try:
-            content['connection_type'] = db.query(schema.ConnectionType).\
+            content['connection_type'] = db.query(schema.ConnectionType). \
                 filter(schema.ConnectionType.id == host.connection_type).one()
         except NoResultFound:
             raise error.WTF('Не указан тип подклчюения')
@@ -262,7 +264,7 @@ def get_content_host(param: parameters.WebParameters, host_id):
         except NoResultFound:
             content['parent'] = None
         try:
-            content['ilo_type'] = db.query(schema.IPMIType).\
+            content['ilo_type'] = db.query(schema.IPMIType). \
                 filter(schema.IPMIType.id == host.ilo_type).one().name
         except NoResultFound:
             content['ilo_type'] = None
@@ -301,7 +303,7 @@ def get_user_content_dashboard(param: parameters.WebParameters):
     return content
 
 
-def get_host(param: parameters.WebParameters, host_id=None, name=None,  parent=0):
+def get_host(param: parameters.WebParameters, host_id=None, name=None, parent=0):
     """
     Возвращает объект Host, поиск по schema.Host.id или schema.Host.name и schema.Host.parent
     :param host_id: schema.Host.id
@@ -346,10 +348,10 @@ def get_host_list(param: parameters.WebParameters, level=None):
     :return: list
     """
     with schema.db_select(param.engine) as db:
-        host_list = db.query(schema.Host)\
+        host_list = db.query(schema.Host) \
             .filter(schema.Host.parent == level,
                     schema.Host.prefix == param.user_info.prefix,
-                    schema.Host.remove.is_(False))\
+                    schema.Host.remove.is_(False)) \
             .order_by(schema.Host.type.desc()).order_by(schema.Host.name).all()
     return host_list
 
@@ -434,8 +436,8 @@ def get_route_host(param: parameters.WebParameters):
 
 def get_routes(param: parameters.WebParameters, host_id):
     with schema.db_select(param.engine) as db:
-        routes = db.query(schema.RouteMap, schema.Host).join(schema.Host, schema.Host.id == schema.RouteMap.route).\
-            filter(schema.RouteMap.host == host_id).\
+        routes = db.query(schema.RouteMap, schema.Host).join(schema.Host, schema.Host.id == schema.RouteMap.route). \
+            filter(schema.RouteMap.host == host_id). \
             order_by(schema.RouteMap.sequence).all()
 
     if len(routes) == 0:
@@ -447,7 +449,7 @@ def get_group(param: parameters.WebParameters, group_id):
     content = {}
     with schema.db_select(param.engine) as db:
         try:
-            group = db.query(schema.Group).filter(schema.Group.id == group_id).one()    # type: schema.Group
+            group = db.query(schema.Group).filter(schema.Group.id == group_id).one()  # type: schema.Group
             content['group'] = group
         except NoResultFound:
             return False
@@ -456,15 +458,15 @@ def get_group(param: parameters.WebParameters, group_id):
 
     if group.type == 0:
         with schema.db_select(param.engine) as db:
-            users = db.query(schema.GroupUser, schema.User)\
-                .join(schema.User, schema.GroupUser.user == schema.User.login)\
+            users = db.query(schema.GroupUser, schema.User) \
+                .join(schema.User, schema.GroupUser.user == schema.User.login) \
                 .filter(schema.GroupUser.group == group_id).all()
             content['users'] = users
 
     if group.type == 1:
         with schema.db_select(param.engine) as db:
-            hosts = db.query(schema.GroupHost, schema.Host)\
-                .join(schema.Host, schema.GroupHost.host == schema.Host.id)\
+            hosts = db.query(schema.GroupHost, schema.Host) \
+                .join(schema.Host, schema.GroupHost.host == schema.Host.id) \
                 .filter(schema.GroupHost.group == group_id).all()
             content['hosts'] = hosts
 
@@ -500,7 +502,7 @@ def get_group_host(param: parameters.WebParameters):
     return group
 
 
-def get_group_list(param: parameters.WebParameters, host=False, user=False):
+def get_group_list(param: parameters.Parameters, host=False, user=False):
     if host:
         with schema.db_select(param.engine) as db:
             group = db.query(schema.GroupHost, schema.Group) \
@@ -519,8 +521,8 @@ def get_group_list(param: parameters.WebParameters, host=False, user=False):
 def get_users(param: parameters.WebParameters):
     content = {}
     with schema.db_select(param.engine) as db:
-        users = db.query(schema.AAAUser, schema.User)\
-            .join(schema.User, schema.AAAUser.uid == schema.User.login)\
+        users = db.query(schema.AAAUser, schema.User) \
+            .join(schema.User, schema.AAAUser.uid == schema.User.login) \
             .order_by(schema.User.full_name).all()
         content['users'] = users
     return content
@@ -533,16 +535,16 @@ def get_parameters(param: parameters.WebParameters):
     return p
 
 
-def get_user(param: parameters.WebParameters, uid):
+def get_user(param: parameters.Parameters, uid):
     content = {}
     with schema.db_select(param.engine) as db:
-        content['aaa_user'], content['user'] = db.query(schema.AAAUser, schema.User)\
-            .join(schema.User, schema.AAAUser.uid == schema.User.login)\
-            .order_by(schema.User.full_name)\
-            .filter(schema.AAAUser.uid == uid)\
+        content['aaa_user'], content['user'] = db.query(schema.AAAUser, schema.User) \
+            .join(schema.User, schema.AAAUser.uid == schema.User.login) \
+            .order_by(schema.User.full_name) \
+            .filter(schema.AAAUser.uid == uid) \
             .one()
-        content['action'] = db.query(schema.Action)\
-            .filter(schema.Action.user == uid)\
+        content['action'] = db.query(schema.Action) \
+            .filter(schema.Action.user == uid) \
             .order_by(schema.Action.date.desc()).limit(10).all()
         content['connection'] = db.query(schema.Connection, schema.Host, schema.ConnectionType) \
             .join(schema.Host, schema.Host.id == schema.Connection.host) \
@@ -613,12 +615,12 @@ def get_user_permission(app_param: parameters.Parameters, subj):
             .filter(schema.GroupUser.user == subj) \
             .group_by(schema.GroupUser.group).subquery()
 
-        permission = db.query(schema.Permission)\
+        permission = db.query(schema.Permission) \
             .filter(or_(
-                        and_(schema.Permission.subject == subj, schema.Permission.t_subject == 0),
-                        and_(schema.Permission.subject.in_(user_groups), schema.Permission.t_subject == 1)
-                        )
-                    ).all()
+            and_(schema.Permission.subject == subj, schema.Permission.t_subject == 0),
+            and_(schema.Permission.subject.in_(user_groups), schema.Permission.t_subject == 1)
+        )
+        ).all()
     if len(permission) == 0:
         return None
 
@@ -664,20 +666,20 @@ def get_action(param: parameters.WebParameters, uid, date):
     date_stop = date + datetime.timedelta(days=1)
     if uid == 0:
         with schema.db_select(param.engine) as db:
-            actions = db.query(schema.Action, schema.ActionType, schema.User)\
-                .join(schema.ActionType, schema.Action.action_type == schema.ActionType.id)\
-                .join(schema.User, schema.Action.user == schema.User.login)\
+            actions = db.query(schema.Action, schema.ActionType, schema.User) \
+                .join(schema.ActionType, schema.Action.action_type == schema.ActionType.id) \
+                .join(schema.User, schema.Action.user == schema.User.login) \
                 .filter(and_(schema.Action.date >= utils.date_to_datetime(date_start),
-                             schema.Action.date < utils.date_to_datetime(date_stop)))\
+                             schema.Action.date < utils.date_to_datetime(date_stop))) \
                 .order_by(schema.Action.date.desc()).all()
     else:
         with schema.db_select(param.engine) as db:
-            actions = db.query(schema.Action, schema.ActionType, schema.User)\
-                .join(schema.ActionType, schema.Action.action_type == schema.ActionType.id)\
-                .join(schema.User, schema.Action.user == schema.User.login)\
+            actions = db.query(schema.Action, schema.ActionType, schema.User) \
+                .join(schema.ActionType, schema.Action.action_type == schema.ActionType.id) \
+                .join(schema.User, schema.Action.user == schema.User.login) \
                 .filter(and_(schema.Action.date >= utils.date_to_datetime(date_start),
                              schema.Action.date < utils.date_to_datetime(date_stop),
-                             schema.Action.user == uid))\
+                             schema.Action.user == uid)) \
                 .order_by(schema.Action.date.desc()).all()
     return actions
 
@@ -699,7 +701,7 @@ def get_new_user(param: parameters.WebParameters):
 
 def add_user_group(param: parameters.WebParameters, uid, gid):
     with schema.db_select(param.engine) as db:
-        user_group = db.query(schema.GroupUser)\
+        user_group = db.query(schema.GroupUser) \
             .filter(schema.GroupUser.user == uid, schema.GroupUser.group == gid).all()
         if len(user_group) > 0:
             return False
@@ -725,7 +727,7 @@ def add_user_group(param: parameters.WebParameters, uid, gid):
 
 def add_host_group(param: parameters.WebParameters, host_id, gid):
     with schema.db_select(param.engine) as db:
-        user_group = db.query(schema.GroupUser)\
+        user_group = db.query(schema.GroupUser) \
             .filter(schema.GroupHost.host == host_id, schema.GroupHost.group == gid).all()
         if len(user_group) > 0:
             return False
@@ -801,7 +803,7 @@ def set_group_permission(param: parameters.WebParameters, group_id, form: forms.
     user_access.change('ShowLogin', set_access=form.ShowLogin.data)
     user_access.change('ShowPassword', set_access=form.ShowPassword.data)
     user_access.change('ShowAllSession', set_access=form.ShowAllSession.data)
-    user_access.change('ShowAllGroupSession', set_access=form.ShowAllGroupSession.data)
+    user_access.change('AccessRequest', set_access=form.AccessRequest.data)
     user_access.change('Administrate', set_access=form.Administrate.data)
 
     connection_access = access.ConnectionAccess(0)
@@ -882,7 +884,7 @@ def set_parameters(param: parameters.WebParameters, name: str, value: str):
     return True
 
 
-def search(param: parameters.WebParameters, query):
+def search(param: parameters.Parameters, query):
     """
     Возвращает список хостов подходящих под условие.
     :param param: WebParameters
@@ -890,14 +892,14 @@ def search(param: parameters.WebParameters, query):
     :return: list
     """
     with schema.db_select(param.engine) as db:
-        host_list = db.query(schema.Host)\
+        host_list = db.query(schema.Host) \
             .filter(or_(schema.Host.name.like("%" + query + "%"),
                         schema.Host.ilo == query,
                         schema.Host.ip == query,
                         schema.Host.describe.like("%" + query + "%"),
-                        schema.Host.note.like("%" + query + "%")))\
+                        schema.Host.note.like("%" + query + "%"))) \
             .filter(schema.Host.remove.is_(False),
-                    schema.Host.prefix == param.user_info.prefix)\
+                    schema.Host.prefix == param.user_info.prefix) \
             .order_by(schema.Host.type.desc()).order_by(schema.Host.name).all()
     return host_list
 
@@ -979,47 +981,84 @@ def user_change_password(param: parameters.WebParameters, uid, password):
 
 def restore_password(username, engine, request):
     with schema.db_select(engine) as db:
-        user, aaa_user = db.query(schema.User).join(schema.AAAUser, schema.User.login == schema.AAAUser.uid). \
-            filter(sqlalchemy.or_(schema.AAAUser.username == username, schema.User.email == username)).all()
-
-    if len(user) != 1:
-        return False
-
-    # TODO: добавить отключение старых запросов.
+        try:
+            user, aaa_user = db.query(schema.User, schema.AAAUser).filter(schema.User.login == schema.AAAUser.uid). \
+                filter(sqlalchemy.or_(schema.AAAUser.username == username, schema.User.email == username)).one()
+        except NoResultFound:
+            return False
+        except MultipleResultsFound:
+            return False
 
     key = ''.join(random.choice(string.ascii_letters + string.punctuation + string.digits) for _ in range(256))
     key = hashlib.md5(key.encode()).hexdigest()
 
     with schema.db_edit(engine) as db:
-        db.add(schema.RestorePassword(user=user.login,
-                                      status=1,
-                                      date=datetime.datetime.now(),
-                                      key=key))
-        db.add(schema.Action(user=user.login,
-                             action_type=50,
-                             date=datetime.datetime.now()))
+        db.query(schema.RestorePassword). \
+            filter(schema.RestorePassword.status == 1, schema.RestorePassword.user == user.login). \
+            update({schema.RestorePassword.status: 0, schema.RestorePassword.date_complete: datetime.datetime.now()})
+        db.add(
+            schema.RestorePassword(
+                user=user.login,
+                status=1,
+                date=datetime.datetime.now(),
+                key=key
+            )
+        )
+        db.add(
+            schema.Action(
+                user=user.login,
+                action_type=50,
+                date=datetime.datetime.now(),
+                message='Запрос восстановления пароля (Client IP: {})'.format(request.remote_addr)
+            )
+        )
     host = request.host_url
-    email.send_mail(
+    status = mail.send_mail(
         engine,
         'Восстановление пароля - {}({})'.format(aaa_user.username, user.full_name),
         template.restore_password(),
         user.login,
         {
-            'username': user.full_name,
+            'username': aaa_user.username,
             'url_recovery': '{0}{1}'.format(host, "restore/" + key),
-            'url_deny': '{0}{1}'.format(host, "restore/deny/" + key),
-            'user': user.login
+            'url_deny': '{0}{1}'.format(host, "restore/deny/" + key)
         }
     )
 
+    if status:
+        return True
+    else:
+        return False
+
+
+def restore_deny_password(param: parameters.WebParameters, key):
+    with schema.db_select(param.engine) as db:
+        try:
+            db.query(schema.RestorePassword).filter(
+                sqlalchemy.and_(schema.RestorePassword.key == key, schema.RestorePassword.status == 1)).one()
+        except sqlalchemy.orm.exc.NoResultFound:
+            return False
+
+    with schema.db_edit(param.engine) as db:
+        db.query(schema.RestorePassword). \
+            filter(schema.RestorePassword.status == 1, schema.RestorePassword.key == key). \
+            update({schema.RestorePassword.status: 0, schema.RestorePassword.date_complete: datetime.datetime.now()})
+        db.add(
+            schema.Action(
+                user=param.user_info.login if param.user_info else sql.null(),
+                action_type=50,
+                date=datetime.datetime.now(),
+                message='Восстановение пароля отменено (Client IP: {})'.format(request.remote_addr)
+            )
+        )
     return True
 
 
 def reset_password(key, engine, password=False, check=False):
     with schema.db_select(engine) as db:
         try:
-            restore = db.query(schema.RestorePassword).filter(sqlalchemy.and_(schema.RestorePassword.key == key,
-                                                                              schema.RestorePassword.status == 1)).one()
+            restore = db.query(schema.RestorePassword).filter(
+                sqlalchemy.and_(schema.RestorePassword.key == key, schema.RestorePassword.status == 1)).one()
         except sqlalchemy.orm.exc.NoResultFound:
             return False
 
@@ -1041,7 +1080,7 @@ def reset_password(key, engine, password=False, check=False):
         db.query(schema.AAAUser). \
             filter(schema.AAAUser.uid == restore.user). \
             update({schema.AAAUser.password: hashlib.md5(str(password).encode()).hexdigest()})
-    email.send_mail(
+    mail.send_mail(
         engine,
         'Восстановление пароля - {}'.format(aaa_user.username),
         template.restore_password_access(), aaa_user.uid, {'login': aaa_user.username})
@@ -1071,13 +1110,14 @@ def user_registration(reg_data, engine):
         db.flush()
 
     aaa, user = user_info(reg_data['username'], engine)
-    email.send_mail(
+    # TODO: добавить оправку письма админам.
+    mail.send_mail(
         engine,
         'Регистрация нового пользователя - {}'.format(user.full_name),
         template.registration_user(),
         aaa.uid,
-        {'username': user.full_name},
-        admin=True)
+        {'username': user.full_name}
+    )
     return True
 
 
@@ -1191,14 +1231,14 @@ def add_hosts_file(param: parameters.WebParameters, filepath: str, parent=0):
             elif str(i).upper() == 'Protocol'.upper():
                 with schema.db_select(param.engine) as db:
                     try:
-                        n_host.connection_type = db.query(schema.ConnectionType).\
+                        n_host.connection_type = db.query(schema.ConnectionType). \
                             filter(func.upper(schema.ConnectionType.name) == func.upper(h[i])).one().id
                     except sqlalchemy.orm.exc.NoResultFound:
                         n_host.connection_type = None
             elif str(i).upper() == 'Vendor'.upper():
                 with schema.db_select(param.engine) as db:
                     try:
-                        n_host.ilo_type = db.query(schema.IPMIType).\
+                        n_host.ilo_type = db.query(schema.IPMIType). \
                             filter(func.upper(schema.IPMIType.vendor) == func.upper(h[i])).one().id
                     except sqlalchemy.orm.exc.NoResultFound:
                         n_host.ilo_type = None
@@ -1207,15 +1247,15 @@ def add_hosts_file(param: parameters.WebParameters, filepath: str, parent=0):
         n_host.note = json.dumps(n_host.note, ensure_ascii=False)
         if not n_host.connection_type:
             with schema.db_select(param.engine) as db:
-                n_host.connection_type = db.query(schema.ConnectionType).\
+                n_host.connection_type = db.query(schema.ConnectionType). \
                     order_by(schema.ConnectionType.id).first().id
         if not n_host.file_transfer_type:
             with schema.db_select(param.engine) as db:
-                n_host.file_transfer_type = db.query(schema.FileTransferType).\
+                n_host.file_transfer_type = db.query(schema.FileTransferType). \
                     order_by(schema.FileTransferType.id).first().id
         if not n_host.ilo_type:
             with schema.db_select(param.engine) as db:
-                n_host.ilo_type = db.query(schema.IPMIType).\
+                n_host.ilo_type = db.query(schema.IPMIType). \
                     order_by(schema.IPMIType.id).first().id
         add_host(param, n_host, password=password, parent=parent)
         del n_host
@@ -1227,7 +1267,7 @@ def add_route(param: parameters.WebParameters, r):
         routes = db.query(schema.RouteMap).filter(schema.RouteMap.host == r['host']).all()
 
         route = schema.RouteMap(
-            sequence=len(routes)+1,
+            sequence=len(routes) + 1,
             host=r['host'],
             route=r['route']
         )
@@ -1576,7 +1616,6 @@ def save_password(app_param: parameters.AppParameters, host_id, user, password):
         db.flush()
 
 
-
 if __name__ == '__main__':
     e = create_engine('{0}://{1}:{2}@{3}:{4}/{5}'.format('postgresql',
                                                          'acs',
@@ -1585,4 +1624,4 @@ if __name__ == '__main__':
                                                          '5432',
                                                          'acs'
                                                          ))
-    # print(hashlib.md5('admin'.encode()).hexdigest())
+    print(hashlib.md5('admin'.encode()).hexdigest())
