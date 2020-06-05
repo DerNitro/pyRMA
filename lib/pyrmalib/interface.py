@@ -14,7 +14,7 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 """
-
+import datetime
 import weakref
 import npyscreen
 import curses.ascii
@@ -24,7 +24,7 @@ appParameters = parameters.AppParameters()  # type: parameters.AppParameters
 
 
 def echo_form(text):
-    f = npyscreen.Popup()
+    f = npyscreen.PopupWide()
     f.add(npyscreen.FixedText, value=text)
     f.edit()
     del f
@@ -217,12 +217,13 @@ class AccessRequest(npyscreen.ActionPopup):
     OK_BUTTON_TEXT = "Отправить"
     CANCEL_BUTTON_TEXT = "Отмена"
     CANCEL_BUTTON_BR_OFFSET = (2, 18)
+    host = None
 
     def __init__(self, *args, **keywords):
         super().__init__(*args, **keywords)
         self.add_handlers({'^Q': self.exit_editing})
         self.name = 'Запрос доступа к узлу: {0}'.format(keywords['name'])
-        self.date_disable = self.add(npyscreen.TitleDateCombo, name="Доступ до даты")
+        self.date_disable = self.add(npyscreen.TitleDateCombo, name="Доступ до даты", value=datetime.date.today())
         self.ticket = self.add(npyscreen.TitleText, name='Номер Заявки')
         self.access = self.add(npyscreen.TitleMultiSelect, name='Доступы', max_height=4, values=keywords['access_list'])
         self.note = self.add(npyscreen.MultiLineEditableBoxed, name='Дополнительное Описание', editable=True)
@@ -232,7 +233,21 @@ class AccessRequest(npyscreen.ActionPopup):
         self.cycle_widgets = True
 
     def on_ok(self):
-        echo_form('Запрос доступа отправлен')
+        access_list = [self.access.values[i] for i in self.access.value]
+        request = schema.RequestAccess(
+            user=appParameters.aaa_user.uid,
+            host=self.host.id,
+            status=0,
+            date_request=datetime.datetime.now(),
+            date_access=self.date_disable.value,
+            ticket=self.ticket.value,
+            note="\n".join(self.note.values),
+            connection=True if 'Подключение' in access_list else False,
+            file_transfer=True if 'Передача файлов' in access_list else False,
+            ipmi=True if 'IPMI' in access_list else False
+        )
+        if not access.request_access(appParameters, request):
+            echo_form('Ошибка выполнения запроса доступа, просьба обратится к администратору системы!')
 
 
 class Filter(npyscreen.Popup):
@@ -355,12 +370,13 @@ class ConnectionForm(npyscreen.Popup):
         pass
 
     def connection(self):
-        if access.check_access(appParameters, "Connection", self.host):
+        if access.check_access(appParameters, "Connection", h_object=self.host):
             if len(self.save_pass.value) > 0:
                 applib.save_password(appParameters, self.host.id, self.login.value, self.password.value)
             # connection
+            echo_form('Success!!')
             return None
-        elif access.check_access(appParameters, "ConnectionOnlyService", self.host):
+        elif access.check_access(appParameters, "ConnectionOnlyService", h_object=self.host):
             # connection only service
             return None
         else:
@@ -370,6 +386,7 @@ class ConnectionForm(npyscreen.Popup):
             if not self.btn_ipmi.hidden:
                 access_list.append('IPMI')
             access_form = AccessRequest(name=self.host.name, access_list=access_list)
+            access_form.host = self.host
             access_form.edit()
 
     def file_transfer(self):

@@ -60,7 +60,6 @@ class Mail:
         msg['Cc'] = ",".join(self.mail_cc)
         part = MIMEText(template.format(**data))
         msg.attach(part)
-        print(msg.as_string())
         try:
             self.mail_to += self.mail_cc
             s = smtplib.SMTP(host=self.host, port=self.port)
@@ -84,29 +83,28 @@ class Mail:
             return False
         except smtplib.SMTPNotSupportedError:
             return False
+        return True
 
     def __repr__(self):
         return "{0}".format(self.__dict__)
 
 
-def send_mail(param: parameters.Parameters, subject, template, user_id, data, admin_cc=False):
+def send_mail(param: parameters.Parameters, subject, template, user: schema.User or list, data, admin_cc=False):
     mail = Mail(param.engine)
     mail.subject += subject
-    if param.user_info.login != user_id:
+    if param.user_info != user:
         mail.mail_cc.append(param.user_info.email)
     if admin_cc:
         admins = access.users_access_list(param, 'Administrate')
         for a in admins:
             mail.mail_cc.append(a.email)
-    if isinstance(user_id, list):
-        for i in user_id:
-            with schema.db_select(param.engine) as db:
-                mail.mail_to.append(db.query(schema.User.email).filter(schema.User.login == i).one()[0])
+    if isinstance(user, list):
+        for i in user:
+            mail.mail_to.append(i.email)
     else:
-        with schema.db_select(param.engine) as db:
-            mail.mail_to.append(db.query(schema.User.email).filter(schema.User.login == user_id).one()[0])
+        mail.mail_to.append(user.email)
 
-    if mail.send(template, data):
+    if not mail.send(template, data):
         del mail
         return False
     del mail

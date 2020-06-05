@@ -196,8 +196,35 @@ def get_access_list(param: parameters.WebParameters):
     return access_list
 
 
-def get_access_request(param: parameters.WebParameters):
-    return []
+def get_access_request(param: parameters.WebParameters, acc_id=None):
+    result = []
+    if acc_id:
+        with schema.db_select(param.engine) as db:
+            access_list = db.query(schema.Host, schema.User, schema.RequestAccess).filter(
+                schema.RequestAccess.host == schema.Host.id,
+                schema.RequestAccess.user == schema.User.login,
+                schema.RequestAccess.id == acc_id
+            ).all()
+    else:
+        with schema.db_select(param.engine) as db:
+            access_list = db.query(schema.Host, schema.User, schema.RequestAccess).filter(
+                schema.RequestAccess.host == schema.Host.id,
+                schema.RequestAccess.user == schema.User.login,
+                schema.RequestAccess.status == 0,
+                schema.RequestAccess.date_access > datetime.datetime.now()
+            ).all()
+
+    for host, user, acc in access_list:
+        if access.check_access(param, 'AccessRequest', h_object=host) or access.check_access(param, 'Administrate'):
+            result.append(
+                {
+                    'user': user,
+                    'host': host,
+                    'access': acc
+                }
+            )
+
+    return result
 
 
 def get_connection(param: parameters.WebParameters):
@@ -283,13 +310,15 @@ def get_admin_content_dashboard(param: parameters.WebParameters):
     """
     with schema.db_select(param.engine) as db:
         connection_count = db.query(schema.Connection).filter(schema.Connection.status == 1).count()
-    content = {'access_request': get_access_request(param.engine),
-               'connection': get_connection(param.engine),
-               'connection_count': connection_count,
-               'la': os.getloadavg()[2],
-               'free': psutil.virtual_memory().percent,
-               'disk': psutil.disk_usage(param.data_dir).percent,
-               'new_user': get_new_user(param)}
+    content = {
+        'access_request': get_access_request(param),
+        'connection': get_connection(param),
+        'connection_count': connection_count,
+        'la': os.getloadavg()[2],
+        'free': psutil.virtual_memory().percent,
+        'disk': psutil.disk_usage(param.data_dir).percent,
+        'new_user': get_new_user(param)
+    }
     return content
 
 
@@ -299,7 +328,9 @@ def get_user_content_dashboard(param: parameters.WebParameters):
     :param param: WebParameters
     :return: dict
     """
-    content = {}
+    content = {
+        'access_request': get_access_request(param),
+    }
     return content
 
 
@@ -979,8 +1010,8 @@ def user_change_password(param: parameters.WebParameters, uid, password):
     return True
 
 
-def restore_password(username, engine, request):
-    with schema.db_select(engine) as db:
+def restore_password(username, param: parameters.WebParameters, request):
+    with schema.db_select(param.engine) as db:
         try:
             user, aaa_user = db.query(schema.User, schema.AAAUser).filter(schema.User.login == schema.AAAUser.uid). \
                 filter(sqlalchemy.or_(schema.AAAUser.username == username, schema.User.email == username)).one()
@@ -992,7 +1023,7 @@ def restore_password(username, engine, request):
     key = ''.join(random.choice(string.ascii_letters + string.punctuation + string.digits) for _ in range(256))
     key = hashlib.md5(key.encode()).hexdigest()
 
-    with schema.db_edit(engine) as db:
+    with schema.db_edit(param.engine) as db:
         db.query(schema.RestorePassword). \
             filter(schema.RestorePassword.status == 1, schema.RestorePassword.user == user.login). \
             update({schema.RestorePassword.status: 0, schema.RestorePassword.date_complete: datetime.datetime.now()})
@@ -1014,10 +1045,10 @@ def restore_password(username, engine, request):
         )
     host = request.host_url
     status = mail.send_mail(
-        engine,
+        param,
         'Восстановление пароля - {}({})'.format(aaa_user.username, user.full_name),
         template.restore_password(),
-        user.login,
+        user,
         {
             'username': aaa_user.username,
             'url_recovery': '{0}{1}'.format(host, "restore/" + key),
@@ -1054,8 +1085,8 @@ def restore_deny_password(param: parameters.WebParameters, key):
     return True
 
 
-def reset_password(key, engine, password=False, check=False):
-    with schema.db_select(engine) as db:
+def reset_password(key, param: parameters.WebParameters, password=False, check=False):
+    with schema.db_select(param.engine) as db:
         try:
             restore = db.query(schema.RestorePassword).filter(
                 sqlalchemy.and_(schema.RestorePassword.key == key, schema.RestorePassword.status == 1)).one()
@@ -1065,13 +1096,14 @@ def reset_password(key, engine, password=False, check=False):
     if check and restore:
         return True
 
-    with schema.db_select(engine) as db:
+    with schema.db_select(param.engine) as db:
         try:
-            aaa_user = db.query(schema.AAAUser).filter(schema.AAAUser.uid == restore.user).one()
+            user, aaa_user = db.query(schema.User, schema.AAAUser).filter(schema.User.login == schema.AAAUser.uid). \
+                filter(schema.AAAUser.uid == restore.user).one()
         except sqlalchemy.orm.exc.NoResultFound:
             return False
 
-    with schema.db_edit(engine) as db:
+    with schema.db_edit(param.engine) as db:
         db.query(schema.RestorePassword). \
             filter(sqlalchemy.and_(schema.RestorePassword.key == key,
                                    schema.RestorePassword.status == 1)). \
@@ -1081,14 +1113,14 @@ def reset_password(key, engine, password=False, check=False):
             filter(schema.AAAUser.uid == restore.user). \
             update({schema.AAAUser.password: hashlib.md5(str(password).encode()).hexdigest()})
     mail.send_mail(
-        engine,
+        param,
         'Восстановление пароля - {}'.format(aaa_user.username),
-        template.restore_password_access(), aaa_user.uid, {'login': aaa_user.username})
+        template.restore_password_access(), user, {'login': aaa_user.username})
     return True
 
 
-def user_registration(reg_data, engine):
-    with schema.db_edit(engine) as db:
+def user_registration(reg_data, param: parameters.WebParameters):
+    with schema.db_edit(param.engine) as db:
         aaa = schema.AAAUser(
             username=reg_data['username'],
             password=hashlib.md5(reg_data['password'].encode()).hexdigest()
@@ -1109,14 +1141,15 @@ def user_registration(reg_data, engine):
         db.add(user)
         db.flush()
 
-    aaa, user = user_info(reg_data['username'], engine)
-    # TODO: добавить оправку письма админам.
+    aaa, user = user_info(reg_data['username'], param.engine)
+
     mail.send_mail(
-        engine,
+        param,
         'Регистрация нового пользователя - {}'.format(user.full_name),
         template.registration_user(),
-        aaa.uid,
-        {'username': user.full_name}
+        user,
+        {'username': user.full_name},
+        admin_cc=True
     )
     return True
 

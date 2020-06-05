@@ -13,8 +13,9 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 """
+import datetime
 
-from pyrmalib import schema, error, parameters, applib, mail
+from pyrmalib import schema, error, parameters, applib, mail, template
 from sqlalchemy import create_engine
 
 user_access_map = {
@@ -139,7 +140,7 @@ def check_access(app_param: parameters.Parameters, access, h_object=None, check_
         elif isinstance(perm, schema.Permission):
             return ConnectionAccess(perm.conn_access).get(access)
         elif isinstance(perm, dict):
-            return UserAccess(perm['conn_access']).get(access)
+            return ConnectionAccess(perm['conn_access']).get(access)
         elif not perm:
             return False
         else:
@@ -212,6 +213,136 @@ def users_access_list(param: parameters.Parameters, access, group_host=None, gro
     return user_list
 
 
+def request_access(param: parameters.Parameters, request: schema.RequestAccess):
+    ticket = request.ticket
+    note = request.note
+    with schema.db_select(param.engine) as db:
+        host = db.query(schema.Host).filter(schema.Host.id == request.host).one()
+        host_group = db.query(schema.GroupHost).filter(schema.GroupHost.host == request.host).all()
+    with schema.db_edit(param.engine) as db:
+        db.add(request)
+        db.flush()
+        db.refresh(request)
+        action = schema.Action(
+            user=param.user_info.login,
+            action_type=32,
+            date=datetime.datetime.now(),
+            message="Запрос доступа до узла {host.name}({request})".format(host=host, request=request)
+        )
+        db.add(action)
+        db.flush()
+    user_list = []
+    for group in host_group:
+        user_list += users_access_list(param, 'AccessRequest', group_host=group.group)
+    return mail.send_mail(
+        param,
+        "Запрос доступа до узла - {host.name} ({user})".format(host=host, user=param.user_info.full_name),
+        template.request_access(),
+        user_list,
+        {
+            'host': host.name,
+            'ticket': ticket,
+            'note': note,
+            'user': param.user_info.full_name
+        },
+        admin_cc=True
+    )
+
+
+def access_request(param: parameters.Parameters, access):
+    with schema.db_select(param.engine) as db:
+        request = db.query(schema.RequestAccess).filter(schema.RequestAccess.id == access['access'].id).one()
+        request_user = db.query(schema.User).filter(schema.User.login == request.user).one()
+    with schema.db_edit(param.engine) as db:
+        db.query(schema.RequestAccess).filter(
+            schema.RequestAccess.id == access['access'].id
+        ).update(
+            {
+                schema.RequestAccess.status: 1,
+                schema.RequestAccess.user_approve: param.user_info.login,
+                schema.RequestAccess.date_approve: datetime.datetime.now()
+            }
+        )
+        action = schema.Action(
+            user=param.user_info.login,
+            action_type=33,
+            date=datetime.datetime.now(),
+            message="Запрос доступа {user} до узла {host} - согласован".format(host=access['host'], user=access['user'])
+        )
+        db.add(action)
+        conn_access = ConnectionAccess(0)
+        if access['access'].connection:
+            conn_access.change('Connection', set_access=True)
+        if access['access'].file_transfer:
+            conn_access.change('FileTransfer', set_access=True)
+        if access['access'].ipmi:
+            conn_access.change('ConnectionIlo', set_access=True)
+        acc = schema.AccessList(
+            t_subject=0,
+            subject=access['user'].login,
+            t_object=0,
+            object=access['host'].id,
+            date_disable=access['access'].date_access,
+            note="Запрос доступа согласован - {}({})".format(param.user_info.full_name, datetime.datetime.now()),
+            conn_access=conn_access.get_int(),
+            status=1
+        )
+        db.add(acc)
+        db.flush()
+        mail.send_mail(
+            param,
+            "Запрос доступа до узла - {host.name} ({user.full_name}) - разрешен".format(
+                host=access['host'], user=access['user']
+            ),
+            template.access_request(),
+            request_user,
+            {
+                'host': access['host'].name,
+                'user_approve': param.user_info.full_name
+            },
+            admin_cc=True
+        )
+
+
+def deny_request(param: parameters.Parameters, access):
+    with schema.db_select(param.engine) as db:
+        request = db.query(schema.RequestAccess).filter(schema.RequestAccess.id == access['access'].id).one()
+        request_user = db.query(schema.User).filter(schema.User.login == request.user).one()
+    with schema.db_edit(param.engine) as db:
+        db.query(schema.RequestAccess).filter(
+            schema.RequestAccess.id == access['access'].id
+        ).update(
+            {
+                schema.RequestAccess.status: 2,
+                schema.RequestAccess.user_approve: param.user_info.login,
+                schema.RequestAccess.date_approve: datetime.datetime.now()
+            }
+        )
+        action = schema.Action(
+            user=param.user_info.login,
+            action_type=34,
+            date=datetime.datetime.now(),
+            message="Запрос доступа {user.full_name} до узла {host.name} - отклонен".format(
+                host=access['host'], user=access['user']
+            )
+        )
+        db.add(action)
+        db.flush()
+    mail.send_mail(
+        param,
+        "Запрос доступа до узла - {host.name} ({user.full_name}) - отклонен".format(
+            host=access['host'], user=access['user']
+        ),
+        template.deny_request(),
+        request_user,
+        {
+            'host': access['host'].name,
+            'user_approve': param.user_info.full_name
+        },
+        admin_cc=True
+    )
+
+
 if __name__ == '__main__':
     p = parameters.AppParameters()
     p.engine = engine = create_engine(
@@ -224,4 +355,4 @@ if __name__ == '__main__':
             p.dbase_param["database"]
         )
     )
-    print(users_access_list(p, 'Administrate'))
+    print(check_access(p, 'Administrate'))

@@ -82,7 +82,8 @@ siteMap = {'index': 'index.html',
            'settings_ipmi': 'settings_ipmi.html',
            'settings_prefix': 'settings_prefix.html',
            'settings_service': 'settings_service.html',
-           'settings_del_service': 'del_service_type.html', }
+           'settings_del_service': 'del_service_type.html',
+           'access': 'access.html'}
 
 
 def check_auth(username, password, client_ip):
@@ -97,11 +98,13 @@ def root():
         content = applib.get_admin_content_dashboard(webParameters)
     else:
         content = applib.get_user_content_dashboard(webParameters)
-    return render_template(siteMap['index'],
-                           admin=access.check_access(webParameters, 'Administrate'),
-                           content=content,
-                           search=search_field,
-                           username=webParameters.aaa_user.username)
+    return render_template(
+        siteMap['index'],
+        admin=access.check_access(webParameters, 'Administrate'),
+        content=content,
+        search=search_field,
+        username=webParameters.aaa_user.username
+    )
 
 
 @app.route('/search', methods=['POST'])
@@ -854,13 +857,15 @@ def administrate_group():
         }
 
         applib.add_group(webParameters, g)
-    return render_template(siteMap['admin_group'],
-                           admin=access.check_access(webParameters, 'Administrate'),
-                           form=form,
-                           group_user=applib.get_group_user(webParameters),
-                           group_host=applib.get_group_host(webParameters),
-                           search=search_field,
-                           username=webParameters.aaa_user.username)
+    return render_template(
+        siteMap['admin_group'],
+        admin=access.check_access(webParameters, 'Administrate'),
+        form=form,
+        group_user=applib.get_group_user(webParameters),
+        group_host=applib.get_group_host(webParameters),
+        search=search_field,
+        username=webParameters.aaa_user.username
+    )
 
 
 @app.route('/administrate/group/<group_id>', methods=['GET', 'POST'])
@@ -904,12 +909,14 @@ def administrate_group_show(group_id):
         form.ConnectionIlo.data = \
             access.check_access(webParameters, 'ConnectionIlo', check_permission=content['permission'])
 
-    return render_template(siteMap['administrate_group_show'],
-                           content=content,
-                           form=form,
-                           admin=access.check_access(webParameters, 'Administrate'),
-                           search=search_field,
-                           username=webParameters.aaa_user.username)
+    return render_template(
+        siteMap['administrate_group_show'],
+        content=content,
+        form=form,
+        admin=access.check_access(webParameters, 'Administrate'),
+        search=search_field,
+        username=webParameters.aaa_user.username
+    )
 
 
 @app.route('/administrate/group/<group_id>/delete', methods=['GET', 'POST'])
@@ -920,12 +927,14 @@ def administrate_group_delete(group_id):
     if request.method == 'POST' and del_button.validate_on_submit():
         applib.del_group(webParameters, group=group_id)
         return redirect('/administrate/group')
-    return render_template(siteMap['administrate_group_delete'],
-                           admin=access.check_access(webParameters, 'Administrate'),
-                           del_button=del_button,
-                           group_id=group_id,
-                           search=search_field,
-                           username=webParameters.aaa_user.username)
+    return render_template(
+        siteMap['administrate_group_delete'],
+        admin=access.check_access(webParameters, 'Administrate'),
+        del_button=del_button,
+        group_id=group_id,
+        search=search_field,
+        username=webParameters.aaa_user.username
+    )
 
 
 @app.route('/administrate/users')
@@ -933,12 +942,14 @@ def administrate_group_delete(group_id):
 def administrate_users():
     search_field = forms.Search()
     content = applib.get_users(webParameters)
-    return render_template(siteMap['administrate_users'],
-                           content=content,
-                           cur_date=datetime.datetime.now(),
-                           admin=access.check_access(webParameters, 'Administrate'),
-                           search=search_field,
-                           username=webParameters.aaa_user.username)
+    return render_template(
+        siteMap['administrate_users'],
+        content=content,
+        cur_date=datetime.datetime.now(),
+        admin=access.check_access(webParameters, 'Administrate'),
+        search=search_field,
+        username=webParameters.aaa_user.username
+    )
 
 
 @app.route('/administrate/user/<uid>/enable')
@@ -966,12 +977,14 @@ def administrate_user_change_password(uid):
         return redirect(url_for('administrate_user', uid=uid))
     print(form.is_submitted(), form.validate())
     print(form.errors)
-    return render_template(siteMap['change_password'],
-                           form=form,
-                           user=user_info,
-                           admin=access.check_access(webParameters, 'Administrate'),
-                           search=search_field,
-                           username=webParameters.aaa_user.username)
+    return render_template(
+        siteMap['change_password'],
+        form=form,
+        user=user_info,
+        admin=access.check_access(webParameters, 'Administrate'),
+        search=search_field,
+        username=webParameters.aaa_user.username
+    )
 
 
 @app.route('/administrate/user/<uid>', methods=['GET', 'POST'])
@@ -995,14 +1008,16 @@ def administrate_user(uid):
                 prefix = t.name
                 break
         applib.set_user_prefix(webParameters, prefix, uid)
-    return render_template(siteMap['administrate_user'],
-                           content=applib.get_user(webParameters, uid),
-                           group_user_form=group_user_form,
-                           prefix_form=prefix_form,
-                           cur_date=datetime.datetime.now(),
-                           admin=access.check_access(webParameters, 'Administrate'),
-                           search=search_field,
-                           username=webParameters.aaa_user.username)
+    return render_template(
+        siteMap['administrate_user'],
+        content=applib.get_user(webParameters, uid),
+        group_user_form=group_user_form,
+        prefix_form=prefix_form,
+        cur_date=datetime.datetime.now(),
+        admin=access.check_access(webParameters, 'Administrate'),
+        search=search_field,
+        username=webParameters.aaa_user.username
+    )
 
 
 @app.route('/administrate/user/<user>/group/<group>/delete')
@@ -1028,6 +1043,47 @@ def administrate_host(host_id):
     return redirect(request.referrer)
 
 
+@app.route('/access/<id_access>/<command>', methods=['GET', 'POST'])
+@applib.authorization(session, request, webParameters)
+def acc(id_access, command):
+    form = forms.Access()
+    if command == 'access':
+        title = 'Согласовать доступ'
+    elif command == 'deny':
+        title = 'Отказать в доступе'
+    else:
+        return render_template(siteMap['404']), 404
+
+    access_list = applib.get_access_request(webParameters, acc_id=id_access)
+    if len(access_list) != 1:
+        return render_template(siteMap['error']), 404
+
+    form.data_access.data = access_list[0]['access'].date_access
+    form.connection.data = access_list[0]['access'].connection
+    form.file_transfer.data = access_list[0]['access'].file_transfer
+    form.ipmi.data = access_list[0]['access'].ipmi
+
+    if request.method == 'POST' and form.sub.data:
+        if command == 'access':
+            access_list[0]['access'].date_access = form.data_access.data
+            access_list[0]['access'].connection = form.connection.data
+            access_list[0]['access'].file_transfer = form.file_transfer.data
+            access_list[0]['access'].ipmi = form.ipmi.data
+            access.access_request(webParameters, access_list[0])
+        elif command == 'deny':
+            access.deny_request(webParameters, access_list[0])
+        return redirect(url_for('root'))
+
+    return render_template(
+        siteMap['access'],
+        admin=access.check_access(webParameters, 'Administrate'),
+        title=title,
+        access=access_list[0],
+        current_url=request.full_path,
+        form=form
+    )
+
+
 @app.route('/registration', methods=['GET', 'POST'])
 def registration():
     status = None
@@ -1039,7 +1095,7 @@ def registration():
                              'full_name': form.full_name.data,
                              'email': form.email.data,
                              'ip': form.ip.data}
-        if applib.user_registration(registration_data, webParameters.engine):
+        if applib.user_registration(registration_data, webParameters):
             status = 'Пользователь создан.'
         else:
             error = 'Во время создания пользователя произошла ошибка!'
@@ -1051,7 +1107,7 @@ def registration():
 def get_restore():
     form = forms.ResetPassword()
     if request.method == 'POST' and form.validate_on_submit():
-        if applib.restore_password(form.login.data, webParameters.engine, request):
+        if applib.restore_password(form.login.data, webParameters, request):
             status = "Инструкции отправлены"
             return render_template(siteMap['restore'], status=status)
         else:
@@ -1066,11 +1122,11 @@ def restore(key):
     form = forms.UserChangePassword()
     status = None
     if request.method == 'GET':
-        if not applib.reset_password(key, webParameters.engine, check=True):
+        if not applib.reset_password(key, webParameters, check=True):
             render_template(siteMap['404']), 404
     elif request.method == 'POST':
         if form.validate_on_submit():
-            if applib.reset_password(key, webParameters.engine, password=form.password.data):
+            if applib.reset_password(key, webParameters, password=form.password.data):
                 status = 'Password reset'
             else:
                 status = 'Error reset'

@@ -226,3 +226,11 @@ class AddService(FlaskForm):
     name = StringField('Имя', validators=[DataRequired()])
     default_port = StringField('Порт по умолчанию')
     sub = SubmitField('Добавить')
+
+
+class Access(FlaskForm):
+    data_access = DateField(format='%Y-%m-%d', validators=[DataRequired()])
+    connection = BooleanField('Подключение')
+    file_transfer = BooleanField('Передача файлов')
+    ipmi = BooleanField('IPMI')
+    sub = SubmitField('OK')

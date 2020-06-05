@@ -12,9 +12,10 @@
 <div class="dashboard">
     {% if admin %}
         {% from "dashboard.html" import admin_dashboard %}
-	{{ admin_dashboard(content) }}
+	    {{ admin_dashboard(content) }}
     {% else %}
-        UserDashboard
+        {% from "dashboard.html" import user_dashboard %}
+	    {{ user_dashboard(content) }}
     {% endif %}
 </div>
 {% endblock %}

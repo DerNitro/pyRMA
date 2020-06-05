@@ -1,5 +1,12 @@
-{% macro user_dashboard() %}
-    user
+{% from "_function.html" import access_table %}
+
+{% macro user_dashboard(content) %}
+    {% if content['access_request']|length != 0 %}
+    <div class="accessRequest">
+            {{ access_table(content['access_request']) }}
+        <hr>
+    </div>
+    {% endif %}
 {% endmacro %}
 
 {% macro admin_dashboard(content) %}
@@ -34,14 +41,7 @@
     {% endif %}
     {% if content['access_request']|length != 0 %}
     <div class="accessRequest">
-        accessRequest
-        <ul>
-            {% for i in content['access_request'] %}
-            <li>
-                {{ i }}
-            </li>
-            {% endfor %}
-        </ul>
+        {{ access_table(content['access_request']) }}
         <hr>
     </div>
     {% endif %}

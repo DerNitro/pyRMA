@@ -1,0 +1,29 @@
+{% macro access_table(access) %}
+<h3>Запрос доступа</h3>
+        <table border="1" width="90%">
+            <th>User</th>
+            <th>Email</th>
+            <th>Host</th>
+            <th>Access to Date</th>
+            <th>Ticket ID</th>
+            <th>Connection</th>
+            <th>File</th>
+            <th>IPMI</th>
+            <th>Access</th>
+            <th>Deny</th>
+            {% for acc in access %}
+            <tr>
+                <td>{{acc['user'].full_name}}</td>
+                <td>{{acc['user'].email}}</td>
+                <td>{{acc['host'].name}}</td>
+                <td>{{acc['access'].date_access}}</td>
+                <td align="center">{{acc['access'].ticket}}</td>
+                <td align="center">{{acc['access'].connection}}</td>
+                <td align="center">{{acc['access'].file_transfer}}</td>
+                <td align="center">{{acc['access'].ipmi}}</td>
+                <td align="center"><a href="/access/{{acc['access'].id}}/access"><button>Access</button></a> </td>
+                <td align="center"><a href="/access/{{acc['access'].id}}/deny"><button>Deny</button></a> </td>
+            </tr>
+            {% endfor %}
+        </table>
+{% endmacro %}

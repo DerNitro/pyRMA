@@ -35,14 +35,32 @@ def restore_password_access():
     return msg + footer
 
 
+def request_access():
+    msg = (
+        "Запрос доступа к серверу: {host}.\n"
+        "В рамках заявки: {ticket}\n"
+        "Дополнительная информация:\n"
+        "{note}\n"
+        "\n"
+        "{user}\n"
+    )
+    return msg + footer
+
+
+def deny_request():
+    msg = (
+        "Запрос доступа к серверу: {host} - Отклонен.\n"
+        "\n"
+        "{user_approve}"
+    )
+    return msg + footer
+
+
 def access_request():
     msg = (
-        "Запрос доступа к серверу: {host}."
-        "В рамках заявки: {Ticket}"
-        "Дополнительная информация:"
-        "{note}"
-        ""
-        "{user}"
+        "Запрос доступа к серверу: {host} - Разрешен.\n"
+        "\n"
+        "{user_approve}"
     )
     return msg + footer
 

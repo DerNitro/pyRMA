@@ -225,11 +225,16 @@ class RequestAccess(Base):
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
     user = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
     host = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
-    date_request = sqlalchemy.Column(sqlalchemy.DateTime, nullable=False)
+    date_request = sqlalchemy.Column(sqlalchemy.DateTime, nullable=False, default=datetime.datetime.now())
     date_access = sqlalchemy.Column(sqlalchemy.DateTime, nullable=False)
     status = sqlalchemy.Column(sqlalchemy.Integer)
     user_approve = sqlalchemy.Column(sqlalchemy.Integer)
     date_approve = sqlalchemy.Column(sqlalchemy.DateTime)
+    ticket = sqlalchemy.Column(sqlalchemy.String)
+    note = sqlalchemy.Column(sqlalchemy.Text)
+    connection = sqlalchemy.Column(sqlalchemy.Boolean)
+    file_transfer = sqlalchemy.Column(sqlalchemy.Boolean)
+    ipmi = sqlalchemy.Column(sqlalchemy.Boolean)
 
     def __repr__(self):
         return "{0}".format(self.__dict__)
@@ -550,13 +555,13 @@ class PasswordList(Base):
 
 
 if __name__ == '__main__':
-    # TODO: Привести к порядку
     arg = argparse.ArgumentParser(
         epilog='schema.py (C) "Sergey Utkin" mailto:utkins01@gmail.com',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=textwrap.dedent('''\
         Управление БД.
-        '''))
+        ''')
+    )
     arg.add_argument('--user', help='Пользователь', default='acs', type=str)
     arg.add_argument('--password', help='Пароль', default='acs', type=str)
     arg.add_argument('--db', help='База Данных', default='acs', type=str)
