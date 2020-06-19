@@ -21,7 +21,7 @@
 
 import sys
 import traceback
-from pyrmalib import parameters, interface, schema, error
+from pyrmalib import parameters, interface, schema, error, modules
 import sqlalchemy.orm
 from sqlalchemy import create_engine
 from pyrmalib.utils import *
@@ -166,7 +166,10 @@ with schema.db_edit(engine) as db:
 # Запуск интерфейса.
 appParameters.log.debug("Запуск графического интерфейса.")
 App = interface.Interface(appParameters)
-result = App.run()
+connection_host = App.run()
+if connection_host:      # type: modules.ConnectionModules
+    connection_host.firewall()
+    pass
 appParameters.log.info('Выход из приложения.')
 
 with schema.db_edit(engine) as db:

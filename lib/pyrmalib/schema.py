@@ -401,8 +401,6 @@ class ConnectionType(Base):
     __tablename__ = 'connection_type'
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
     name = sqlalchemy.Column(sqlalchemy.String(20), unique=True)
-    default_port = sqlalchemy.Column(sqlalchemy.Integer)
-    plugin = sqlalchemy.Column(sqlalchemy.String)
 
     def __repr__(self):
         return "{0}".format(self.__dict__)
@@ -657,23 +655,17 @@ if __name__ == '__main__':
             db.flush()
             db.add(
                 ConnectionType(
-                    name='SSH',
-                    default_port=22,
-                    plugin='SSH'
+                    name='SSH'
                 )
             )
             db.add(
                 ConnectionType(
-                    name='TELNET',
-                    default_port=23,
-                    plugin='TELNET'
+                    name='TELNET'
                 )
             )
             db.add(
                 FileTransferType(
-                    name='SFTP',
-                    default_port=22,
-                    plugin='SFTP'
+                    name='SFTP'
                 )
             )
             db.flush()

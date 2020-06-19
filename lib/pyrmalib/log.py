@@ -30,8 +30,7 @@ class Log:
                 '/var/log/pyRMA/' + filename,
                 maxBytes=1024*1024*1024,
                 backupCount=10)
-            log_format = Formatter('[{0:<10}] [%(levelname)-8s] [%(asctime)s] - %(message)s' 
-                                   '[in %(pathname)s:%(lineno)d]'.format(name))
+            log_format = Formatter('[{0:<10}] [%(levelname)-8s] [%(asctime)s] - %(message)s'.format(name))
             self.handler.setFormatter(log_format)
             self.log.addHandler(self.handler)
 

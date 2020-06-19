@@ -16,7 +16,6 @@
 import datetime
 
 from pyrmalib import schema, error, parameters, applib, mail, template
-from sqlalchemy import create_engine
 
 user_access_map = {
     'ShowHostInformation': 0,       # Просмотр информации об узле
@@ -40,7 +39,6 @@ connection_access_map = {
 
 
 class Access:
-    map = {}
     access_map = None
 
     def __init__(self, n_access: int):
@@ -48,6 +46,7 @@ class Access:
         Формируем мапинг правил доступа
         :param n_access: текущее значение доступа int
         """
+        self.map = {}
         bin_str = '{0:b}'.format(n_access).zfill(len(self.access_map))
         for access, n in self.access_map.items():
             self.map[access] = bin_str[n]
@@ -84,47 +83,98 @@ class Access:
 
 
 class UserAccess(Access):
-    access_map = user_access_map
+    def __init__(self, n_access: int):
+        self.access_map = user_access_map
+        super().__init__(n_access)
 
 
 class ConnectionAccess(Access):
-    access_map = connection_access_map
+    def __init__(self, n_access: int):
+        self.access_map = connection_access_map
+        super().__init__(n_access)
 
 
-def check_access(app_param: parameters.Parameters, access, h_object=None, check_permission=None):
+def get_user_access(param: parameters.Parameters, user, host):
+    conn_acc = ConnectionAccess(0)
+    user_acc = UserAccess(0)
+
+    if check_access(param, 'ShowHostInformation', h_object=host, user=user):
+        user_acc.change('ShowHostInformation', set_access=True)
+    if check_access(param, 'EditHostInformation', h_object=host, user=user):
+        user_acc.change('EditHostInformation', set_access=True)
+    if check_access(param, 'EditDirectory', h_object=host, user=user):
+        user_acc.change('EditDirectory', set_access=True)
+    if check_access(param, 'EditPrefixHost', h_object=host, user=user):
+        user_acc.change('EditPrefixHost', set_access=True)
+    if check_access(param, 'ShowLogin', h_object=host, user=user):
+        user_acc.change('ShowLogin', set_access=True)
+    if check_access(param, 'ShowPassword', h_object=host, user=user):
+        user_acc.change('ShowPassword', set_access=True)
+    if check_access(param, 'ShowAllSession', h_object=host, user=user):
+        user_acc.change('ShowAllSession', set_access=True)
+    if check_access(param, 'AccessRequest', h_object=host, user=user):
+        user_acc.change('AccessRequest', set_access=True)
+    if check_access(param, 'Administrate', h_object=host, user=user):
+        user_acc.change('Administrate', set_access=True)
+
+    if check_access(param, 'Connection', h_object=host, user=user):
+        conn_acc.change('Connection', set_access=True)
+    if check_access(param, 'FileTransfer', h_object=host, user=user):
+        conn_acc.change('FileTransfer', set_access=True)
+    if check_access(param, 'ConnectionService', h_object=host, user=user):
+        conn_acc.change('ConnectionService', set_access=True)
+    if check_access(param, 'ConnectionOnlyService', h_object=host, user=user):
+        conn_acc.change('ConnectionOnlyService', set_access=True)
+    if check_access(param, 'ConnectionIlo', h_object=host, user=user):
+        conn_acc.change('ConnectionIlo', set_access=True)
+
+    return user_acc.get_int(), conn_acc.get_int()
+
+
+def check_access(app_param: parameters.Parameters, access, h_object=None, check_permission=None, user=None):
     """
     Возвращает True|False по разрещенному доступу
+    :param user: schema.User.login
     :param check_permission: Строка или Список schema.Permission
     :param app_param: Настроки приложения.
     :param access: Правило доступа из access_map
     :param h_object: хост schema.Host
     :return: bool
     """
+    app_param.log.debug('check_access(param, {},{},{},{})'.format(access, h_object, check_permission, user))
+    if not user:
+        user = app_param.user_info.login
+
     if check_permission:
         perm = check_permission
     elif h_object:
-        user_access = applib.get_user_access(app_param, app_param.user_info.login, hid=h_object.id)
+        user_access = applib.get_user_access(app_param, user, hid=h_object.id)
         if user_access:
             perm = {'conn_access': user_access.conn_access, 'user_access': user_access.user_access}
         else:
-            user_group = applib.get_user_group(app_param, app_param.user_info.login)
+            user_group = applib.get_user_group(app_param, user)
             host_group = applib.get_host_group(app_param, h_object.id) + [0]
             access_list = applib.get_group_access(app_param, user_group, host_group)
             if not access_list:
                 return False
             perm = applib.get_group_permission(app_param, [t.subject for t in access_list])
     else:
-        perm = applib.get_user_permission(app_param, app_param.user_info.login)
+        perm = applib.get_user_permission(app_param, user)
+
+    app_param.log.debug(perm)
 
     if user_access_map.get(access) is not None:
         if isinstance(perm, list):
             for i in perm:
+                app_param.log.debug(UserAccess(i.user_access).get(access))
                 if UserAccess(i.user_access).get(access):
                     return True
             return False
         elif isinstance(perm, schema.Permission):
+            app_param.log.debug(UserAccess(perm.user_access).get(access))
             return UserAccess(perm.user_access).get(access)
         elif isinstance(perm, dict):
+            app_param.log.debug(UserAccess(perm['user_access']).get(access))
             return UserAccess(perm['user_access']).get(access)
         elif not perm:
             return False
@@ -134,12 +184,15 @@ def check_access(app_param: parameters.Parameters, access, h_object=None, check_
     elif connection_access_map.get(access) is not None:
         if isinstance(perm, list):
             for i in perm:
+                app_param.log.debug(ConnectionAccess(i.conn_access).get(access))
                 if ConnectionAccess(i.conn_access).get(access):
                     return True
             return False
         elif isinstance(perm, schema.Permission):
+            app_param.log.debug(ConnectionAccess(perm.conn_access).get(access))
             return ConnectionAccess(perm.conn_access).get(access)
         elif isinstance(perm, dict):
+            app_param.log.debug(ConnectionAccess(perm['conn_access']).get(access))
             return ConnectionAccess(perm['conn_access']).get(access)
         elif not perm:
             return False
@@ -267,16 +320,22 @@ def access_request(param: parameters.Parameters, access):
             user=param.user_info.login,
             action_type=33,
             date=datetime.datetime.now(),
-            message="Запрос доступа {user} до узла {host} - согласован".format(host=access['host'], user=access['user'])
+            message="Запрос доступа {user.full_name} до узла {host.name} - согласован".format(
+                host=access['host'], user=access['user']
+            )
         )
         db.add(action)
-        conn_access = ConnectionAccess(0)
+        u_access, c_access = get_user_access(param, access['user'].login, access['host'])
+        conn_access = ConnectionAccess(c_access)
+        user_access = UserAccess(u_access)
+
         if access['access'].connection:
             conn_access.change('Connection', set_access=True)
         if access['access'].file_transfer:
             conn_access.change('FileTransfer', set_access=True)
         if access['access'].ipmi:
             conn_access.change('ConnectionIlo', set_access=True)
+
         acc = schema.AccessList(
             t_subject=0,
             subject=access['user'].login,
@@ -285,6 +344,7 @@ def access_request(param: parameters.Parameters, access):
             date_disable=access['access'].date_access,
             note="Запрос доступа согласован - {}({})".format(param.user_info.full_name, datetime.datetime.now()),
             conn_access=conn_access.get_int(),
+            user_access=user_access.get_int(),
             status=1
         )
         db.add(acc)
@@ -344,15 +404,5 @@ def deny_request(param: parameters.Parameters, access):
 
 
 if __name__ == '__main__':
-    p = parameters.AppParameters()
-    p.engine = engine = create_engine(
-        '{0}://{1}:{2}@{3}:{4}/{5}'.format(
-            p.dbase,
-            p.dbase_param["user"],
-            p.dbase_param["password"],
-            p.dbase_param["host"],
-            p.dbase_param["port"],
-            p.dbase_param["database"]
-        )
-    )
-    print(check_access(p, 'Administrate'))
+    u = UserAccess(474)
+    print(u)

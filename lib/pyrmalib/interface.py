@@ -18,9 +18,10 @@ import datetime
 import weakref
 import npyscreen
 import curses.ascii
-from pyrmalib import schema, template, access, parameters, utils, applib
+from pyrmalib import schema, template, access, parameters, utils, applib, connection
 
 appParameters = parameters.AppParameters()  # type: parameters.AppParameters
+connection_host = None
 
 
 def echo_form(text):
@@ -60,6 +61,7 @@ class RecordList(npyscreen.MultiLineAction):
             elif act_on_this.type == 1:
                 connection_form = ConnectionForm(host=act_on_this, color='GOOD')
                 connection_form.edit()
+                self.parent.update_list()
         else:
             self.parent.Filter = ''
             self.parent.Level.pop()
@@ -163,6 +165,9 @@ class HostListDisplay(npyscreen.FormMutt):
 
         if len(self.HostList) == 0:
             self.wMain.values = ['empty']
+
+        if connection_host:
+            self.app_exit()
 
         self.wMain.display()
         self.wCommand.display()
@@ -370,15 +375,24 @@ class ConnectionForm(npyscreen.Popup):
         pass
 
     def connection(self):
+        global connection_host
         if access.check_access(appParameters, "Connection", h_object=self.host):
             if len(self.save_pass.value) > 0:
                 applib.save_password(appParameters, self.host.id, self.login.value, self.password.value)
-            # connection
-            echo_form('Success!!')
-            return None
+            conn_type = applib.get_connection_type(appParameters)
+            conn_type_name = None
+            for type_id, name in conn_type:
+                if type_id == self.host.connection_type:
+                    conn_type_name = name
+            if conn_type_name == 'SSH':
+                connection_host = connection.SSH(self.host)
+            elif conn_type_name == 'TELNET':
+                connection_host = connection.TELNET(self.host)
+            self.editing = False
         elif access.check_access(appParameters, "ConnectionOnlyService", h_object=self.host):
             # connection only service
-            return None
+            connection_host = connection.SERVICE(self.host)
+            self.editing = False
         else:
             access_list = ['Подключение']
             if not self.btn_file_transfer.hidden:
@@ -504,12 +518,14 @@ class Interface(npyscreen.NPSAppManaged):
         if x > 120 and y > 40:
             appParameters.log.info('Запуск в обычном режиме')
             self.addForm("MAIN", HostListDisplay)
-            return None
         else:
             appParameters.log.error('Размер терминала не поддерживется!')
             self.addForm("MAIN", ErrorForm)
             self.getForm("MAIN").error_text = 'Размер терминала не поддерживется!'
-            return None
+
+    def run(self, fork=None):
+        super(Interface, self).run(fork=None)
+        return connection_host
 
     @staticmethod
     def xy():

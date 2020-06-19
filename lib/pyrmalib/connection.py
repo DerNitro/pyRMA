@@ -22,52 +22,48 @@
    limitations under the License.
 """
 
-from pyrmalib import modules
+from pyrmalib import modules, schema
 
 
 class SSH(modules.ConnectionModules):
     """
     Модуль подключения к удаленному узлу по SSH.
     """
-    def __init__(self):
+    def __init__(self, host):
         super().__init__()
         self.NAME = 'SSH'
         self.DESCRIPTION = 'Модуль подключения по протоколу SSH'
-        self.AUTHOR = 'Sergey Utkin'
-        self.DATE_CREATE = '01/10/2018'
+        self.HOST = host
 
 
 class SFTP(modules.ConnectionModules):
     """
     Модуль передачи файлов по SSH.
     """
-    def __init__(self):
+    def __init__(self, host):
         super().__init__()
         self.NAME = 'SFTP'
         self.DESCRIPTION = 'Модуль передачи файлов по SFTP'
-        self.AUTHOR = 'Sergey Utkin'
-        self.DATE_CREATE = '01/10/2018'
+        self.HOST = host
 
 
 class TELNET(modules.ConnectionModules):
     """
     Модуль подключения к удаленному узлу по telnet
     """
-    def __init__(self):
+    def __init__(self, host):
         super().__init__()
         self.NAME = 'Telnet'
         self.DESCRIPTION = 'Модуль подключения по протоколу Telnet'
-        self.AUTHOR = 'Sergey Utkin'
-        self.DATE_CREATE = '01/10/2018'
+        self.HOST = host
 
 
 class SERVICE(modules.ConnectionModules):
     """
     Модуль формирования подключения только сервисов.
     """
-    def __init__(self):
+    def __init__(self, host):
         super().__init__()
         self.NAME = 'OnlyServices'
-        self.DESCRIPTION = 'Модуль подключниея только сервисов'
-        self.AUTHOR = 'Sergey Utkin'
-        self.DATE_CREATE = '01/10/2018'
+        self.DESCRIPTION = 'Модуль подключения только сервисов'
+        self.HOST = host

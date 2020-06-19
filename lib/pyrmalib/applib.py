@@ -176,7 +176,7 @@ def get_access_list(param: parameters.WebParameters):
         ). \
             join(group_user, schema.AccessList.subject == group_user.id). \
             join(group_host, schema.AccessList.object == group_host.id). \
-            filter(schema.AccessList.t_object == 1, schema.AccessList.t_subject == 1)
+            filter(schema.AccessList.t_object == 1, schema.AccessList.t_subject == 1, schema.AccessList.status != 2)
         user_access = db.query(
             schema.AccessList.id,
             schema.AccessList.date_disable,
@@ -190,7 +190,7 @@ def get_access_list(param: parameters.WebParameters):
         ). \
             join(schema.User, schema.AccessList.subject == schema.User.login). \
             join(schema.Host, schema.AccessList.object == schema.Host.id). \
-            filter(schema.AccessList.t_object == 0, schema.AccessList.t_subject == 0)
+            filter(schema.AccessList.t_object == 0, schema.AccessList.t_subject == 0, schema.AccessList.status != 2)
         access_list = group_access.union(user_access).all()
 
     return access_list
@@ -407,7 +407,7 @@ def get_service(param: parameters.Parameters, host=None, service=None):
     return s
 
 
-def get_connection_type(param: parameters.WebParameters):
+def get_connection_type(param: parameters.Parameters):
     with schema.db_select(param.engine) as db:
         connection_type = db.query(schema.ConnectionType).all()
 
@@ -602,7 +602,8 @@ def get_user_access(param: parameters.Parameters, uid, hid=None):
                     schema.AccessList.subject == uid,
                     schema.AccessList.t_object == 0,
                     schema.AccessList.object == hid,
-                    schema.AccessList.date_disable > datetime.datetime.now()
+                    schema.AccessList.date_disable > datetime.datetime.now(),
+                    schema.AccessList.status != 2
                 ).one()
             except NoResultFound:
                 return None
@@ -613,7 +614,8 @@ def get_user_access(param: parameters.Parameters, uid, hid=None):
                 schema.AccessList.status == 1,
                 schema.AccessList.t_subject == 0,
                 schema.AccessList.subject == uid,
-                schema.AccessList.date_disable > datetime.datetime.now()
+                schema.AccessList.date_disable > datetime.datetime.now(),
+                schema.AccessList.status != 2
             ).all()
             if len(user_access) == 0:
                 return None
@@ -628,7 +630,8 @@ def get_group_access(param: parameters.Parameters, u_gid: list, h_gid: list):
             schema.AccessList.t_object == 1,
             schema.AccessList.t_subject == 1,
             schema.AccessList.subject.in_(u_gid),
-            schema.AccessList.object.in_(h_gid)
+            schema.AccessList.object.in_(h_gid),
+            schema.AccessList.status != 2
         ).all()
 
     if len(group_access) == 0:
@@ -1464,7 +1467,13 @@ def del_access(param: parameters.WebParameters, access):
     :return: True
     """
     with schema.db_edit(param.engine) as db:
-        db.query(schema.AccessList).filter(schema.AccessList.id == access).delete()
+        db.query(schema.AccessList).filter(
+            schema.AccessList.id == access
+        ).update(
+            {
+                schema.AccessList.status: 2
+            }
+        )
         action = schema.Action(
             user=param.user_info.login,
             action_type=31,

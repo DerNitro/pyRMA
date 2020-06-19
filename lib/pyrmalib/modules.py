@@ -21,28 +21,39 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 """
+from pyrmalib import schema
 
 
 class Modules:
     NAME = ''
     DESCRIPTION = ''
-    AUTHOR = ''
-    DATE_CREATE = ''
 
     def __init__(self):
         pass
 
-    def initialize(self):
+    def __repr__(self):
+        return "{0}".format(self.__dict__)
+
+
+class ConnectionModules(Modules):
+    HOST = None  # type: schema.Host
+
+    def __init__(self):
+        super().__init__()
+
+    def run(self):
         """
-        Иннициализация плагина в системе
+        Запуск подключения
         :return: Возвращает код завершения
         """
         pass
 
-
-class ConnectionModules(Modules):
-    def __init__(self):
-        super().__init__()
+    def close(self):
+        """
+        Закрывает подключение
+        :return: Возвращает код завершения
+        """
+        pass
 
     def connection(self):
         """
