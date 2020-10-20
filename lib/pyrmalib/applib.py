@@ -1607,6 +1607,14 @@ def clear_routes(param: parameters.WebParameters, host_id):
     return True
 
 
+def check_worktime():
+    work_hour = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+    work_weekdays = [1, 2, 3, 4, 5]
+    if datetime.datetime.today().hour in work_hour and datetime.datetime.today().isoweekday() in work_weekdays:
+        return True
+    return False
+
+
 def get_password(app_param: parameters.Parameters, host):
     """
     Возвращает schema.Password

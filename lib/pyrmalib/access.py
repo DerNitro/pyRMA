@@ -166,15 +166,12 @@ def check_access(app_param: parameters.Parameters, access, h_object=None, check_
     if user_access_map.get(access) is not None:
         if isinstance(perm, list):
             for i in perm:
-                app_param.log.debug(UserAccess(i.user_access).get(access))
                 if UserAccess(i.user_access).get(access):
                     return True
             return False
         elif isinstance(perm, schema.Permission):
-            app_param.log.debug(UserAccess(perm.user_access).get(access))
             return UserAccess(perm.user_access).get(access)
         elif isinstance(perm, dict):
-            app_param.log.debug(UserAccess(perm['user_access']).get(access))
             return UserAccess(perm['user_access']).get(access)
         elif not perm:
             return False
@@ -184,15 +181,12 @@ def check_access(app_param: parameters.Parameters, access, h_object=None, check_
     elif connection_access_map.get(access) is not None:
         if isinstance(perm, list):
             for i in perm:
-                app_param.log.debug(ConnectionAccess(i.conn_access).get(access))
                 if ConnectionAccess(i.conn_access).get(access):
                     return True
             return False
         elif isinstance(perm, schema.Permission):
-            app_param.log.debug(ConnectionAccess(perm.conn_access).get(access))
             return ConnectionAccess(perm.conn_access).get(access)
         elif isinstance(perm, dict):
-            app_param.log.debug(ConnectionAccess(perm['conn_access']).get(access))
             return ConnectionAccess(perm['conn_access']).get(access)
         elif not perm:
             return False

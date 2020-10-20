@@ -116,5 +116,13 @@ class WebParameters(Parameters):
         self.log = log.Log('pyrma_web', **self.log_param)
 
 
-class PamParameters(Parameters):
-    pass
+class FirewallParameters(Parameters):
+
+    def __init__(self):
+        super().__init__()
+        self.log_param = {
+            'level': self.conf.get('Main', 'log_level', fallback='INFO'),
+            'filename': 'pyrma_firewall.log'
+        }
+        self.log = log.Log('pyrma_firewall', **self.log_param)
+

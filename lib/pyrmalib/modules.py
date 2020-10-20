@@ -22,13 +22,18 @@
    limitations under the License.
 """
 from pyrmalib import schema
+import datetime
 
 
 class Modules:
     NAME = ''
     DESCRIPTION = ''
+    PARAMETERS = None
 
     def __init__(self):
+        self.PARAMETERS = None
+        self.NAME = None
+        self.DESCRIPTION = None
         pass
 
     def __repr__(self):
@@ -37,15 +42,49 @@ class Modules:
 
 class ConnectionModules(Modules):
     HOST = None  # type: schema.Host
+    CONNECTION_TYPE = None  # type:int
+    ERROR = None
+    SERVICE = None
+    LOGIN = None
+    PASSWORD = None
 
     def __init__(self):
         super().__init__()
+        self.connection_id = None
+        self.ERROR = None
+        self.SERVICE = None
+        self.LOGIN = None
+        self.PASSWORD = None
 
     def run(self):
         """
         Запуск подключения
         :return: Возвращает код завершения
         """
+        self.PARAMETERS.log.info('Подключение {name} к хосту {host.name}({host.ip})'
+                                 .format(name=self.NAME, host=self.HOST))
+        connection = schema.Connection(
+            status=0,
+            user=self.PARAMETERS.user_info.login,
+            host=self.HOST.id,
+            connection_type=self.CONNECTION_TYPE,
+            date_start=datetime.datetime.now(),
+            session=self.PARAMETERS.session
+        )
+        with schema.db_edit(self.PARAMETERS.engine) as db:
+            db.add(connection)
+            db.flush()
+            db.refresh(connection)
+            self.connection_id = connection.id
+
+        # Строка информации о подключении
+        print('=================== PyRMA ===================')
+        print('Подключение {name} к хосту {host.name}({host.ip})'.format(name=self.NAME, host=self.HOST))
+        if self.SERVICE:
+            print('Подключенные сервисы:')
+            for i in self.SERVICE:
+                print('\t[{name:15}] - {local_port} -> {remote_ip}:{remote_port}({describe})'.format(**i))
+        print('=============================================')
         pass
 
     def close(self):
@@ -53,6 +92,15 @@ class ConnectionModules(Modules):
         Закрывает подключение
         :return: Возвращает код завершения
         """
+        self.PARAMETERS.log.info('Отключение {name} к хосту {host.name}({host.ip})'
+                                 .format(name=self.NAME, host=self.HOST))
+        with schema.db_edit(self.PARAMETERS.engine) as db:
+            connection = db.query(schema.Connection).filter(schema.Connection.id == self.connection_id).one()
+            connection.date_end = datetime.datetime.now()
+            connection.status = 2
+            connection.termination = 0
+            db.flush()
+            db.refresh(connection)
         pass
 
     def connection(self):
@@ -60,6 +108,8 @@ class ConnectionModules(Modules):
         Инициирует логику подключения к удаленному хосту.
         :return: Возвращает код завершения
         """
+        self.route()
+        self.firewall()
         pass
 
     def firewall(self):

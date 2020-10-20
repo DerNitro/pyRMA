@@ -71,13 +71,14 @@ pyRMA
 ::
 
     [root@pyrma ~]# yum install python3 gcc gcc-c++ python-devel python3-devel libgcrypt-devel autoconf automake git xmlto libtool
-    [root@pyrma ~]# pip3 install flask
-    [root@pyrma ~]# pip3 install npyscreen
-    [root@pyrma ~]# pip3 install flask_wtf
-    [root@pyrma ~]# pip3 install sqlalchemy
-    [root@pyrma ~]# pip3 install psycopg2
-    [root@pyrma ~]# pip3 install wtforms
-    [root@pyrma ~]# pip3 install psutil
+    [root@pyrma ~]# pip3 install --upgrade flask
+    [root@pyrma ~]# pip3 install --upgrade npyscreen
+    [root@pyrma ~]# pip3 install --upgrade flask_wtf
+    [root@pyrma ~]# pip3 install --upgrade sqlalchemy
+    [root@pyrma ~]# pip3 install --upgrade psycopg2
+    [root@pyrma ~]# pip3 install --upgrade wtforms
+    [root@pyrma ~]# pip3 install --upgrade psutil
+    [root@pyrma ~]# pip3 install --upgrade python-iptables
 
 
 Установка PostgreSQL
@@ -224,6 +225,15 @@ Web Интерфейс
 
 * Логин:  admin
 * Пароль: admin
+
+Firewall
+--------
+Добавление правил в firewalld.
+::
+
+    pyrma_input
+    pyrma_forward
+    
 
 Инструкция пользователя
 =======================

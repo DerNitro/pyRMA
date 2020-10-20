@@ -228,7 +228,11 @@ class AccessRequest(npyscreen.ActionPopup):
         super().__init__(*args, **keywords)
         self.add_handlers({'^Q': self.exit_editing})
         self.name = 'Запрос доступа к узлу: {0}'.format(keywords['name'])
-        self.date_disable = self.add(npyscreen.TitleDateCombo, name="Доступ до даты", value=datetime.date.today())
+        self.date_disable = self.add(
+            npyscreen.TitleDateCombo,
+            name="Доступ до даты",
+            value=datetime.date.today() + datetime.timedelta(days=1)
+        )
         self.ticket = self.add(npyscreen.TitleText, name='Номер Заявки')
         self.access = self.add(npyscreen.TitleMultiSelect, name='Доступы', max_height=4, values=keywords['access_list'])
         self.note = self.add(npyscreen.MultiLineEditableBoxed, name='Дополнительное Описание', editable=True)
@@ -385,13 +389,23 @@ class ConnectionForm(npyscreen.Popup):
                 if type_id == self.host.connection_type:
                     conn_type_name = name
             if conn_type_name == 'SSH':
-                connection_host = connection.SSH(self.host)
+                connection_host = connection.SSH(appParameters, self.host)
             elif conn_type_name == 'TELNET':
-                connection_host = connection.TELNET(self.host)
+                connection_host = connection.TELNET(appParameters, self.host)
+            connection_host.LOGIN = self.login.value
+
+            if isinstance(self.login_password, schema.PasswordList) \
+                    and self.password.value == '*' * len(self.login_password.password):
+                connection_host.PASSWORD = utils.password(self.login_password.password, self.host.id, mask=False)
+            elif self.password.value == '*' * len(self.host.default_password):
+                connection_host.PASSWORD = utils.password(self.host.default_password, self.host.id, mask=False)
+            else:
+                connection_host.PASSWORD = self.password.value
+
             self.editing = False
         elif access.check_access(appParameters, "ConnectionOnlyService", h_object=self.host):
             # connection only service
-            connection_host = connection.SERVICE(self.host)
+            connection_host = connection.SERVICE(appParameters, self.host)
             self.editing = False
         else:
             access_list = ['Подключение']

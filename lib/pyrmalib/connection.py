@@ -21,49 +21,110 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 """
+import os
+import shlex
+import subprocess
 
-from pyrmalib import modules, schema
+from pyrmalib import modules, dict, applib, parameters
 
 
 class SSH(modules.ConnectionModules):
     """
     Модуль подключения к удаленному узлу по SSH.
     """
-    def __init__(self, host):
+
+    def __init__(self, param: parameters.AppParameters, host):
         super().__init__()
+        self.PARAMETERS = param
         self.NAME = 'SSH'
         self.DESCRIPTION = 'Модуль подключения по протоколу SSH'
         self.HOST = host
+        self.CONNECTION_TYPE = dict.conn_type_dict['Connection']
+
+        self.run_command = '/usr/bin/ssh -l {user}'
+
+        services = applib.get_service(self.PARAMETERS, host=self.HOST.id)
+        if len(services) > 0:
+            self.SERVICE = []  # type: dict
+            for service in services:
+                service_type = applib.get_service_type(self.PARAMETERS, service_type_id=service.type)
+                self.SERVICE.append(
+                    {
+                        'name': service_type.name,
+                        'local_port': service.local_port,
+                        'remote_port': service.remote_port,
+                        'remote_ip': service.remote_ip,
+                        'describe': service.describe
+                    }
+                )
+
+    def connection(self):
+        super().connection()
+        ssh_options = '-o "StrictHostKeyChecking=no"'
+        ssh = '/usr/bin/ssh {options} {login}@{ip}'
+        sshpass = '/usr/bin/sshpass -e ssh {options} {login}@{ip}'
+        if self.PASSWORD:
+            os.environ["SSHPASS"] = self.PASSWORD
+            cmd = sshpass
+        else:
+            cmd = ssh
+        args = shlex.split(cmd.format(login=self.LOGIN, ip=self.HOST.ip, options=ssh_options))
+        proc = subprocess.Popen(args)
+        stdout, stderr = proc.communicate('through stdin to stdout')
+        if proc.returncode > 0:
+            print("Error {0}: {1}; run command: {2}".format(proc.returncode, stderr, cmd))
+        if proc.returncode == 5:
+            print("Неверно указан пароль для подключения!!!")
+            if cmd == sshpass:
+                print('-----------------')
+                print('Введите пароль {login} к {host.name}({host.ip})'.format(host=self.HOST, login=self.LOGIN))
+                print('-----------------')
+                proc = subprocess.Popen(shlex.split(ssh.format(login=self.LOGIN, ip=self.HOST.ip, options=ssh_options)))
+                stdout, stderr = proc.communicate('through stdin to stdout')
+                if proc.returncode > 0:
+                    print("Error {0}: {1}; run command: {2}".format(proc.returncode, stderr, ssh))
+                if proc.returncode == 5:
+                    print("Неверно указан пароль для подключения!!!")
+        pass
 
 
 class SFTP(modules.ConnectionModules):
     """
     Модуль передачи файлов по SSH.
     """
-    def __init__(self, host):
+
+    def __init__(self, param: parameters.AppParameters, host):
         super().__init__()
+        self.PARAMETERS = param
         self.NAME = 'SFTP'
         self.DESCRIPTION = 'Модуль передачи файлов по SFTP'
         self.HOST = host
+        self.CONNECTION_TYPE = dict.conn_type_dict['File Transfer']
 
 
 class TELNET(modules.ConnectionModules):
     """
     Модуль подключения к удаленному узлу по telnet
     """
-    def __init__(self, host):
+
+    def __init__(self, param: parameters.AppParameters, host):
         super().__init__()
+        self.PARAMETERS = param
         self.NAME = 'Telnet'
         self.DESCRIPTION = 'Модуль подключения по протоколу Telnet'
         self.HOST = host
+        self.CONNECTION_TYPE = dict.conn_type_dict['Connection']
 
 
 class SERVICE(modules.ConnectionModules):
     """
     Модуль формирования подключения только сервисов.
     """
-    def __init__(self, host):
+
+    def __init__(self, param: parameters.AppParameters, host):
         super().__init__()
+        self.PARAMETERS = param
         self.NAME = 'OnlyServices'
         self.DESCRIPTION = 'Модуль подключения только сервисов'
         self.HOST = host
+        self.CONNECTION_TYPE = dict.conn_type_dict['Service']

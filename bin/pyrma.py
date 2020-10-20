@@ -62,9 +62,7 @@ if not check_license(appParameters.license):
 else:
     appParameters.log.info('Файл лицензии корректный.')
 
-if appParameters.dbase in ['postgresql', 'mysql', 'oracle']:
-    if appParameters.dbase == 'mysql':
-        appParameters.dbase += '+pymysql'
+if appParameters.dbase in ['postgresql']:
     engine = create_engine(
         '{0}://{1}:{2}@{3}:{4}/{5}'.format(
             appParameters.dbase,
@@ -168,8 +166,12 @@ appParameters.log.debug("Запуск графического интерфей�
 App = interface.Interface(appParameters)
 connection_host = App.run()
 if connection_host:      # type: modules.ConnectionModules
-    connection_host.firewall()
-    pass
+    connection_host.run()
+    try:
+        connection_host.connection()
+        connection_host.close()
+    except KeyboardInterrupt:
+        pass
 appParameters.log.info('Выход из приложения.')
 
 with schema.db_edit(engine) as db:
