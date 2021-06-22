@@ -21,6 +21,9 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 """
+import datetime
+import os
+import socket
 
 from pyrmalib import parameters
 import sys
@@ -37,6 +40,8 @@ firewall_filter_table = 'pyrma_input'
 firewall_forward_table = 'pyrma_forward'
 firewall_ipmi = 'pyrma_ipmi'
 
+SOCKET_FILE = '/var/run/pyrma/firewall.socket'
+
 
 def handle_sig_term(signum, frame):
     global interrupted
@@ -48,6 +53,27 @@ def handle_sig_term(signum, frame):
 def app_exit(code):
     appParameters.log.info('Завершение приложения')
     sys.exit(code)
+
+
+def socket_run():
+    if os.path.exists(SOCKET_FILE):
+        os.remove(SOCKET_FILE)
+
+    server = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+    server.bind(SOCKET_FILE)
+
+    while True:
+        datagram = server.recv(1024)
+        if not datagram:
+            break
+        else:
+            print("-" * 20)
+        print(datagram)
+
+
+def check_connection():
+    print('{date} - check connection'.format(date=datetime.datetime.now()))
+    pass
 
 
 try:
@@ -83,20 +109,27 @@ else:
 
 appParameters.engine = engine
 
+
+if not os.path.exists('/var/run/pyrma/'):
+    os.mkdir('/var/run/pyrma/')
+
+socket_run()
+
 table_filter = iptc.Table(iptc.Table.FILTER)
 table_nat = iptc.Table(iptc.Table.NAT)
 
 # создание цепочек.
-# if firewall_filter_table not in table_filter.chains:
-#     table_filter.create_chain(firewall_filter_table)
-#     appParameters.log.info('Create chains {} in table Filter.'.format(firewall_filter_table))
-#
-# if firewall_forward_table not in table_nat.chains:
-#     table_nat.create_chain(firewall_filter_table)
-#     appParameters.log.info('Create chains {} in table NAT.'.format(firewall_forward_table))
+if firewall_filter_table not in table_filter.chains:
+    table_filter.create_chain(firewall_filter_table)
+    appParameters.log.info('Create chains {} in table Filter.'.format(firewall_filter_table))
+
+if firewall_forward_table not in table_nat.chains:
+    table_nat.create_chain(firewall_filter_table)
+    appParameters.log.info('Create chains {} in table NAT.'.format(firewall_forward_table))
 
 
 while True:
+    check_connection()
     time.sleep(1)
     if interrupted:
         app_exit(0)

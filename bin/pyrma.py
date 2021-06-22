@@ -169,9 +169,9 @@ if connection_host:      # type: modules.ConnectionModules
     connection_host.run()
     try:
         connection_host.connection()
-        connection_host.close()
     except KeyboardInterrupt:
         pass
+connection_host.close()
 appParameters.log.info('Выход из приложения.')
 
 with schema.db_edit(engine) as db:

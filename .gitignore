@@ -7,3 +7,4 @@
 old/**
 *~
 lib/*/__pycache__/*
+zabbix.csv

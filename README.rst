@@ -81,30 +81,10 @@ pyRMA
     [root@pyrma ~]# pip3 install --upgrade python-iptables
 
 
-Установка PostgreSQL
---------------------
-::
-
-    [root@pyrma ~]# yum install postgresql-server postgresql-devel
-    [root@pyrma ~]# postgresql-setup
-    [root@pyrma ~]# systemctl start postgresql
-    [root@pyrma ~]# sudo -u postgres psql*
-    postgres=# create database pyrma;
-    postgres=# create user pyrma with encrypted password 'pyrma';
-    postgres=# grant all privileges on database pyrma to pyrma;
-
-Меняем строки в /var/lib/pgsql/data/pg_hba.conf
-::
-
-    # IPv4 local connections:
-    host    all             all             127.0.0.1/32            md5
-    # IPv6 local connections:
-    host    all             all             ::1/128                 md5
-
-
 Установка pyRMA
 ---------------
 Устанавливаем pyRMA в /opt
+
 ::
 
     [root@pyrma ~]# ln -s /opt/pyRMA/etc/pyrma /etc/pyrma
@@ -125,7 +105,8 @@ pyRMA
     [root@pyrma ~]# git clone https://github.com/jandd/libnss-pgsql.git
     [root@pyrma ~]# cd libnss-pgsql/
 
-Для начала требуется внести изменения в src/backend.c, заменить #include <postgres/libpq-fe.h> на #include <libpq-fe.h>
+.. Для начала требуется внести изменения в src/backend.c, заменить #include <postgres/libpq-fe.h> на #include <libpq-fe.h>
+
 ::
 
     [root@pyrma libnss-pgsql]# ./configure --libdir=/usr/lib64 --sysconfdir=/etc
