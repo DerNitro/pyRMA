@@ -1,0 +1,8 @@
+ansible>=2.10,<2.11
+flask==2.1.2
+npyscreen==4.10.5
+flask_wtf==1.0.1
+sqlalchemy==1.4.36
+wtforms==3.0.1
+psutil==5.9.0
+email_validator==1.2.1

@@ -14,6 +14,7 @@
    limitations under the License.
 """
 import textwrap
+import sys
 
 import sqlalchemy
 from sqlalchemy import create_engine
@@ -540,31 +541,39 @@ if __name__ == '__main__':
     ))
 
     if pars.command == 'install':
-        AAAGroup.__table__.create(bind=engine)
-        AAAGroupList.__table__.create(bind=engine)
-        AAAUser.__table__.create(bind=engine)
-        AccessList.__table__.create(bind=engine)
-        Action.__table__.create(bind=engine)
-        ActionType.__table__.create(bind=engine)
-        Connection.__table__.create(bind=engine)
-        ConnectionType.__table__.create(bind=engine)
-        FileTransferType.__table__.create(bind=engine)
-        Group.__table__.create(bind=engine)
-        GroupHost.__table__.create(bind=engine)
-        GroupUser.__table__.create(bind=engine)
-        Host.__table__.create(bind=engine)
-        IPMIType.__table__.create(bind=engine)
-        Parameter.__table__.create(bind=engine)
-        PasswordList.__table__.create(bind=engine)
-        Permission.__table__.create(bind=engine)
-        Prefix.__table__.create(bind=engine)
-        RequestAccess.__table__.create(bind=engine)
-        RestorePassword.__table__.create(bind=engine)
-        RouteMap.__table__.create(bind=engine)
-        Service.__table__.create(bind=engine)
-        ServiceType.__table__.create(bind=engine)
-        Session.__table__.create(bind=engine)
-        User.__table__.create(bind=engine)
+        try:
+            AAAGroup.__table__.create(bind=engine)
+            AAAGroupList.__table__.create(bind=engine)
+            AAAUser.__table__.create(bind=engine)
+            AccessList.__table__.create(bind=engine)
+            Action.__table__.create(bind=engine)
+            ActionType.__table__.create(bind=engine)
+            Connection.__table__.create(bind=engine)
+            ConnectionType.__table__.create(bind=engine)
+            FileTransferType.__table__.create(bind=engine)
+            Group.__table__.create(bind=engine)
+            GroupHost.__table__.create(bind=engine)
+            GroupUser.__table__.create(bind=engine)
+            Host.__table__.create(bind=engine)
+            IPMIType.__table__.create(bind=engine)
+            Parameter.__table__.create(bind=engine)
+            PasswordList.__table__.create(bind=engine)
+            Permission.__table__.create(bind=engine)
+            Prefix.__table__.create(bind=engine)
+            RequestAccess.__table__.create(bind=engine)
+            RestorePassword.__table__.create(bind=engine)
+            RouteMap.__table__.create(bind=engine)
+            Service.__table__.create(bind=engine)
+            ServiceType.__table__.create(bind=engine)
+            Session.__table__.create(bind=engine)
+            User.__table__.create(bind=engine)
+        except sqlalchemy.exc.ProgrammingError as e:
+            if 'psycopg2.errors.DuplicateTable' in str(e):
+                print("The tables are already created!")
+                sys.exit(99)
+            else:
+                print(e)
+                sys.exit(1)
 
         for key, value in dict.action_type.items():
             with db_edit(engine) as db:

@@ -1,11 +1,10 @@
-.vscode/**
+.vscode
 *.log
 *.log.*
 *.pyc
 *.lic
 old/**
 *~
-lib/*/__pycache__/*
-zabbix.csv
+*.csv
 .env
 venv

@@ -1,0 +1,79 @@
+---
+- name: Set variables PostgreSQL
+  set_fact:
+    pyrma_database:
+      name:      "{{ pyrma_database.name | default('acs') }}"
+      host:      "{{ pyrma_database.host | default('127.0.0.1') }}"
+      port:      "{{ pyrma_database.port | default('5432') }}"
+      encoding:  "{{ pyrma_database.encoding | default('UTF-8') }}"
+      username:  "{{ pyrma_database.username | default('acs') }}"
+      password:  "{{ pyrma_database.password | default('acs') }}"
+      source:    "{{ pyrma_database.source | default('127.0.0.1/8') }}"
+
+- name: Install and configure PostgreSQL
+  become: true
+  when: install_postgresql
+  block:
+    - name: Install PostgreSQL
+      apt:
+        name: postgresql-12
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Enable a postgresql.service
+      ansible.builtin.systemd:
+        name: postgresql.service
+        state: started
+        enabled: yes
+
+    - name: Create a new database with name {{ pyrma_database.name }}
+      become_user: postgres
+      community.postgresql.postgresql_db:
+        name: "{{ pyrma_database.name }}"
+        encoding: "{{ pyrma_database.encoding }}"
+
+    - name: Create user with name {{ pyrma_database.username }}
+      become_user: postgres
+      community.postgresql.postgresql_user:
+        db: "{{ pyrma_database.name }}"
+        name: "{{ pyrma_database.username }}"
+        password: "{{ pyrma_database.password }}"
+        state: present
+
+    - name: GRANT ALL PRIVILEGES ON DATABASE {{ pyrma_database.name }} TO {{ pyrma_database.username }}
+      become_user: postgres
+      community.postgresql.postgresql_privs:
+        db: "{{ pyrma_database.name }}"
+        privs: ALL
+        type: database
+        role: "{{ pyrma_database.username }}"
+
+    - name: Grant some_user access to some_db
+      become_user: postgres
+      community.postgresql.postgresql_pg_hba:
+        dest: /etc/postgresql/12/main/pg_hba.conf
+        contype: host
+        users: "{{ pyrma_database.username }}"
+        databases: "{{ pyrma_database.name }}"
+        method: md5
+        source: "{{ pyrma_database.source }}"
+      notify: Restart postgresql.service
+
+    - name: Flush handlers
+      meta: flush_handlers
+
+- name: Ping PostgreSQL server
+  community.postgresql.postgresql_ping:
+    db: "{{ pyrma_database.name }}"
+    login_host: "{{ pyrma_database.host }}"
+    port: "{{ pyrma_database.port }}"
+    login_user: "{{ pyrma_database.username }}"
+    login_password: "{{ pyrma_database.password }}"
+  register: __psql_ping
+
+- name: Check connection host {{ pyrma_database.host }}, db {{ pyrma_database.name }}
+  assert:
+    that: 
+      - __psql_ping.is_available
+    fail_msg: "{{ __psql_ping.warnings | default('') }}"
+    success_msg: "PostgreSQL is available"

@@ -1,0 +1,24 @@
+[Main]
+# Логирование
+# Уровни  CRITICAL, ERROR, WARNING, INFO, DEBUG
+log_level = {{ app_log_level }}
+
+# Лицензия
+license = /etc/pyrma/pyrma.lic
+
+# Расположение файлов записи и бекапов файлов передачи
+data_dir = {{ app_data_dir }}
+
+[DataBase]
+provider = postgresql
+dbhost = {{ pyrma_database.host }}
+dbport = {{ pyrma_database.port }}
+dbuser = {{ pyrma_database.username }}
+dbpass = {{ pyrma_database.password }}
+dbname = {{ pyrma_database.name }}
+
+[Web]
+log_level = {{ app_log_level }}
+ip = {{ app_web_ip }}
+port = {{ app_web_port }}
+template = {{ app_folder }}/web

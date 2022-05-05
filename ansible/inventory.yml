@@ -1,0 +1,9 @@
+pyrma:
+  hosts:
+    pyrma.vmlocal:  
+  vars:
+    install_postgresql: yes
+    pyrma_database:
+      name: 'acs'
+      username: 'acs'
+      password: 'acs'

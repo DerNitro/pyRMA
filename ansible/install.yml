@@ -1,0 +1,125 @@
+---
+- name: Set variables install pyRMA
+  set_fact:
+    app_user:       "{{ app_user | default('pyrma') }}"
+    app_group:      "{{ app_group | default('pyrma') }}"
+    app_folder:     "{{ app_folder | default('/opt/pyRMA') }}"
+    app_data_dir:   "{{ app_data_dir | default('/data/pyRMA') }}"
+    app_log_level:  "{{ app_log_level | default('DEBUG') }}"
+    app_web_ip:     "{{ app_web_ip | default('0.0.0.0') }}"
+    app_web_port:   "{{ app_web_port | default('8080') }}"
+
+- name: Install multi python packages with version specifiers
+  become: true
+  pip:
+    name:
+      - flask==2.1.2
+      - npyscreen==4.10.5
+      - flask_wtf==1.0.1
+      - sqlalchemy==1.4.36
+      - wtforms==3.0.1
+      - psutil==5.9.0
+      - email_validator==1.2.1
+
+- name: Create local group {{ app_group }}
+  become: true
+  ansible.builtin.group:
+    name: "{{ app_group }}"
+    state: present
+    system: true
+
+- name: Add local user {{ app_user }}
+  become: true
+  ansible.builtin.user:
+    name: "{{ app_user }}"
+    system: true
+    group: "{{ app_group }}"
+    shell: "/usr/bin/false"
+
+- name: Create APP folders
+  become: true
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0775'
+  with_items: 
+    - "{{ app_folder }}"
+    - "{{ app_folder }}/bin"
+    - "{{ app_data_dir }}"
+    - /etc/pyrma
+    - /var/log/pyRMA/
+
+- name: Copy bin files
+  become: true
+  ansible.builtin.copy:
+    src: "bin/{{ item }}"
+    dest: "{{ app_folder }}/bin/{{ item }}"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0755'
+  with_items: 
+    - pyrma.py
+    - ttyplay
+    - ttyrec
+    - ttytime
+    - web.py
+
+- name: Copy data files
+  become: true
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ app_folder }}"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+  with_items: 
+    - web
+    - lib
+
+- name: Create link pyRMA lib
+  become: true
+  ansible.builtin.file:
+    dest: /usr/lib/python3.8/pyrmalib
+    src: "{{ app_folder }}/lib/pyrmalib"
+    state: link
+
+- name: Copy bin/pyrma.sh
+  become: true
+  ansible.builtin.template:
+    src: bin/pyrma.sh.j2
+    dest: "{{ app_folder }}/bin/pyrma.sh"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0755'
+
+- name: Configure pyRMA
+  become: true
+  ansible.builtin.template:
+    src: etc/pyrma/pyrma.conf.j2
+    dest: /etc/pyrma/pyrma.conf
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0640'
+
+- name: Create pyRMA SCHEME
+  become: true
+  become_user: "{{ app_user }}"
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/python3
+      - "{{ app_folder }}/lib/pyrmalib/schema.py"
+      - "--user"
+      - "{{ pyrma_database.username }}"
+      - "--password"
+      - "{{ pyrma_database.password }}"
+      - "--db"
+      - "{{ pyrma_database.name }}"
+      - "--host"
+      - "{{ pyrma_database.host }}"
+      - "--port"
+      - "{{ pyrma_database.port }}"
+      - install
+  register: _create_scheme
+  failed_when: _create_scheme.rc != 0 and _create_scheme.rc != 99
+  changed_when: _create_scheme.rc == 0

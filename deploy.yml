@@ -1,0 +1,21 @@
+- hosts: pyrma
+  tasks:
+    - name: Include tasks checking server for deploy pyRMA
+      include_tasks: ansible/check.yml
+
+    - name: Include tasks prepare server
+      include_tasks: ansible/prepare.yml
+
+    - name: Include tasks install postgresql
+      include_tasks: ansible/postgresql.yml
+    
+    - name: Include tasks install pyRMA
+      include_tasks: ansible/install.yml
+
+  
+  handlers:
+    - name: Restart postgresql.service
+      become: true
+      ansible.builtin.systemd:
+        name: postgresql.service
+        state: restarted

@@ -1,0 +1,18 @@
+---
+- name: Set fact supported_os
+  set_fact:
+    __supported_os__: False
+
+- name: Check release Ubuntu 20.04
+  set_fact:
+    __supported_os__: True
+  when:
+    - ansible_facts['lsb']['id'] == "Ubuntu"
+    - ansible_facts['lsb']['release'] == "20.04"
+
+- name: Check supported OS
+  assert:
+    that:
+      - __supported_os__ == True
+    fail_msg: "Host OS doesn't supported"
+    success_msg: "Host OS is supported"
