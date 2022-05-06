@@ -1,4 +1,4 @@
-connectionstring        = hostaddr=127.0.0.1 dbname=acs user=acs password=acs connect_timeout=1
+connectionstring        = hostaddr={{ pyrma_database.host }} dbname={{ pyrma_database.name }} user={{ pyrma_database.username }} password={{ pyrma_database.password }} connect_timeout=1
 
 # you can use anything postgres accepts as table expression
 

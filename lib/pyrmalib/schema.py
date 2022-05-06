@@ -41,7 +41,7 @@ default_parameter = [
     {"name": "CHECK_IP",        "value": "0", "description": "Проверка IP адреса клиента"},
     {"name": "FORWARD_TCP_PORT_DISABLE", "value": "22;23", "description": ""},
     {"name": "FORWARD_TCP_PORT_RANGE",
-     "value": "10000;15000", "description": "Диапозон портов для подключения сервисов"}
+     "value": "10000;15000", "description": "Диапазон портов для подключения сервисов"}
 ]
 
 

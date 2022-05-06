@@ -1,0 +1,1 @@
+account    sufficient   pam_pgsql.so config_file=/etc/pam_pgsql.conf

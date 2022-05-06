@@ -11,6 +11,8 @@
     
     - name: Include tasks install pyRMA
       include_tasks: ansible/install.yml
+      tags:
+        - test
 
   
   handlers:
