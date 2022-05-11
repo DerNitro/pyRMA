@@ -1,8 +1,8 @@
 ---
 - name: Set variables install pyRMA
   ansible.builtin.set_fact:
-    app_user:       "{{ app_user | default('pyrma') }}"
-    app_group:      "{{ app_group | default('pyrma') }}"
+    app_user:       "{{ app_user | default('acs') }}"
+    app_group:      "{{ app_group | default('acs') }}"
     app_folder:     "{{ app_folder | default('/opt/pyRMA') }}"
     app_data_dir:   "{{ app_data_dir | default('/data/pyRMA') }}"
     app_log_level:  "{{ app_log_level | default('DEBUG') }}"
@@ -34,7 +34,7 @@
     name: "{{ app_user }}"
     system: true
     group: "{{ app_group }}"
-    shell: "/usr/bin/false"
+    shell: "/opt/pyRMA/bin/pyrma.sh"
 
 - name: Create APP folders
   become: true
@@ -118,83 +118,13 @@
     path: /etc/shells
     line: "{{ app_folder }}/bin/pyrma.sh"
 
-- name: Install libnss-pgsql2 pam-pgsql
-  become: true
-  apt:
-    name: 
-      - libnss-pgsql2
-      - libpam-pgsql
-    update_cache: yes
-    cache_valid_time: 3600
-
-- name: Configure libnss-pgsql2 and libpam-pgsql
-  become: true
-  ansible.builtin.template:
-    src: "etc/{{ item }}.j2"
-    dest: /etc/{{ item }}
-    owner: root
-    group: root
-    mode: '0644'
-  with_items: 
-    - nss-pgsql-root.conf
-    - nss-pgsql.conf
-    - pam_pgsql.conf
-
-- name: Configure nsswitch.conf
-  become: true
-  ansible.builtin.lineinfile:
-    path: /etc/nsswitch.conf
-    line: '\1 pgsql'
-    regexp: "^({{ item }})$"
-    backup: yes
-    backrefs: yes
-  with_items: 
-    - "passwd:         files systemd"
-    - "group:          files systemd"
-    - "shadow:         files"
-
-- name: Copy PAM.D modules
-  become: true
-  ansible.builtin.copy:
-    src: "etc/pam.d/{{ item }}"
-    dest: /etc/pam.d/{{ item }}
-    owner: root
-    group: root
-    mode: '0644'
-  with_items: 
-    - psql-account
-    - psql-auth
-    - psql-password
-
-- name: Add pam module psql-auth to sshd service
-  become: true
-  ansible.builtin.lineinfile:
-    path: /etc/pam.d/sshd
-    line: '@include psql-auth'
-    insertbefore: "@include common-auth"
-    backup: yes
-  
-- name: Add pam module psql-account to sshd service
-  become: true
-  ansible.builtin.lineinfile:
-    path: /etc/pam.d/sshd
-    line: '@include psql-account'
-    insertbefore: "@include common-account"
-
-- name: Add pam module psql-password to sshd service
-  become: true
-  ansible.builtin.lineinfile:
-    path: /etc/pam.d/sshd
-    line: '@include psql-password'
-    insertbefore: "@include common-password"
-
 - name: Change owner and group pyRMA folders
   become: true
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
-    owner: admin
-    group: acs
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
     mode: '6775'
   with_items: 
     - "{{ app_data_dir }}"
@@ -209,13 +139,14 @@
     dest: /etc/pyrma/pyrma.conf
     owner: "{{ app_user }}"
     group: "{{ app_group }}"
-    mode: '0644'
+    mode: '0640'
   
-- name: Copy file to /etc/security/limits.d/acs.conf
+- name: Add pyRMA Web service
   become: true
-  ansible.builtin.copy:
-    src: "etc/security/limits.d/acs.conf"
-    dest: /etc/security/limits.d/acs.conf
+  ansible.builtin.template:
+    src: "etc/systemd/system/pyrma-web.service.j2"
+    dest: /etc/systemd/system/pyrma-web.service
     owner: root
     group: root
     mode: '0644'
+  notify: Restart pyrma-web.service

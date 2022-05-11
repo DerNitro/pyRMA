@@ -1,4 +1,0 @@
-shadowconnectionstring    = hostaddr={{ pyrma_database.host }} dbname={{ pyrma_database.name }} user={{ pyrma_database.username }} password={{ pyrma_database.password }} connect_timeout=1
-
-shadowbyname        = SELECT username, password, lstchg, min, max, warn, inact, expire, flag FROM aaa_user WHERE username = $1
-shadow              = SELECT username, password, lstchg, min, max, warn, inact, expire, flag FROM aaa_user

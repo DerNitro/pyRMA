@@ -1,13 +1,14 @@
 #!/bin/bash
 
 export SHELL=/bin/bash
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
 
 umask 0002
 
 TTYREC={{ app_folder }}/bin/ttyrec
 
 data_dir={{ app_data_dir }}
-file_rec=$(id -u -n)_$(date +%Y-%m-%d_%H:%M:%S.%s)
+file_rec=$(id -u)_$(date +%Y-%m-%d_%H:%M:%S.%s)
 file_path=$data_dir/filerecords/$(date +%Y/%m/%d)
 
 export file_rec file_path

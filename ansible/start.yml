@@ -1,0 +1,8 @@
+---
+- name: Start pyRMA Web Interface
+  become: true
+  ansible.builtin.systemd:
+    name: pyrma-web.service
+    state: started
+    enabled: yes
+    daemon_reload: yes

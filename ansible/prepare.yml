@@ -8,3 +8,11 @@
       - acl                           # https://github.com/georchestra/ansible/issues/55#issuecomment-651043423
     update_cache: yes
     cache_valid_time: 3600
+
+- name: Disable MOTD display when opening SSH session
+  become: true
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/sshd
+    state: absent
+    regexp: '^session    optional     pam_motd.so'
+    backup: true

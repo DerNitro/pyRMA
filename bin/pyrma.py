@@ -51,17 +51,6 @@ appParameters.version = __version__
 appParameters.log.info('Запуск приложения: {0} {1}'.format(__program__, __version__))
 appParameters.log.debug(appParameters)
 
-if not os.path.isfile(appParameters.license):
-    print('Отсутствует файл лицензии!!!')
-    appParameters.log.error("Отсутствует файл лицензии: {0}!!!".format(appParameters.license), pr=True)
-    sys.exit(10)
-
-if not check_license(appParameters.license):
-    appParameters.log.error('Не корректный файл лицензии!!!', pr=True)
-    sys.exit(11)
-else:
-    appParameters.log.info('Файл лицензии корректный.')
-
 if appParameters.dbase in ['postgresql']:
     engine = create_engine(
         '{0}://{1}:{2}@{3}:{4}/{5}'.format(
