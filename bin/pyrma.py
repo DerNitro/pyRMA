@@ -112,7 +112,7 @@ except sqlalchemy.orm.exc.NoResultFound:
                 if i == g.name:
                     gid = g.id
             if gid:
-                applib.add_user_group(appParameters, pw_uid, gid)
+                applib.add_user_group(appParameters, pw_uid, gid, action=False)
 finally:
     with schema.db_select(engine) as db:
         user_info = db.query(schema.User). \

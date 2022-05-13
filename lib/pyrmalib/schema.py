@@ -80,7 +80,7 @@ class User(Base):
     __tablename__ = 'user'
 
     uid = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, unique=True)
-    login = sqlalchemy.Column(sqlalchemy.String(256))
+    login = sqlalchemy.Column(sqlalchemy.String(256), unique=True)
     full_name = sqlalchemy.Column(sqlalchemy.String(256))
     date_create = sqlalchemy.Column(sqlalchemy.DateTime, default=datetime.datetime.now)
     disable = sqlalchemy.Column(sqlalchemy.BOOLEAN(), default=False)

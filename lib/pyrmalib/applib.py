@@ -728,7 +728,7 @@ def get_new_user(param: parameters.WebParameters):
     return user
 
 
-def add_user_group(param: parameters.Parameters, uid, gid):
+def add_user_group(param: parameters.Parameters, uid: int, gid: int, action: bool=True):
     with schema.db_select(param.engine) as db:
         user_group = db.query(schema.GroupUser) \
             .filter(schema.GroupUser.user == uid, schema.GroupUser.group == gid).all()
@@ -743,14 +743,15 @@ def add_user_group(param: parameters.Parameters, uid, gid):
         db.flush()
         db.refresh(r)
 
-        action = schema.Action(
-            user=param.user_info.uid,
-            action_type=53,
-            date=datetime.datetime.now(),
-            message="Добавлена группа: {group.group} - user={group.user}({group})".format(group=r)
-        )
-        db.add(action)
-        db.flush()
+        if action:
+            action = schema.Action(
+                user=param.user_info.uid,
+                action_type=53,
+                date=datetime.datetime.now(),
+                message="Добавлена группа: {group.group} - user={group.user}({group})".format(group=r)
+            )
+            db.add(action)
+            db.flush()
     return True
 
 
