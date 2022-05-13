@@ -23,7 +23,8 @@ import json
 from flask import Flask, render_template, request, redirect, session, url_for
 from flask_wtf.csrf import CSRFProtect
 from pyrmalib import schema, parameters, applib, access, forms, error as rma_error
-import os.path
+import os
+import pwd
 from sqlalchemy import create_engine, sql
 from werkzeug.utils import secure_filename
 
@@ -42,9 +43,26 @@ app = Flask(__name__,
             template_folder=webParameters.template,
             static_folder=os.path.join(webParameters.template, 'static'))
 app.secret_key = os.urandom(64)
-app.debug = True
+app.debug = True    # TODO: Снять DEBUG
 csrf = CSRFProtect()
 csrf.init_app(app)
+
+# Создание пользователя администратор.
+app_username = pwd.getpwuid(os.getuid())[0]
+app_uid = os.getuid()
+if not applib.user_info(app_username, webParameters.engine):
+    applib.user_registration(
+        {
+            'uid': app_uid,
+            'login': app_username,
+            'full_name': 'Super Admin',
+            'ip': '0.0.0.0/0',
+            'email': "{}@{}".format(app_username, webParameters.users['email_domain_name']),
+            'check': 1
+        },
+        webParameters
+    )
+    applib.set_user_permission(webParameters, 511, 29, app_uid)
 
 webParameters.log.info('start app')
 print(webParameters.log.handler)
@@ -103,7 +121,7 @@ def root():
         admin=access.check_access(webParameters, 'Administrate'),
         content=content,
         search=search_field,
-        username=webParameters.aaa_user.username
+        username=webParameters.user_info.login
     )
 
 
@@ -120,7 +138,7 @@ def search():
                            host_list=host_list,
                            Search=query,
                            search=form,
-                           username=webParameters.aaa_user.username)
+                           username=webParameters.user_info.login)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -203,7 +221,7 @@ def settings():
         parameters_form=parameters_form,
         admin=access.check_access(webParameters, 'Administrate'),
         search=search_field,
-        username=webParameters.aaa_user.username
+        username=webParameters.user_info.login
     )
 
 
@@ -219,7 +237,7 @@ def settings_service():
         search=search_field,
         service=service,
         form_add_service=form_add_service,
-        username=webParameters.aaa_user.username
+        username=webParameters.user_info.login
     )
 
 
@@ -235,7 +253,7 @@ def settings_prefix():
         search=search_field,
         prefix=prefix,
         form_add_prefix=form_add_prefix,
-        username=webParameters.aaa_user.username
+        username=webParameters.user_info.login
     )
 
 
@@ -251,7 +269,7 @@ def settings_ipmi():
         search=search_field,
         ipmi=ipmi,
         form_add_ipmi=form_add_ipmi,
-        username=webParameters.aaa_user.username
+        username=webParameters.user_info.login
     )
 
 
@@ -310,7 +328,7 @@ def settings_ipmi_delete(ipmi_id):
         del_button=del_button,
         search=search_field,
         ipmi=ipmi,
-        username=webParameters.aaa_user.username
+        username=webParameters.user_info.login
     )
 
 
@@ -329,7 +347,7 @@ def settings_prefix_delete(prefix_id):
         del_button=del_button,
         search=search_field,
         prefix=prefix,
-        username=webParameters.aaa_user.username
+        username=webParameters.user_info.login
     )
 
 
@@ -348,7 +366,7 @@ def settings_service_delete(service_id):
         del_button=del_button,
         search=search_field,
         service=service,
-        username=webParameters.aaa_user.username
+        username=webParameters.user_info.login
     )
 
 
@@ -386,8 +404,8 @@ def logs(date=None):
     search_field = forms.Search()
     form = forms.ShowLog()
     form.user.choices = [(0, "Все")]
-    for aaa, user in applib.get_users(webParameters)['users']:
-        form.user.choices.append((user.login, user.full_name))
+    for user in applib.get_users(webParameters)['users']:
+        form.user.choices.append((user.uid, user.full_name))
 
     date = datetime.date.today()
     user = 0
@@ -402,7 +420,7 @@ def logs(date=None):
         search=search_field,
         form=form,
         action_list=action_list,
-        username=webParameters.aaa_user.username
+        username=webParameters.user_info.login
     )
 
 
@@ -429,7 +447,7 @@ def route(host_id):
                            host_id=host_id,
                            routes=applib.get_routes(webParameters, host_id),
                            search=search_field,
-                           username=webParameters.aaa_user.username)
+                           username=webParameters.user_info.login)
 
 
 @app.route('/hosts')
@@ -474,7 +492,7 @@ def hosts(directory_id=None):
                            directory_id=directory_id,
                            EditHostInformation=edit_host_information,
                            EditDirectory=edit_directory,
-                           username=webParameters.aaa_user.username)
+                           username=webParameters.user_info.login)
 
 
 @app.route('/hosts/<directory_id>/add_folder', methods=['GET', 'POST'])
@@ -512,7 +530,7 @@ def add_folder(directory_id):
                            error=error,
                            status=status,
                            search=search_field,
-                           username=webParameters.aaa_user.username)
+                           username=webParameters.user_info.login)
 
 
 @app.route('/hosts/<directory_id>/edit_folder', methods=['GET', 'POST'])
@@ -563,7 +581,7 @@ def edit_folder(directory_id):
                            status=status,
                            form=form,
                            search=search_field,
-                           username=webParameters.aaa_user.username)
+                           username=webParameters.user_info.login)
 
 
 @app.route('/hosts/<directory_id>/add_host', methods=['GET', 'POST'])
@@ -621,7 +639,7 @@ def add_host(directory_id):
                            status=status,
                            form=form,
                            search=search_field,
-                           username=webParameters.aaa_user.username)
+                           username=webParameters.user_info.login)
 
 
 @app.route('/host/<host_id>/edit', methods=['GET', 'POST'])
@@ -692,7 +710,7 @@ def edit_host(host_id):
                            status=status,
                            form=form,
                            search=search_field,
-                           username=webParameters.aaa_user.username)
+                           username=webParameters.user_info.login)
 
 
 @app.route('/host/<host_id>')
@@ -719,7 +737,7 @@ def host(host_id):
             content=content_host,
             form=form,
             search=search_field,
-            username=webParameters.aaa_user.username
+            username=webParameters.user_info.login
         )
     else:
         return render_template(siteMap['access_denied'])
@@ -739,7 +757,7 @@ def del_service(service_id):
                            service=service,
                            del_button=del_button,
                            search=search_field,
-                           username=webParameters.aaa_user.username)
+                           username=webParameters.user_info.login)
 
 
 @app.route('/host/<host_id>/add_service', methods=['GET', 'POST'])
@@ -784,7 +802,7 @@ def add_service(host_id):
                                admin=admin,
                                host_id=host_id,
                                search=search_field,
-                               username=webParameters.aaa_user.username)
+                               username=webParameters.user_info.login)
     else:
         return render_template(siteMap['access_denied'])
 
@@ -797,7 +815,7 @@ def administrate():
         siteMap['administrate'],
         admin=access.check_access(webParameters, 'Administrate'),
         search=search_field,
-        username=webParameters.aaa_user.username
+        username=webParameters.user_info.login
     )
 
 
@@ -834,7 +852,7 @@ def administrate_access():
         form=add_access_form,
         access_list=access_list,
         cur_date=datetime.datetime.now(),
-        username=webParameters.aaa_user.username
+        username=webParameters.user_info.login
     )
 
 
@@ -864,7 +882,7 @@ def administrate_group():
         group_user=applib.get_group_user(webParameters),
         group_host=applib.get_group_host(webParameters),
         search=search_field,
-        username=webParameters.aaa_user.username
+        username=webParameters.user_info.login
     )
 
 
@@ -915,7 +933,7 @@ def administrate_group_show(group_id):
         form=form,
         admin=access.check_access(webParameters, 'Administrate'),
         search=search_field,
-        username=webParameters.aaa_user.username
+        username=webParameters.user_info.login
     )
 
 
@@ -933,7 +951,7 @@ def administrate_group_delete(group_id):
         del_button=del_button,
         group_id=group_id,
         search=search_field,
-        username=webParameters.aaa_user.username
+        username=webParameters.user_info.login
     )
 
 
@@ -948,7 +966,7 @@ def administrate_users():
         cur_date=datetime.datetime.now(),
         admin=access.check_access(webParameters, 'Administrate'),
         search=search_field,
-        username=webParameters.aaa_user.username
+        username=webParameters.user_info.login
     )
 
 
@@ -964,27 +982,6 @@ def administrate_user_enable(uid):
 def administrate_user_disable(uid):
     applib.user_disable(webParameters, uid, disable=True)
     return redirect(request.referrer)
-
-
-@app.route('/administrate/user/<uid>/change_password', methods=['GET', 'POST'])
-@applib.authorization(session, request, webParameters)
-def administrate_user_change_password(uid):
-    search_field = forms.Search()
-    form = forms.UserChangePassword()
-    user_info = applib.get_user(webParameters, uid)['user']
-    if request.method == 'POST' and form.validate_on_submit():
-        applib.user_change_password(webParameters, uid, form.password.data)
-        return redirect(url_for('administrate_user', uid=uid))
-    print(form.is_submitted(), form.validate())
-    print(form.errors)
-    return render_template(
-        siteMap['change_password'],
-        form=form,
-        user=user_info,
-        admin=access.check_access(webParameters, 'Administrate'),
-        search=search_field,
-        username=webParameters.aaa_user.username
-    )
 
 
 @app.route('/administrate/user/<uid>', methods=['GET', 'POST'])
@@ -1016,7 +1013,7 @@ def administrate_user(uid):
         cur_date=datetime.datetime.now(),
         admin=access.check_access(webParameters, 'Administrate'),
         search=search_field,
-        username=webParameters.aaa_user.username
+        username=webParameters.user_info.login
     )
 
 

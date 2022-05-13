@@ -1,13 +1,15 @@
 ---
 - name: Set variables install pyRMA
   ansible.builtin.set_fact:
-    app_user:       "{{ app_user | default('acs') }}"
-    app_group:      "{{ app_group | default('acs') }}"
-    app_folder:     "{{ app_folder | default('/opt/pyRMA') }}"
-    app_data_dir:   "{{ app_data_dir | default('/data/pyRMA') }}"
-    app_log_level:  "{{ app_log_level | default('DEBUG') }}"
-    app_web_ip:     "{{ app_web_ip | default('0.0.0.0') }}"
-    app_web_port:   "{{ app_web_port | default('8080') }}"
+    app_user:           "{{ app_user | default('acs') }}"
+    app_user_password:  "{{ app_user_password | default('admin') }}"
+    app_group:          "{{ app_group | default('acs') }}"
+    app_folder:         "{{ app_folder | default('/opt/pyRMA') }}"
+    app_data_dir:       "{{ app_data_dir | default('/data/pyRMA') }}"
+    app_log_level:      "{{ app_log_level | default('DEBUG') }}"
+    app_web_ip:         "{{ app_web_ip | default('0.0.0.0') }}"
+    app_web_port:       "{{ app_web_port | default('8080') }}"
+    email_domain_name:  "{{ email_domain_name | default('localhost') }}"
 
 - name: Install multi python packages with version specifiers
   become: true
@@ -20,6 +22,7 @@
       - wtforms==3.0.1
       - psutil==5.9.0
       - email_validator==1.2.1
+      - python-pam==2.0.2
 
 - name: Create local group {{ app_group }}
   become: true
@@ -34,6 +37,10 @@
     name: "{{ app_user }}"
     system: true
     group: "{{ app_group }}"
+    groups:
+      - shadow    # для проверки локальных пользователей.
+    append: yes
+    password: "{{ app_user_password | password_hash('sha512', 'mysecretsalt') }}"
     shell: "/opt/pyRMA/bin/pyrma.sh"
 
 - name: Create APP folders
@@ -62,6 +69,7 @@
     - ttyrec
     - ttytime
     - web.py
+  notify: Restart pyrma-web.service
 
 - name: Copy data files
   become: true
@@ -73,6 +81,7 @@
   with_items: 
     - web
     - lib
+  notify: Restart pyrma-web.service
 
 - name: Create link pyRMA lib
   become: true
@@ -140,6 +149,7 @@
     owner: "{{ app_user }}"
     group: "{{ app_group }}"
     mode: '0640'
+  notify: Restart pyrma-web.service
   
 - name: Add pyRMA Web service
   become: true
@@ -150,3 +160,6 @@
     group: root
     mode: '0644'
   notify: Restart pyrma-web.service
+
+- name: Flush handlers
+  meta: flush_handlers

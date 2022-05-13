@@ -20,6 +20,7 @@ import json
 import psutil
 import os
 import random
+import pam
 
 from sqlalchemy.orm import aliased
 
@@ -39,7 +40,7 @@ def authorization(web_session: session, req: request, param: parameters.WebParam
         @wraps(function)
         def wrapper(*args, **kwargs):
             if 'username' in web_session:
-                param.aaa_user, param.user_info = user_info(web_session['username'], param.engine)
+                param.user_info = user_info(web_session['username'], param.engine)
                 return function(*args, **kwargs)
             else:
                 return redirect('/login')
@@ -50,21 +51,17 @@ def authorization(web_session: session, req: request, param: parameters.WebParam
 
 
 def login_access(username, password, ip, engine):
+    if not pam.authenticate(username=username, password=password):
+        return False
+
     with schema.db_select(engine) as db:
         try:
-            aaa = db.query(schema.AAAUser).filter(schema.AAAUser.username == username).one()
-            user = db.query(schema.User).filter(schema.User.login == aaa.uid).one()
+            user = db.query(schema.User).filter(schema.User.login == username).one()
             check_ip = db.query(schema.Parameter).filter(schema.Parameter.name == 'CHECK_IP').one()
         except NoResultFound:
             return False
         except MultipleResultsFound:
             return False
-
-    if not aaa:
-        return False
-
-    if aaa.password != hashlib.md5(password.encode()).hexdigest():
-        return False
 
     if not utils.check_ip(ip, user.ip) and check_ip.value == '1':
         return False
@@ -104,7 +101,7 @@ def change_ipmi(param: parameters.WebParameters, ipmi_id, data):
         db.refresh(ipmi)
 
         action = schema.Action(
-            user=param.user_info.login,
+            user=param.user_info.uid,
             action_type=6,
             date=datetime.datetime.now(),
             message="Изменение IPMI{ipmi}".format(ipmi=ipmi)
@@ -150,13 +147,13 @@ def get_access_list(param: parameters.WebParameters):
         al.date_disable as date_disable,
         al.note as note,
         gu.full_name as subject,
-        gu.login as subject_id,
+        gu.uid as subject_id,
         al.t_subject as t_subject,
         gh."name" as "object",
         gh.id as object_id,
         al.t_object as t_object
     from access_list al
-    left join "user" as gu on al.subject = gu.login
+    left join "user" as gu on al.subject = gu.uid
     left join host as gh on al.object = gh.id
     where t_subject = 0 and t_object = 0;
     """
@@ -182,13 +179,13 @@ def get_access_list(param: parameters.WebParameters):
             schema.AccessList.date_disable,
             schema.AccessList.note,
             schema.User.full_name,
-            schema.User.login,
+            schema.User.uid,
             schema.AccessList.t_subject,
             schema.Host.name,
             schema.Host.id,
             schema.AccessList.t_object
         ). \
-            join(schema.User, schema.AccessList.subject == schema.User.login). \
+            join(schema.User, schema.AccessList.subject == schema.User.uid). \
             join(schema.Host, schema.AccessList.object == schema.Host.id). \
             filter(schema.AccessList.t_object == 0, schema.AccessList.t_subject == 0, schema.AccessList.status != 2)
         access_list = group_access.union(user_access).all()
@@ -202,14 +199,14 @@ def get_access_request(param: parameters.WebParameters, acc_id=None):
         with schema.db_select(param.engine) as db:
             access_list = db.query(schema.Host, schema.User, schema.RequestAccess).filter(
                 schema.RequestAccess.host == schema.Host.id,
-                schema.RequestAccess.user == schema.User.login,
+                schema.RequestAccess.user == schema.User.uid,
                 schema.RequestAccess.id == acc_id
             ).all()
     else:
         with schema.db_select(param.engine) as db:
             access_list = db.query(schema.Host, schema.User, schema.RequestAccess).filter(
                 schema.RequestAccess.host == schema.Host.id,
-                schema.RequestAccess.user == schema.User.login,
+                schema.RequestAccess.user == schema.User.uid,
                 schema.RequestAccess.status == 0,
                 schema.RequestAccess.date_access > datetime.datetime.now()
             ).all()
@@ -490,7 +487,7 @@ def get_group(param: parameters.WebParameters, group_id):
     if group.type == 0:
         with schema.db_select(param.engine) as db:
             users = db.query(schema.GroupUser, schema.User) \
-                .join(schema.User, schema.GroupUser.user == schema.User.login) \
+                .join(schema.User, schema.GroupUser.user == schema.User.uid) \
                 .filter(schema.GroupUser.group == group_id).all()
             content['users'] = users
 
@@ -515,7 +512,7 @@ def get_group(param: parameters.WebParameters, group_id):
     return content
 
 
-def get_group_user(param: parameters.WebParameters):
+def get_group_user(param: parameters.Parameters):
     with schema.db_select(param.engine) as db:
         group = db.query(schema.Group).filter(schema.Group.type == 0, schema.Group.id != 0).all()
 
@@ -552,8 +549,7 @@ def get_group_list(param: parameters.Parameters, host=False, user=False):
 def get_users(param: parameters.WebParameters):
     content = {}
     with schema.db_select(param.engine) as db:
-        users = db.query(schema.AAAUser, schema.User) \
-            .join(schema.User, schema.AAAUser.uid == schema.User.login) \
+        users = db.query(schema.User) \
             .order_by(schema.User.full_name).all()
         content['users'] = users
     return content
@@ -569,10 +565,9 @@ def get_parameters(param: parameters.WebParameters):
 def get_user(param: parameters.Parameters, uid):
     content = {}
     with schema.db_select(param.engine) as db:
-        content['aaa_user'], content['user'] = db.query(schema.AAAUser, schema.User) \
-            .join(schema.User, schema.AAAUser.uid == schema.User.login) \
+        content['user'] = db.query(schema.User) \
             .order_by(schema.User.full_name) \
-            .filter(schema.AAAUser.uid == uid) \
+            .filter(schema.User.uid == uid) \
             .one()
         content['action'] = db.query(schema.Action) \
             .filter(schema.Action.user == uid) \
@@ -702,7 +697,7 @@ def get_action(param: parameters.WebParameters, uid, date):
         with schema.db_select(param.engine) as db:
             actions = db.query(schema.Action, schema.ActionType, schema.User) \
                 .join(schema.ActionType, schema.Action.action_type == schema.ActionType.id) \
-                .join(schema.User, schema.Action.user == schema.User.login) \
+                .join(schema.User, schema.Action.user == schema.User.uid) \
                 .filter(and_(schema.Action.date >= utils.date_to_datetime(date_start),
                              schema.Action.date < utils.date_to_datetime(date_stop))) \
                 .order_by(schema.Action.date.desc()).all()
@@ -710,7 +705,7 @@ def get_action(param: parameters.WebParameters, uid, date):
         with schema.db_select(param.engine) as db:
             actions = db.query(schema.Action, schema.ActionType, schema.User) \
                 .join(schema.ActionType, schema.Action.action_type == schema.ActionType.id) \
-                .join(schema.User, schema.Action.user == schema.User.login) \
+                .join(schema.User, schema.Action.user == schema.User.uid) \
                 .filter(and_(schema.Action.date >= utils.date_to_datetime(date_start),
                              schema.Action.date < utils.date_to_datetime(date_stop),
                              schema.Action.user == uid)) \
@@ -733,7 +728,7 @@ def get_new_user(param: parameters.WebParameters):
     return user
 
 
-def add_user_group(param: parameters.WebParameters, uid, gid):
+def add_user_group(param: parameters.Parameters, uid, gid):
     with schema.db_select(param.engine) as db:
         user_group = db.query(schema.GroupUser) \
             .filter(schema.GroupUser.user == uid, schema.GroupUser.group == gid).all()
@@ -749,7 +744,7 @@ def add_user_group(param: parameters.WebParameters, uid, gid):
         db.refresh(r)
 
         action = schema.Action(
-            user=param.user_info.login,
+            user=param.user_info.uid,
             action_type=53,
             date=datetime.datetime.now(),
             message="Добавлена группа: {group.group} - user={group.user}({group})".format(group=r)
@@ -775,7 +770,7 @@ def add_host_group(param: parameters.WebParameters, host_id, gid):
         db.refresh(r)
 
         action = schema.Action(
-            user=param.user_info.login,
+            user=param.user_info.uid,
             action_type=54,
             date=datetime.datetime.now(),
             message="Добавлена группа: {group.group} - host={group.host}({group})".format(group=r)
@@ -796,7 +791,7 @@ def add_prefix(param: parameters.WebParameters, name, describe):
         db.refresh(p)
 
         action = schema.Action(
-            user=param.user_info.login,
+            user=param.user_info.uid,
             action_type=3,
             date=datetime.datetime.now(),
             message="Добавлен префикс ({prefix})".format(prefix=p)
@@ -818,7 +813,7 @@ def add_ipmi(param: parameters.WebParameters, name, vendor, ports):
         db.refresh(i)
 
         action = schema.Action(
-            user=param.user_info.login,
+            user=param.user_info.uid,
             action_type=5,
             date=datetime.datetime.now(),
             message="Добавлен IPMI ({ipmi})".format(ipmi=i)
@@ -826,6 +821,30 @@ def add_ipmi(param: parameters.WebParameters, name, vendor, ports):
         db.add(action)
         db.flush()
     return True
+
+
+def set_user_permission(param: parameters.WebParameters, user_access: int, connection_access: int, uid: int):
+    user_access = access.UserAccess(user_access)
+    connection_access = access.ConnectionAccess(connection_access)
+    with schema.db_edit(param.engine) as db:
+        try:
+            perm = db.query(schema.Permission).filter(
+                schema.Permission.t_subject == 0,
+                schema.Permission.subject == uid
+            ).one()
+            perm.conn_access = connection_access.get_int()
+            perm.user_access = user_access.get_int()
+            db.flush()
+        except NoResultFound:
+            perm = schema.Permission(
+                t_subject=0,
+                subject=uid,
+                conn_access=connection_access.get_int(),
+                user_access=user_access.get_int()
+            )
+            db.add(perm)
+        except MultipleResultsFound:
+            raise error.WTF("Дубли default Permission в таблице Permission!!!")
 
 
 def set_group_permission(param: parameters.WebParameters, group_id, form: forms.ChangePermission):
@@ -867,7 +886,7 @@ def set_group_permission(param: parameters.WebParameters, group_id, form: forms.
             raise error.WTF("Дубли default Permission в таблице Permission!!!")
 
         action = schema.Action(
-            user=param.user_info.login,
+            user=param.user_info.uid,
             action_type=61,
             date=datetime.datetime.now(),
             message="Смена прав доступа для группы {group_id}({user_access}, {connection_access})".format(
@@ -882,12 +901,12 @@ def set_group_permission(param: parameters.WebParameters, group_id, form: forms.
 
 def set_user_prefix(param: parameters.WebParameters, prefix, uid):
     with schema.db_edit(param.engine) as db:
-        user = db.query(schema.User).filter(schema.User.login == uid).one()
+        user = db.query(schema.User).filter(schema.User.uid == uid).one()
         user.prefix = prefix
         db.flush()
         db.refresh(user)
         action = schema.Action(
-            user=param.user_info.login,
+            user=param.user_info.uid,
             action_type=60,
             date=datetime.datetime.now(),
             message="Смена префикса пользователя - {user.full_name}({user.prefix})".format(user=user)
@@ -907,7 +926,7 @@ def set_parameters(param: parameters.WebParameters, name: str, value: str):
             db.refresh(p)
 
             action = schema.Action(
-                user=param.user_info.login,
+                user=param.user_info.uid,
                 action_type=2,
                 date=datetime.datetime.now(),
                 message="Изменение параметров - {param}".format(param=p)
@@ -941,14 +960,13 @@ def search(param: parameters.Parameters, query):
 def user_info(username, engine):
     with schema.db_select(engine) as db:
         try:
-            aaa = db.query(schema.AAAUser).filter(schema.AAAUser.username == username).one()
-            user = db.query(schema.User).filter(schema.User.login == aaa.uid).one()
+            user = db.query(schema.User).filter(schema.User.login == username).one()
         except NoResultFound:
             return False
         except MultipleResultsFound:
             return False
 
-    return aaa, user
+    return user
 
 
 def user_disable(param: parameters.WebParameters, uid, disable=False, enable=False):
@@ -961,7 +979,7 @@ def user_disable(param: parameters.WebParameters, uid, disable=False, enable=Fal
     :return: True
     """
     with schema.db_edit(param.engine) as db:
-        user = db.query(schema.User).filter(schema.User.login == uid).one()
+        user = db.query(schema.User).filter(schema.User.uid == uid).one()
         if disable:
             user.disable = True
             user.date_disable = datetime.datetime.now()
@@ -978,7 +996,7 @@ def user_disable(param: parameters.WebParameters, uid, disable=False, enable=Fal
             db.flush()
 
         action = schema.Action(
-            user=param.user_info.login,
+            user=param.user_info.uid,
             action_type=status_id,
             date=datetime.datetime.now(),
             message="{} пользователя: {user.full_name}({user})".format(status, user=user)
@@ -987,82 +1005,6 @@ def user_disable(param: parameters.WebParameters, uid, disable=False, enable=Fal
         db.flush()
 
     return True
-
-
-def user_change_password(param: parameters.WebParameters, uid, password):
-    """
-    Смена пароля
-    :param param:
-    :param uid:
-    :param password:
-    :return:
-    """
-    with schema.db_edit(param.engine) as db:
-        user = db.query(schema.User).filter(schema.User.login == uid).one()
-        aaa = db.query(schema.AAAUser).filter(schema.AAAUser.uid == uid).one()
-        aaa.password = hashlib.md5(str(password).encode()).hexdigest()
-        action = schema.Action(
-            user=param.user_info.login,
-            action_type=59,
-            date=datetime.datetime.now(),
-            message="Смена пароля для пользователя: {user.full_name}".format(user=user)
-        )
-        db.add(action)
-        db.flush()
-
-    return True
-
-
-def restore_password(username, param: parameters.WebParameters, request):
-    with schema.db_select(param.engine) as db:
-        try:
-            user, aaa_user = db.query(schema.User, schema.AAAUser).filter(schema.User.login == schema.AAAUser.uid). \
-                filter(sqlalchemy.or_(schema.AAAUser.username == username, schema.User.email == username)).one()
-        except NoResultFound:
-            return False
-        except MultipleResultsFound:
-            return False
-
-    key = ''.join(random.choice(string.ascii_letters + string.punctuation + string.digits) for _ in range(256))
-    key = hashlib.md5(key.encode()).hexdigest()
-
-    with schema.db_edit(param.engine) as db:
-        db.query(schema.RestorePassword). \
-            filter(schema.RestorePassword.status == 1, schema.RestorePassword.user == user.login). \
-            update({schema.RestorePassword.status: 0, schema.RestorePassword.date_complete: datetime.datetime.now()})
-        db.add(
-            schema.RestorePassword(
-                user=user.login,
-                status=1,
-                date=datetime.datetime.now(),
-                key=key
-            )
-        )
-        db.add(
-            schema.Action(
-                user=user.login,
-                action_type=50,
-                date=datetime.datetime.now(),
-                message='Запрос восстановления пароля (Client IP: {})'.format(request.remote_addr)
-            )
-        )
-    host = request.host_url
-    status = mail.send_mail(
-        param,
-        'Восстановление пароля - {}({})'.format(aaa_user.username, user.full_name),
-        template.restore_password(),
-        user,
-        {
-            'username': aaa_user.username,
-            'url_recovery': '{0}{1}'.format(host, "restore/" + key),
-            'url_deny': '{0}{1}'.format(host, "restore/deny/" + key)
-        }
-    )
-
-    if status:
-        return True
-    else:
-        return False
 
 
 def restore_deny_password(param: parameters.WebParameters, key):
@@ -1079,7 +1021,7 @@ def restore_deny_password(param: parameters.WebParameters, key):
             update({schema.RestorePassword.status: 0, schema.RestorePassword.date_complete: datetime.datetime.now()})
         db.add(
             schema.Action(
-                user=param.user_info.login if param.user_info else sql.null(),
+                user=param.user_info.uid if param.user_info else sql.null(),
                 action_type=50,
                 date=datetime.datetime.now(),
                 message='Восстановение пароля отменено (Client IP: {})'.format(request.remote_addr)
@@ -1088,72 +1030,22 @@ def restore_deny_password(param: parameters.WebParameters, key):
     return True
 
 
-def reset_password(key, param: parameters.WebParameters, password=False, check=False):
-    with schema.db_select(param.engine) as db:
-        try:
-            restore = db.query(schema.RestorePassword).filter(
-                sqlalchemy.and_(schema.RestorePassword.key == key, schema.RestorePassword.status == 1)).one()
-        except sqlalchemy.orm.exc.NoResultFound:
-            return False
-
-    if check and restore:
-        return True
-
-    with schema.db_select(param.engine) as db:
-        try:
-            user, aaa_user = db.query(schema.User, schema.AAAUser).filter(schema.User.login == schema.AAAUser.uid). \
-                filter(schema.AAAUser.uid == restore.user).one()
-        except sqlalchemy.orm.exc.NoResultFound:
-            return False
-
+def user_registration(reg_data, param: parameters.Parameters):
     with schema.db_edit(param.engine) as db:
-        db.query(schema.RestorePassword). \
-            filter(sqlalchemy.and_(schema.RestorePassword.key == key,
-                                   schema.RestorePassword.status == 1)). \
-            update({schema.RestorePassword.status: 2,
-                    schema.RestorePassword.date_complete: datetime.datetime.now()})
-        db.query(schema.AAAUser). \
-            filter(schema.AAAUser.uid == restore.user). \
-            update({schema.AAAUser.password: hashlib.md5(str(password).encode()).hexdigest()})
-    mail.send_mail(
-        param,
-        'Восстановление пароля - {}'.format(aaa_user.username),
-        template.restore_password_access(), user, {'login': aaa_user.username})
-    return True
-
-
-def user_registration(reg_data, param: parameters.WebParameters):
-    with schema.db_edit(param.engine) as db:
-        aaa = schema.AAAUser(
-            username=reg_data['username'],
-            password=hashlib.md5(reg_data['password'].encode()).hexdigest()
-        )
-        db.add(aaa)
-        db.flush()
-        db.refresh(aaa)
         user = schema.User(
-            login=aaa.uid,
+            uid=reg_data['uid'],
+            login=reg_data['login'],
             full_name=reg_data['full_name'],
             date_create=datetime.datetime.now(),
             disable=False,
             date_disable=datetime.datetime.now() + datetime.timedelta(days=365),
             ip=reg_data['ip'],
             email=reg_data['email'],
-            check=0
+            check=reg_data['check']
         )
         db.add(user)
         db.flush()
 
-    aaa, user = user_info(reg_data['username'], param.engine)
-
-    mail.send_mail(
-        param,
-        'Регистрация нового пользователя - {}'.format(user.full_name),
-        template.registration_user(),
-        user,
-        {'username': user.full_name},
-        admin_cc=True
-    )
     return True
 
 
@@ -1171,7 +1063,7 @@ def add_folder(param: parameters.WebParameters, folder):
         db.flush()
         db.refresh(folder)
         action = schema.Action(
-            user=param.user_info.login,
+            user=param.user_info.uid,
             action_type=10,
             date=datetime.datetime.now(),
             message="Создание директории: {folder.name} - id={folder.id}({folder})".format(folder=folder)
@@ -1192,7 +1084,7 @@ def add_host(param: parameters.WebParameters, host: schema.Host, parent=0, passw
         if password:
             host.default_password = utils.password(password, host.id, True)
         action = schema.Action(
-            user=param.user_info.login,
+            user=param.user_info.uid,
             action_type=20,
             date=datetime.datetime.now(),
             message="Создание хоста: {host.name} - id={host.id}({host})".format(host=host)
@@ -1208,7 +1100,7 @@ def add_service(param: parameters.WebParameters, service: schema.Service):
         db.flush()
         db.refresh(service)
         action = schema.Action(
-            user=param.user_info.login,
+            user=param.user_info.uid,
             action_type=23,
             date=datetime.datetime.now(),
             message="Добавление сервиса: {service.host} - id={service.id}({service})".format(service=service)
@@ -1228,7 +1120,7 @@ def add_service_type(param: parameters.WebParameters, name, default_port):
         db.flush()
         db.refresh(service_type)
         action = schema.Action(
-            user=param.user_info.login,
+            user=param.user_info.uid,
             action_type=8,
             date=datetime.datetime.now(),
             message="Добавление сервиса: id={service.id}({service})".format(service=service_type)
@@ -1312,7 +1204,7 @@ def add_route(param: parameters.WebParameters, r):
         db.refresh(route)
 
         action = schema.Action(
-            user=param.user_info.login,
+            user=param.user_info.uid,
             action_type=25,
             date=datetime.datetime.now(),
             message="Добавлен маршрут: {route.host} - id={route.id}({route})".format(route=route)
@@ -1333,7 +1225,7 @@ def add_group(param: parameters.WebParameters, g):
         db.refresh(group)
 
         action = schema.Action(
-            user=param.user_info.login,
+            user=param.user_info.uid,
             action_type=52,
             date=datetime.datetime.now(),
             message="Добавлена группа: {group.name} - id={group.id}({group})".format(group=group)
@@ -1350,7 +1242,7 @@ def add_access(param: parameters.WebParameters, a):
         db.refresh(a)
 
         action = schema.Action(
-            user=param.user_info.login,
+            user=param.user_info.uid,
             action_type=30,
             date=datetime.datetime.now(),
             message="Добавлено правило доступа - id={a.id}({a})".format(a=a)
@@ -1368,7 +1260,7 @@ def edit_folder(param: parameters.WebParameters, folder, folder_id):
         host.note = folder['note']
 
         action = schema.Action(
-            user=param.user_info.login,
+            user=param.user_info.uid,
             action_type=11,
             date=datetime.datetime.now(),
             message="Редактирование директории: {folder.name} - id={folder.id}({folder})".format(folder=host)
@@ -1395,7 +1287,7 @@ def edit_host(param: parameters.WebParameters, d, host_id):
         host.proxy = d['proxy']
 
         action = schema.Action(
-            user=param.user_info.login,
+            user=param.user_info.uid,
             action_type=21,
             date=datetime.datetime.now(),
             message="Редактирование хоста: {folder.name} - id={folder.id}({folder})".format(folder=host)
@@ -1411,7 +1303,7 @@ def delete_folder(param: parameters.WebParameters, host_id):
         d_host = db.query(schema.Host).filter(schema.Host.id == host_id).one()
         d_host.remove = True
         action = schema.Action(
-            user=param.user_info.login,
+            user=param.user_info.uid,
             action_type=12,
             date=datetime.datetime.now(),
             message="Удаление директории: {folder.name} - id={folder.id}".format(folder=d_host)
@@ -1427,7 +1319,7 @@ def delete_host(param: parameters.WebParameters, host_id):
         d_host = db.query(schema.Host).filter(schema.Host.id == host_id).one()
         d_host.remove = True
         action = schema.Action(
-            user=param.user_info.login,
+            user=param.user_info.uid,
             action_type=22,
             date=datetime.datetime.now(),
             message="Удаление хоста: {folder.name} - id={folder.id}".format(folder=d_host)
@@ -1448,7 +1340,7 @@ def del_group(param: parameters.WebParameters, group=None):
     with schema.db_edit(param.engine) as db:
         db.query(schema.Group).filter(schema.Group.id == group).delete()
         action = schema.Action(
-            user=param.user_info.login,
+            user=param.user_info.uid,
             action_type=24,
             date=datetime.datetime.now(),
             message="Удаление группы: id={}".format(group)
@@ -1475,7 +1367,7 @@ def del_access(param: parameters.WebParameters, access):
             }
         )
         action = schema.Action(
-            user=param.user_info.login,
+            user=param.user_info.uid,
             action_type=31,
             date=datetime.datetime.now(),
             message="Удаление правила доступа: id={}".format(access)
@@ -1489,7 +1381,7 @@ def del_group_user(param: parameters.WebParameters, group=None, user=None):
     with schema.db_edit(param.engine) as db:
         db.query(schema.GroupUser).filter(schema.GroupUser.group == group, schema.GroupUser.user == user).delete()
         action = schema.Action(
-            user=param.user_info.login,
+            user=param.user_info.uid,
             action_type=55,
             date=datetime.datetime.now(),
             message="Удаление группы у пользователя {}: id={}".format(user, group)
@@ -1503,7 +1395,7 @@ def del_group_host(param: parameters.WebParameters, group=None, host=None):
     with schema.db_edit(param.engine) as db:
         db.query(schema.GroupHost).filter(schema.GroupHost.group == group, schema.GroupHost.host == host).delete()
         action = schema.Action(
-            user=param.user_info.login,
+            user=param.user_info.uid,
             action_type=56,
             date=datetime.datetime.now(),
             message="Удаление группы у хоста {}: id={}".format(host, group)
@@ -1528,7 +1420,7 @@ def del_service(param: parameters.WebParameters, host=None, service=None):
         with schema.db_edit(param.engine) as db:
             db.query(schema.Service).filter(schema.Service.host == host).delete()
             action = schema.Action(
-                user=param.user_info.login,
+                user=param.user_info.uid,
                 action_type=24,
                 date=datetime.datetime.now(),
                 message="Удаление сервиса: host={}".format(host)
@@ -1539,7 +1431,7 @@ def del_service(param: parameters.WebParameters, host=None, service=None):
         with schema.db_edit(param.engine) as db:
             db.query(schema.Service).filter(schema.Service.id == service).delete()
             action = schema.Action(
-                user=param.user_info.login,
+                user=param.user_info.uid,
                 action_type=24,
                 date=datetime.datetime.now(),
                 message="Удаление сервиса: id={}".format(service)
@@ -1553,7 +1445,7 @@ def del_prefix(param: parameters.WebParameters, prefix):
     with schema.db_edit(param.engine) as db:
         db.query(schema.Prefix).filter(schema.Prefix.id == prefix).delete()
         action = schema.Action(
-            user=param.user_info.login,
+            user=param.user_info.uid,
             action_type=4,
             date=datetime.datetime.now(),
             message="Удаление префикса: {id}".format(id=prefix)
@@ -1568,7 +1460,7 @@ def del_service_type(param: parameters.WebParameters, service):
         s = db.query(schema.ServiceType).filter(schema.ServiceType.id == service).one()
         db.query(schema.ServiceType).filter(schema.ServiceType.id == service).delete()
         action = schema.Action(
-            user=param.user_info.login,
+            user=param.user_info.uid,
             action_type=9,
             date=datetime.datetime.now(),
             message="Удаление сервиса: {service.name}({service.id})".format(service=s)
@@ -1582,7 +1474,7 @@ def del_ipmi(param: parameters.WebParameters, ipmi):
     with schema.db_edit(param.engine) as db:
         db.query(schema.IPMIType).filter(schema.IPMIType.id == ipmi).delete()
         action = schema.Action(
-            user=param.user_info.login,
+            user=param.user_info.uid,
             action_type=7,
             date=datetime.datetime.now(),
             message="Удаление IPMI: {id}".format(id=ipmi)
@@ -1596,7 +1488,7 @@ def clear_routes(param: parameters.WebParameters, host_id):
     with schema.db_edit(param.engine) as db:
         db.query(schema.RouteMap).filter(schema.RouteMap.host == host_id).delete()
         action = schema.Action(
-            user=param.user_info.login,
+            user=param.user_info.uid,
             action_type=26,
             date=datetime.datetime.now(),
             message="Очистка маршрутов: host={}".format(host_id)
@@ -1625,7 +1517,7 @@ def get_password(app_param: parameters.Parameters, host):
     with schema.db_select(app_param.engine) as db:
         try:
             login_password = db.query(schema.PasswordList).filter(
-                schema.PasswordList.user == app_param.user_info.login,
+                schema.PasswordList.user == app_param.user_info.uid,
                 schema.PasswordList.host == host
             ).one()
         except sqlalchemy.orm.exc.NoResultFound:
@@ -1646,7 +1538,7 @@ def save_password(app_param: parameters.AppParameters, host_id, user, password):
     with schema.db_edit(app_param.engine) as db:
         try:
             login_password = db.query(schema.PasswordList).filter(
-                schema.PasswordList.user == app_param.user_info.login,
+                schema.PasswordList.user == app_param.user_info.uid,
                 schema.PasswordList.host == host_id
             ).one()
         except sqlalchemy.orm.exc.NoResultFound:
@@ -1657,7 +1549,7 @@ def save_password(app_param: parameters.AppParameters, host_id, user, password):
         else:
             db.add(
                 schema.PasswordList(
-                    user=app_param.user_info.login,
+                    user=app_param.user_info.uid,
                     host=host_id,
                     login=user,
                     password=utils.password(password, host_id)

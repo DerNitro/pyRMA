@@ -143,7 +143,7 @@ def check_access(app_param: parameters.Parameters, access, h_object=None, check_
     """
     app_param.log.debug('check_access(param, {},{},{},{})'.format(access, h_object, check_permission, user))
     if not user:
-        user = app_param.user_info.login
+        user = app_param.user_info.uid
 
     if check_permission:
         perm = check_permission

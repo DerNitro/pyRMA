@@ -6,3 +6,4 @@ sqlalchemy==1.4.36
 wtforms==3.0.1
 psutil==5.9.0
 email_validator==1.2.1
+python-pam==2.0.2
