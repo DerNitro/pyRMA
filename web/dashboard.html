@@ -26,13 +26,13 @@
         <table border="1">
             {% for user in content['new_user'] %}
             <tr>
-                <td><a href="/administrate/user/{{ user.login }}"> {{ user.login }} </a></td>
+                <td><a href="/administrate/user/{{ user.uid }}"> {{ user.login }} </a></td>
                 <td>{{ user.full_name }}</td>
                 <td>{{ user.email }}</td>
                 <td>{{ user.ip }}</td>
                 <td>{{ user.date_create }}</td>
                 <td>{{ user.prefix }}</td>
-                <td><a href="/administrate/user/{{ user.login }}/enable"><button>Подтвердить</button></a></td>
+                <td><a href="/administrate/user/{{ user.uid }}/enable"><button>Подтвердить</button></a></td>
             </tr>
             {% endfor %}
         </table>

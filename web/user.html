@@ -5,7 +5,7 @@
 <div class="addGroup">
     <details>
         <summary>Добавить в группу</summary>
-        <form action="/administrate/user/{{ content['aaa_user'].uid }}" method="POST">
+        <form action="/administrate/user/{{ content['user'].uid }}" method="POST">
             {{ group_user_form.csrf_token }}
             <p>
                 {{group_user_form.name.label}}: {{ group_user_form.name() }} {{ group_user_form.add_sub() }}
@@ -18,7 +18,7 @@
 <div class="changePrefix">
     <details>
         <summary>Сменить префикс</summary>
-        <form action="/administrate/user/{{ content['aaa_user'].uid }}" method="POST">
+        <form action="/administrate/user/{{ content['user'].uid }}" method="POST">
             {{ prefix_form.csrf_token }}
             <p>
                 {{prefix_form.prefix.label}}: {{ prefix_form.prefix() }} {{ prefix_form.sub() }}
@@ -36,11 +36,7 @@
     <tbody>
     <tr>
         <td><b>login</b></td>
-        <td>{{content['aaa_user'].username}}</td>
-    </tr>
-    <tr>
-        <td><b>password</b></td>
-        <td><a href="/administrate/user/{{ content['aaa_user'].uid }}/change_password"><button>Сменить пароль</button></a></td>
+        <td>{{content['user'].login}}</td>
     </tr>
     <tr>
         <td><b>email</b></td>

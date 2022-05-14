@@ -18,6 +18,7 @@
 """
 
 import getpass
+from this import s
 from pyrmalib import log, schema
 import configparser
 import os
@@ -43,7 +44,6 @@ class Parameters:
     engine = None
     program = None
     version = None
-    aaa_user = None     # type: schema.AAAUser
     user_info = None    # type: schema.User
     data_dir = None
     log_param = {}
@@ -66,6 +66,9 @@ class Parameters:
             "database": self.conf.get('DataBase', 'dbname', fallback='pyrmalib')
         }
         self.data_dir = self.conf.get('Main', 'data_dir', fallback='/data/pyRMA')
+        self.users = {
+            "email_domain_name": self.conf.get('Users', 'email_domain_name', fallback='localhost')
+        }
 
     def check_user(self):
         if not self.user_info:

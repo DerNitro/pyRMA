@@ -19,9 +19,11 @@
    limitations under the License.
 """
 
+from pickle import TRUE
 import sys
+import pwd, grp
 import traceback
-from pyrmalib import parameters, interface, schema, error, modules
+from pyrmalib import parameters, interface, schema, error, modules, applib
 import sqlalchemy.orm
 from sqlalchemy import create_engine
 from pyrmalib.utils import *
@@ -50,6 +52,7 @@ appParameters.program = __program__
 appParameters.version = __version__
 appParameters.log.info('Запуск приложения: {0} {1}'.format(__program__, __version__))
 appParameters.log.debug(appParameters)
+pw_name, pw_passwd, pw_uid, pw_gid, pw_gecos, pw_dir, pw_shell = pwd.getpwuid(os.getuid())
 
 if appParameters.dbase in ['postgresql']:
     engine = create_engine(
@@ -77,23 +80,47 @@ except sqlalchemy.orm.exc.NoResultFound:
     sys.exit(13)
 
 try:
-    with schema.db_select(engine) as db:
-        aaa_user, user_info = db.query(schema.AAAUser, schema.User). \
-            filter(schema.AAAUser.uid == schema.User.login). \
-            filter(schema.AAAUser.username == appParameters.user_name).one()
-        appParameters.log.debug(aaa_user)
-        appParameters.log.debug(user_info)
-        appParameters.aaa_user = aaa_user
-        appParameters.user_info = user_info
-except sqlalchemy.orm.exc.NoResultFound:
-    appParameters.log.error("Пользователь не существует.", pr=True)
-    sys.exit(14)
-
-# Проверка соответсвия IP адреса с адресом подключения.
-try:
     ssh_client_ip = os.environ.get('SSH_CLIENT').split()[0]
 except AttributeError:
     ssh_client_ip = '127.0.0.1'
+
+try:
+    with schema.db_select(engine) as db:
+        user_info = db.query(schema.User). \
+            filter(schema.User.login == pw_name).one()
+        appParameters.log.debug(user_info)
+        appParameters.user_info = user_info
+except sqlalchemy.orm.exc.NoResultFound:
+    groups = [g.gr_name for g in grp.getgrall() if pw_name in g.gr_mem]
+    groups.append(grp.getgrgid(pw_gid).gr_name)
+    app_group = applib.get_group_user(appParameters)
+    if len(list(set(groups) & set([t.name for t in app_group]))) > 0:
+        applib.user_registration(
+            {
+                'uid': pw_uid,
+                'login': pw_name,
+                'full_name': pw_gecos,
+                'ip': ssh_client_ip,
+                'email': "{}@{}".format(pw_name, appParameters.users['email_domain_name']),
+                'check': 0
+            },
+            appParameters
+        )
+        for i in list(set(groups) & set([t.name for t in app_group])):
+            gid = None
+            for g in app_group:
+                if i == g.name:
+                    gid = g.id
+            if gid:
+                applib.add_user_group(appParameters, pw_uid, gid, action=False)
+finally:
+    with schema.db_select(engine) as db:
+        user_info = db.query(schema.User). \
+            filter(schema.User.login == appParameters.user_name).one()
+        appParameters.log.debug(user_info)
+        appParameters.user_info = user_info
+
+# Проверка соответсвия IP адреса с адресом подключения.
 if list(filter(lambda x: x.name == 'CHECK_IP', appParameters.table_parameter))[0].value == '0':
     appParameters.log.debug("Проверка IP отключена")
 else:
@@ -103,11 +130,11 @@ else:
     else:
         appParameters.log.info(
             "Подключение пользователя {0} с IP: {1}.".format(
-                aaa_user.username, ssh_client_ip
+                appParameters.user_info.login, ssh_client_ip
             )
         )
 
-# Проверка блокироваки уч. записи, с автоматическим продлением даты блокировки.
+# Проверка блокировки уч. записи, с автоматическим продлением даты блокировки.
 if user_info.date_disable < datetime.datetime.now() or user_info.disable:
     appParameters.log.error("Учетная запись заблокирована.", pr=True)
     sys.exit(16)
@@ -131,7 +158,7 @@ except AttributeError:
 
 with schema.db_edit(engine) as db:
     session = schema.Session(
-            user=aaa_user.uid,
+            user=user_info.uid,
             date_start=datetime.datetime.now(),
             pid=os.getpid(),
             ppid=os.getppid(),
@@ -146,7 +173,7 @@ with schema.db_edit(engine) as db:
 
 with schema.db_edit(engine) as db:
     db.add(schema.Action(action_type=1,
-                         user=aaa_user.uid,
+                         user=user_info.uid,
                          date=datetime.datetime.now(),
                          message="Успешное подключение к системе."))
 
@@ -160,7 +187,8 @@ if connection_host:      # type: modules.ConnectionModules
         connection_host.connection()
     except KeyboardInterrupt:
         pass
-connection_host.close()
+    finally:
+        connection_host.close()
 appParameters.log.info('Выход из приложения.')
 
 with schema.db_edit(engine) as db:

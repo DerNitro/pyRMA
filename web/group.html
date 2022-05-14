@@ -80,10 +80,10 @@
 {% for group, user in content['users'] %}
     <tr>
         <td width="80%">
-            <a href="/administrate/user/{{ user.login }}">{{ user.full_name }}</a>
+            <a href="/administrate/user/{{ user.uid }}">{{ user.full_name }}</a>
         </td>
         <td>
-            <a href="/administrate/user/{{ user.login }}/group/{{ group.group }}/delete"><button>Удалить</button></a>
+            <a href="/administrate/user/{{ user.uid }}/group/{{ group.group }}/delete"><button>Удалить</button></a>
         </td>
     </tr>
 {% endfor %}

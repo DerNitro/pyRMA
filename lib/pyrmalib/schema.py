@@ -79,7 +79,8 @@ class User(Base):
     """
     __tablename__ = 'user'
 
-    login = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, unique=True)
+    uid = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, unique=True)
+    login = sqlalchemy.Column(sqlalchemy.String(256), unique=True)
     full_name = sqlalchemy.Column(sqlalchemy.String(256))
     date_create = sqlalchemy.Column(sqlalchemy.DateTime, default=datetime.datetime.now)
     disable = sqlalchemy.Column(sqlalchemy.BOOLEAN(), default=False)
@@ -94,59 +95,6 @@ class User(Base):
 
     def get_id(self):
         return int(self.login)
-
-
-class AAAUser(Base):
-    """
-    Таблица для авторизации пользователей SSH PAM
-    """
-    __tablename__ = 'aaa_user'
-
-    username = sqlalchemy.Column(sqlalchemy.String(16), unique=True)
-    uid = sqlalchemy.Column(sqlalchemy.Integer, Sequence('aaa_user_uid_seq', start=5000, increment=1), primary_key=True)
-    gid = sqlalchemy.Column(sqlalchemy.Integer, default=5000)
-    gecos = sqlalchemy.Column(sqlalchemy.String(128))
-    homedir = sqlalchemy.Column(sqlalchemy.String(255), default='/home/acs/')
-    shell = sqlalchemy.Column(sqlalchemy.String(64), default='/opt/pyRMA/bin/pyrma.sh')
-    password = sqlalchemy.Column(sqlalchemy.String(34))
-    lstchg = sqlalchemy.Column(sqlalchemy.BIGINT)
-    min = sqlalchemy.Column(sqlalchemy.BIGINT, default=0)
-    max = sqlalchemy.Column(sqlalchemy.BIGINT, default=99999)
-    warn = sqlalchemy.Column(sqlalchemy.BIGINT, default=0)
-    inact = sqlalchemy.Column(sqlalchemy.BIGINT, default=0)
-    expire = sqlalchemy.Column(sqlalchemy.Boolean, default=True)
-    flag = sqlalchemy.Column(sqlalchemy.BIGINT)
-
-    def __repr__(self):
-        return "{0}".format(self.__dict__)
-
-
-class AAAGroup(Base):
-    """
-    Список групп PAM
-    """
-    __tablename__ = 'aaa_group'
-
-    gid = sqlalchemy.Column(sqlalchemy.Integer, autoincrement=True, primary_key=True)
-    name = sqlalchemy.Column(sqlalchemy.String(16), default='', unique=True)
-    password = sqlalchemy.Column(sqlalchemy.String(34))
-
-    def __repr__(self):
-        return "{0}".format(self.__dict__)
-
-
-class AAAGroupList(Base):
-    """
-    Включение пользователей в группы PAM
-    """
-    __tablename__ = 'aaa_grouplist'
-
-    rowid = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
-    gid = sqlalchemy.Column(sqlalchemy.Integer)
-    username = sqlalchemy.Column(sqlalchemy.String(16))
-
-    def __repr__(self):
-        return "{0}".format(self.__dict__)
 
 
 class Action(Base):
@@ -542,9 +490,6 @@ if __name__ == '__main__':
 
     if pars.command == 'install':
         try:
-            AAAGroup.__table__.create(bind=engine)
-            AAAGroupList.__table__.create(bind=engine)
-            AAAUser.__table__.create(bind=engine)
             AccessList.__table__.create(bind=engine)
             Action.__table__.create(bind=engine)
             ActionType.__table__.create(bind=engine)
@@ -600,31 +545,6 @@ if __name__ == '__main__':
             db.flush()
 
         with db_edit(engine) as db:
-            aaa_group = AAAGroup(gid=5000, name='acs')
-            db.add(aaa_group)
-            db.flush()
-            aaa = AAAUser(username='admin', password='21232f297a57a5a743894a0e4a801fc3')
-            db.add(aaa)
-            db.flush()
-            db.refresh(aaa)
-            user = User(login=aaa.uid,
-                        full_name='Super Administrator',
-                        date_create=datetime.datetime.now(),
-                        disable=False,
-                        date_disable=datetime.datetime.now() + datetime.timedelta(days=365*10),
-                        ip='0.0.0.0/0',
-                        email='root@localhost',
-                        check=1)
-            db.add(user)
-            db.flush()
-            perm = Permission(
-                t_subject=0,
-                subject=aaa.uid,
-                conn_access=29,
-                user_access=511
-            )
-            db.add(perm)
-            db.flush()
             db.add(
                 ConnectionType(
                     name='SSH'

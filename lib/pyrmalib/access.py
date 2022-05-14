@@ -134,7 +134,7 @@ def get_user_access(param: parameters.Parameters, user, host):
 def check_access(app_param: parameters.Parameters, access, h_object=None, check_permission=None, user=None):
     """
     Возвращает True|False по разрещенному доступу
-    :param user: schema.User.login
+    :param user: schema.User.uid
     :param check_permission: Строка или Список schema.Permission
     :param app_param: Настроки приложения.
     :param access: Правило доступа из access_map
@@ -143,7 +143,7 @@ def check_access(app_param: parameters.Parameters, access, h_object=None, check_
     """
     app_param.log.debug('check_access(param, {},{},{},{})'.format(access, h_object, check_permission, user))
     if not user:
-        user = app_param.user_info.login
+        user = app_param.user_info.uid
 
     if check_permission:
         perm = check_permission
@@ -271,7 +271,7 @@ def request_access(param: parameters.Parameters, request: schema.RequestAccess):
         db.flush()
         db.refresh(request)
         action = schema.Action(
-            user=param.user_info.login,
+            user=param.user_info.uid,
             action_type=32,
             date=datetime.datetime.now(),
             message="Запрос доступа до узла {host.name}({request})".format(host=host, request=request)
@@ -299,19 +299,19 @@ def request_access(param: parameters.Parameters, request: schema.RequestAccess):
 def access_request(param: parameters.Parameters, access):
     with schema.db_select(param.engine) as db:
         request = db.query(schema.RequestAccess).filter(schema.RequestAccess.id == access['access'].id).one()
-        request_user = db.query(schema.User).filter(schema.User.login == request.user).one()
+        request_user = db.query(schema.User).filter(schema.User.uid == request.user).one()
     with schema.db_edit(param.engine) as db:
         db.query(schema.RequestAccess).filter(
             schema.RequestAccess.id == access['access'].id
         ).update(
             {
                 schema.RequestAccess.status: 1,
-                schema.RequestAccess.user_approve: param.user_info.login,
+                schema.RequestAccess.user_approve: param.user_info.uid,
                 schema.RequestAccess.date_approve: datetime.datetime.now()
             }
         )
         action = schema.Action(
-            user=param.user_info.login,
+            user=param.user_info.uid,
             action_type=33,
             date=datetime.datetime.now(),
             message="Запрос доступа {user.full_name} до узла {host.name} - согласован".format(
@@ -319,7 +319,7 @@ def access_request(param: parameters.Parameters, access):
             )
         )
         db.add(action)
-        u_access, c_access = get_user_access(param, access['user'].login, access['host'])
+        u_access, c_access = get_user_access(param, access['user'].uid, access['host'])
         conn_access = ConnectionAccess(c_access)
         user_access = UserAccess(u_access)
 
@@ -332,7 +332,7 @@ def access_request(param: parameters.Parameters, access):
 
         acc = schema.AccessList(
             t_subject=0,
-            subject=access['user'].login,
+            subject=access['user'].uid,
             t_object=0,
             object=access['host'].id,
             date_disable=access['access'].date_access,
@@ -361,19 +361,19 @@ def access_request(param: parameters.Parameters, access):
 def deny_request(param: parameters.Parameters, access):
     with schema.db_select(param.engine) as db:
         request = db.query(schema.RequestAccess).filter(schema.RequestAccess.id == access['access'].id).one()
-        request_user = db.query(schema.User).filter(schema.User.login == request.user).one()
+        request_user = db.query(schema.User).filter(schema.User.uid == request.user).one()
     with schema.db_edit(param.engine) as db:
         db.query(schema.RequestAccess).filter(
             schema.RequestAccess.id == access['access'].id
         ).update(
             {
                 schema.RequestAccess.status: 2,
-                schema.RequestAccess.user_approve: param.user_info.login,
+                schema.RequestAccess.user_approve: param.user_info.uid,
                 schema.RequestAccess.date_approve: datetime.datetime.now()
             }
         )
         action = schema.Action(
-            user=param.user_info.login,
+            user=param.user_info.uid,
             action_type=34,
             date=datetime.datetime.now(),
             message="Запрос доступа {user.full_name} до узла {host.name} - отклонен".format(
