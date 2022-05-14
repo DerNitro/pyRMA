@@ -37,6 +37,7 @@
     name: "{{ app_user }}"
     system: true
     group: "{{ app_group }}"
+    comment: "ACS Administrator"
     groups:
       - shadow    # для проверки локальных пользователей.
     append: yes

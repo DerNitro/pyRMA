@@ -244,7 +244,7 @@ class AccessRequest(npyscreen.ActionPopup):
     def on_ok(self):
         access_list = [self.access.values[i] for i in self.access.value]
         request = schema.RequestAccess(
-            user=appParameters.aaa_user.uid,
+            user=appParameters.user_info.uid,
             host=self.host.id,
             status=0,
             date_request=datetime.datetime.now(),

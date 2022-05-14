@@ -44,7 +44,6 @@ class Parameters:
     engine = None
     program = None
     version = None
-    aaa_user = None     # type: schema.AAAUser
     user_info = None    # type: schema.User
     data_dir = None
     log_param = {}

@@ -48,21 +48,20 @@ csrf = CSRFProtect()
 csrf.init_app(app)
 
 # Создание пользователя администратор.
-app_username = pwd.getpwuid(os.getuid())[0]
-app_uid = os.getuid()
-if not applib.user_info(app_username, webParameters.engine):
+pw_name, pw_passwd, pw_uid, pw_gid, pw_gecos, pw_dir, pw_shell = pwd.getpwuid(os.getuid())
+if not applib.user_info(pw_name, webParameters.engine):
     applib.user_registration(
         {
-            'uid': app_uid,
-            'login': app_username,
-            'full_name': 'Super Admin',
+            'uid': pw_uid,
+            'login': pw_name,
+            'full_name': pw_gecos,
             'ip': '0.0.0.0/0',
-            'email': "{}@{}".format(app_username, webParameters.users['email_domain_name']),
+            'email': "{}@{}".format(pw_name, webParameters.users['email_domain_name']),
             'check': 1
         },
         webParameters
     )
-    applib.set_user_permission(webParameters, 511, 29, app_uid)
+    applib.set_user_permission(webParameters, 511, 29, pw_uid)
 
 webParameters.log.info('start app')
 print(webParameters.log.handler)
