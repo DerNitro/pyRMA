@@ -1,4 +1,4 @@
-ansible>=2.10,<2.11
+ansible==4.2.0
 flask==2.1.2
 npyscreen==4.10.5
 flask_wtf==1.0.1
