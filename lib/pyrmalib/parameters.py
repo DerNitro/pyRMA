@@ -61,13 +61,20 @@ class Parameters:
         self.dbase_param = {
             "host":     self.conf.get('DataBase', 'dbhost', fallback='localhost'),
             "port":     self.conf.get('DataBase', 'dbport', fallback=5432),
-            "user":     self.conf.get('DataBase', 'dbuser', fallback='pyrmalib'),
-            "password": self.conf.get('DataBase', 'dbpass', fallback='pyrmalib'),
-            "database": self.conf.get('DataBase', 'dbname', fallback='pyrmalib')
+            "user":     self.conf.get('DataBase', 'dbuser', fallback='acs'),
+            "password": self.conf.get('DataBase', 'dbpass', fallback='acs'),
+            "database": self.conf.get('DataBase', 'dbname', fallback='acs')
         }
         self.data_dir = self.conf.get('Main', 'data_dir', fallback='/data/pyRMA')
-        self.users = {
-            "email_domain_name": self.conf.get('Users', 'email_domain_name', fallback='localhost')
+        self.auto_extension = int(self.conf.get('Main', 'auto_extension', fallback='1'))
+        self.extension_days = int(self.conf.get('Main', 'extension_days', fallback='21'))
+        self.check_source_ip = int(self.conf.get('Main', 'check_source_ip', fallback='0'))
+        self.email = {
+            "domain_name": self.conf.get('Email', 'domain_name', fallback='localhost'),
+            "type": self.conf.get('Email', 'type', fallback='smtp'),
+            "host": self.conf.get('Email', 'host', fallback='localhost'),
+            "port": int(self.conf.get('Email', 'port', fallback='25')),
+            "from": self.conf.get('Email', 'from', fallback='acs@localhost')
         }
 
     def check_user(self):
@@ -83,7 +90,6 @@ class AppParameters(Parameters):
     rec_file = ''
     rec_folder = ''
     license = None
-    table_parameter = {}
     modules = ''
     session = None
 
@@ -93,7 +99,6 @@ class AppParameters(Parameters):
 
         self.rec_file = self.conf.get('Main', 'file_env', fallback='filerec')
         self.rec_folder = self.conf.get('Main', 'path_env', fallback='filerecord')
-        self.license = self.conf.get('Main', 'license', fallback=None)
         self.modules = self.conf.get('Main', 'modules', fallback='/etc/pyrma/mod.d')
         self.log_param = {
             'level': self.conf.get('Main', 'log_level', fallback='INFO'),
@@ -128,4 +133,8 @@ class FirewallParameters(Parameters):
             'filename': 'pyrma_firewall.log'
         }
         self.log = log.Log('pyrma_firewall', **self.log_param)
-
+        self.forward_tcp_port_disable = self.conf.get('Main', 'forward_tcp_port_disable', fallback='21,22').split(',')
+        self.forward_tcp_port_range = range(
+            int(self.conf.get('Main', 'forward_tcp_port_range', fallback='10000:15000').split(':')[0]),
+            int(self.conf.get('Main', 'forward_tcp_port_range', fallback='10000:15000').split(':')[1]),
+        )

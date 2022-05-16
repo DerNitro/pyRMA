@@ -10,6 +10,9 @@
     app_web_ip:         "{{ app_web_ip | default('0.0.0.0') }}"
     app_web_port:       "{{ app_web_port | default('8080') }}"
     email_domain_name:  "{{ email_domain_name | default('localhost') }}"
+    email_smtp_host:    "{{ email_smtp_host | default('localhost') }}"
+    email_smtp_port:    "{{ email_smtp_port | default('25') }}"
+    email_send_from:    "{{ email_send_from | default('acs@localhost') }}"
 
 - name: Install multi python packages with version specifiers
   become: true

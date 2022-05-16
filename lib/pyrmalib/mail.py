@@ -27,30 +27,12 @@ class Mail:
     mail_cc = []
     subject = '[pyRMA]: '
 
-    def __init__(self, engine):
-        with schema.db_select(engine) as db:
-            try:
-                self.host = db.query(schema.Parameter.value).filter(schema.Parameter.name == 'EMAIL_HOST').one()[0]
-            except sqlalchemy.orm.exc.NoResultFound:
-                self.host = '127.0.0.1'
-            try:
-                self.port = int(db.query(schema.Parameter.value).filter(schema.Parameter.name == 'EMAIL_PORT').one()[0])
-            except sqlalchemy.orm.exc.NoResultFound:
-                self.port = 25
-            try:
-                self.type = db.query(schema.Parameter.value).filter(schema.Parameter.name == 'EMAIL_TYPE').one()[0]
-            except sqlalchemy.orm.exc.NoResultFound:
-                self.type = 'SMTP'
-            try:
-                self.mail_from = db.query(schema.Parameter.value).filter(schema.Parameter.name == 'EMAIL_FROM').one()[0]
-            except sqlalchemy.orm.exc.NoResultFound:
-                self.mail_from = 'pyrma@localhost'
-            try:
-                self.mail_cc.append(
-                    db.query(schema.Parameter.value).filter(schema.Parameter.name == 'EMAIL_CC').one()[0]
-                )
-            except sqlalchemy.orm.exc.NoResultFound:
-                pass
+    def __init__(self, param: parameters.Parameters):
+        self.host = param.email['host']
+        self.port = param.email['port']
+        self.type = param.email['type']
+        self.mail_from = param.email['from']
+
 
     def send(self, template, data):
         msg = MIMEMultipart('alternative')
@@ -61,7 +43,6 @@ class Mail:
         part = MIMEText(template.format(**data))
         msg.attach(part)
         try:
-            self.mail_to += self.mail_cc
             s = smtplib.SMTP(host=self.host, port=self.port)
             s.sendmail(self.mail_from, self.mail_to, msg.as_string())
             s.quit()
@@ -90,7 +71,7 @@ class Mail:
 
 
 def send_mail(param: parameters.Parameters, subject, template, user: schema.User or list, data, admin_cc=False):
-    mail = Mail(param.engine)
+    mail = Mail(param)
     mail.subject += subject
     if param.user_info != user:
         mail.mail_cc.append(param.user_info.email)

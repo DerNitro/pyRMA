@@ -56,7 +56,7 @@ if not applib.user_info(pw_name, webParameters.engine):
             'login': pw_name,
             'full_name': pw_gecos,
             'ip': '0.0.0.0/0',
-            'email': "{}@{}".format(pw_name, webParameters.users['email_domain_name']),
+            'email': "{}@{}".format(pw_name, webParameters.email['domain_name']),
             'check': 1
         },
         webParameters
@@ -67,7 +67,6 @@ webParameters.log.info('start app')
 print(webParameters.log.handler)
 
 siteMap = {'index': 'index.html',
-           'settings': 'settings.html',
            'administrate': 'admin.html',
            'restore': 'restore.html',
            'reset password': 'reset_password.html',
@@ -93,13 +92,7 @@ siteMap = {'index': 'index.html',
            'logs': 'action.html',
            'access_list': 'access_list.html',
            'error': 'error.html',
-           'settings_del_prefix': 'del_prefix.html',
            'change_ipmi': 'change_ipmi.html',
-           'settings_del_ipmi': 'del_ipmi.html',
-           'settings_ipmi': 'settings_ipmi.html',
-           'settings_prefix': 'settings_prefix.html',
-           'settings_service': 'settings_service.html',
-           'settings_del_service': 'del_service_type.html',
            'access': 'access.html'}
 
 
@@ -148,7 +141,7 @@ def login():
         if applib.login_access(request.form['username'],
                                request.form['password'],
                                request.remote_addr,
-                               webParameters.engine):
+                               webParameters):
             session['username'] = request.form['username']
             return redirect(url_for('root'))
         else:
@@ -160,241 +153,6 @@ def login():
 def logout():
     session.pop('username', None)
     return redirect(url_for('login'))
-
-
-@app.route('/settings', methods=['GET', 'POST'])
-@applib.authorization(session, request, webParameters)
-def settings():
-    search_field = forms.Search()
-    parameters_form = forms.Parameters()
-    if request.method == 'POST' and parameters_form.validate_on_submit():
-        applib.set_parameters(webParameters, 'EMAIL_HOST', str(parameters_form.email_host.data))
-        applib.set_parameters(webParameters, 'EMAIL_PORT', str(parameters_form.email_port.data))
-        applib.set_parameters(webParameters, 'EMAIL_FROM', str(parameters_form.email_from.data))
-        applib.set_parameters(webParameters, 'EMAIL_CC', str(parameters_form.email_cc.data))
-        if parameters_form.auto_extension.data:
-            applib.set_parameters(webParameters, 'AUTO_EXTENSION', '1')
-        else:
-            applib.set_parameters(webParameters, 'AUTO_EXTENSION', '0')
-        applib.set_parameters(webParameters, 'EXTENSION_DAYS', str(parameters_form.extension_days.data))
-        if parameters_form.enable_route_map.data:
-            applib.set_parameters(webParameters, 'ENABLE_ROUTE_MAP', '1')
-        else:
-            applib.set_parameters(webParameters, 'ENABLE_ROUTE_MAP', '0')
-        if parameters_form.check_ip.data:
-            applib.set_parameters(webParameters, 'CHECK_IP', '1')
-        else:
-            applib.set_parameters(webParameters, 'CHECK_IP', '0')
-        applib.set_parameters(
-            webParameters,
-            'FORWARD_TCP_PORT_DISABLE',
-            str(parameters_form.forward_tcp_port_disable.data)
-        )
-        applib.set_parameters(
-            webParameters,
-            'FORWARD_TCP_PORT_RANGE',
-            str(parameters_form.forward_tcp_port_range.data)
-        )
-    parameters_table = applib.get_parameters(webParameters)
-    parameters_form.email_host.data = list(filter(lambda x: x.name == 'EMAIL_HOST', parameters_table))[0].value
-    parameters_form.email_port.data = list(filter(lambda x: x.name == 'EMAIL_PORT', parameters_table))[0].value
-    parameters_form.email_from.data = list(filter(lambda x: x.name == 'EMAIL_FROM', parameters_table))[0].value
-    parameters_form.email_cc.data = list(filter(lambda x: x.name == 'EMAIL_CC', parameters_table))[0].value
-    if list(filter(lambda x: x.name == 'AUTO_EXTENSION', parameters_table))[0].value == '1':
-        parameters_form.auto_extension.data = True
-    parameters_form.extension_days.data = list(filter(lambda x: x.name == 'EXTENSION_DAYS', parameters_table))[0].value
-    if list(filter(lambda x: x.name == 'ENABLE_ROUTE_MAP', parameters_table))[0].value == '1':
-        parameters_form.enable_route_map.data = True
-    if list(filter(lambda x: x.name == 'CHECK_IP', parameters_table))[0].value == '1':
-        parameters_form.check_ip.data = True
-    parameters_form.forward_tcp_port_disable.data = list(filter(
-        lambda x: x.name == 'FORWARD_TCP_PORT_DISABLE',
-        parameters_table
-    ))[0].value
-    parameters_form.forward_tcp_port_range.data = list(filter(
-        lambda x: x.name == 'FORWARD_TCP_PORT_RANGE',
-        parameters_table
-    ))[0].value
-    return render_template(
-        siteMap['settings'],
-        parameters_form=parameters_form,
-        admin=access.check_access(webParameters, 'Administrate'),
-        search=search_field,
-        username=webParameters.user_info.login
-    )
-
-
-@app.route('/settings/service', methods=['GET'])
-@applib.authorization(session, request, webParameters)
-def settings_service():
-    search_field = forms.Search()
-    form_add_service = forms.AddService()
-    service = applib.get_service_type(webParameters, raw=True)
-    return render_template(
-        siteMap['settings_service'],
-        admin=access.check_access(webParameters, 'Administrate'),
-        search=search_field,
-        service=service,
-        form_add_service=form_add_service,
-        username=webParameters.user_info.login
-    )
-
-
-@app.route('/settings/prefix', methods=['GET'])
-@applib.authorization(session, request, webParameters)
-def settings_prefix():
-    search_field = forms.Search()
-    form_add_prefix = forms.AddPrefix()
-    prefix = applib.get_prefix(webParameters)
-    return render_template(
-        siteMap['settings_prefix'],
-        admin=access.check_access(webParameters, 'Administrate'),
-        search=search_field,
-        prefix=prefix,
-        form_add_prefix=form_add_prefix,
-        username=webParameters.user_info.login
-    )
-
-
-@app.route('/settings/ipmi', methods=['GET'])
-@applib.authorization(session, request, webParameters)
-def settings_ipmi():
-    search_field = forms.Search()
-    form_add_ipmi = forms.IPMI()
-    ipmi = applib.get_ilo_type(webParameters, raw=True)
-    return render_template(
-        siteMap['settings_ipmi'],
-        admin=access.check_access(webParameters, 'Administrate'),
-        search=search_field,
-        ipmi=ipmi,
-        form_add_ipmi=form_add_ipmi,
-        username=webParameters.user_info.login
-    )
-
-
-@app.route('/settings/add/ipmi', methods=['GET', 'POST'])
-@applib.authorization(session, request, webParameters)
-def settings_ipmi_add():
-    form_add_ipmi = forms.IPMI()
-    if request.method == 'POST' and form_add_ipmi.validate_on_submit():
-        applib.add_ipmi(
-            webParameters,
-            form_add_ipmi.name.data,
-            form_add_ipmi.vendor.data,
-            form_add_ipmi.ports.data
-        )
-    return redirect('/settings/ipmi')
-
-
-@app.route('/settings/add/prefix', methods=['GET', 'POST'])
-@applib.authorization(session, request, webParameters)
-def settings_prefix_add():
-    form_add_prefix = forms.AddPrefix()
-    if request.method == 'POST' and form_add_prefix.validate_on_submit():
-        applib.add_prefix(
-            webParameters,
-            form_add_prefix.name.data,
-            form_add_prefix.describe.data
-        )
-    return redirect('/settings/prefix')
-
-
-@app.route('/settings/add/service', methods=['GET', 'POST'])
-@applib.authorization(session, request, webParameters)
-def settings_service_add():
-    form_add_service = forms.AddService()
-    if request.method == 'POST' and form_add_service.validate_on_submit():
-        applib.add_service_type(
-            webParameters,
-            form_add_service.name.data,
-            form_add_service.default_port.data
-        )
-    return redirect('/settings/service')
-
-
-@app.route('/settings/delete/ipmi/<ipmi_id>', methods=['GET', 'POST'])
-@applib.authorization(session, request, webParameters)
-def settings_ipmi_delete(ipmi_id):
-    del_button = forms.DelButton()
-    search_field = forms.Search()
-    ipmi = applib.get_ilo_type(webParameters, ipmi_id=ipmi_id, raw=True)
-    if request.method == 'POST' and del_button.validate_on_submit():
-        applib.del_ipmi(webParameters, ipmi_id)
-        return redirect('/settings/ipmi')
-    return render_template(
-        siteMap['settings_del_ipmi'],
-        admin=access.check_access(webParameters, 'Administrate'),
-        del_button=del_button,
-        search=search_field,
-        ipmi=ipmi,
-        username=webParameters.user_info.login
-    )
-
-
-@app.route('/settings/delete/prefix/<prefix_id>', methods=['GET', 'POST'])
-@applib.authorization(session, request, webParameters)
-def settings_prefix_delete(prefix_id):
-    prefix = applib.get_prefix(webParameters, prefix_id=prefix_id)
-    del_button = forms.DelButton()
-    search_field = forms.Search()
-    if request.method == 'POST' and del_button.validate_on_submit():
-        applib.del_prefix(webParameters, prefix_id)
-        return redirect('/settings/prefix')
-    return render_template(
-        siteMap['settings_del_prefix'],
-        admin=access.check_access(webParameters, 'Administrate'),
-        del_button=del_button,
-        search=search_field,
-        prefix=prefix,
-        username=webParameters.user_info.login
-    )
-
-
-@app.route('/settings/delete/service/<service_id>', methods=['GET', 'POST'])
-@applib.authorization(session, request, webParameters)
-def settings_service_delete(service_id):
-    service = applib.get_service_type(webParameters, service_type_id=service_id)
-    del_button = forms.DelButton()
-    search_field = forms.Search()
-    if request.method == 'POST' and del_button.validate_on_submit():
-        applib.del_service_type(webParameters, service_id)
-        return redirect('/settings/service')
-    return render_template(
-        siteMap['settings_del_service'],
-        admin=access.check_access(webParameters, 'Administrate'),
-        del_button=del_button,
-        search=search_field,
-        service=service,
-        username=webParameters.user_info.login
-    )
-
-
-@app.route('/settings/change/ipmi/<ipmi_id>', methods=['GET', 'POST'])
-@applib.authorization(session, request, webParameters)
-def settings_ipmi_change(ipmi_id):
-    search_field = forms.Search()
-    ipmi = applib.get_ilo_type(webParameters, ipmi_id=ipmi_id, raw=True)
-    form = forms.IPMI()
-    if request.method == 'POST' and form.validate_on_submit():
-        data = {
-            'name': form.name.data,
-            'vendor': form.vendor.data,
-            'ports': form.ports.data
-        }
-        print(data)
-        applib.change_ipmi(webParameters, ipmi_id, data)
-        return redirect('/settings/ipmi')
-    form.name.data = ipmi.name
-    form.vendor.data = ipmi.vendor
-    form.ports.data = ipmi.ports
-    form.sub.label.text = 'Изменить'
-    return render_template(
-        siteMap['change_ipmi'],
-        admin=access.check_access(webParameters, 'Administrate'),
-        search=search_field,
-        form=form,
-        ipmi=ipmi
-    )
 
 
 @app.route('/administrate/logs', methods=['GET', 'POST'])
