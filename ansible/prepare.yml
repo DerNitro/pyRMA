@@ -3,6 +3,7 @@
   become: true
   apt:
     name:
+      - sshpass
       - python3-pip
       - python3-psycopg2
       - acl                           # https://github.com/georchestra/ansible/issues/55#issuecomment-651043423
