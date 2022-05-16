@@ -3,6 +3,9 @@ pyrma:
     pyrma.vmlocal:  
   vars:
     install_postgresql: yes
+    email_smtp_host: 192.168.56.10
+    email_domain_name: 'infra.vmlocal'
+    email_send_from: "acs@{{ email_domain_name }}"
     pyrma_database:
       name: 'acs'
       username: 'acs'

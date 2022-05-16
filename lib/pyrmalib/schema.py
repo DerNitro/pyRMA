@@ -29,22 +29,6 @@ from pyrmalib import dict
 
 Base = declarative_base()
 
-default_parameter = [
-    {"name": "EMAIL_TYPE", "value": "SMTP", "description": ""},
-    {"name": "EMAIL_HOST", "value": "127.0.0.1", "description": ""},
-    {"name": "EMAIL_PORT", "value": "25", "description": ""},
-    {"name": "EMAIL_FROM", "value": "root@localhost", "description": ""},
-    {"name": "EMAIL_CC", "value": "", "description": ""},
-    {"name": "AUTO_EXTENSION", "value": "1", "description": "Автоматическое продление доступа"},
-    {"name": "EXTENSION_DAYS", "value": "21", "description": "Колличество дней для продления доступа"},
-    {"name": "ENABLE_ROUTE_MAP", "value": "1", "description": "Включение подключения через промежуточные хосты"},
-    {"name": "CHECK_IP",        "value": "0", "description": "Проверка IP адреса клиента"},
-    {"name": "FORWARD_TCP_PORT_DISABLE", "value": "22;23", "description": ""},
-    {"name": "FORWARD_TCP_PORT_RANGE",
-     "value": "10000;15000", "description": "Диапазон портов для подключения сервисов"}
-]
-
-
 @contextmanager
 def db_select(engine):
     cl_session = sessionmaker(bind=engine)
@@ -147,19 +131,6 @@ class RequestAccess(Base):
     connection = sqlalchemy.Column(sqlalchemy.Boolean)
     file_transfer = sqlalchemy.Column(sqlalchemy.Boolean)
     ipmi = sqlalchemy.Column(sqlalchemy.Boolean)
-
-    def __repr__(self):
-        return "{0}".format(self.__dict__)
-
-
-class Parameter(Base):
-    """
-    Параметры приложения.
-    """
-    __tablename__ = 'parameter'
-    name = sqlalchemy.Column(sqlalchemy.String, primary_key=True, unique=True)
-    value = sqlalchemy.Column(sqlalchemy.String)
-    description = sqlalchemy.Column(sqlalchemy.String)
 
     def __repr__(self):
         return "{0}".format(self.__dict__)
@@ -501,7 +472,6 @@ if __name__ == '__main__':
             GroupUser.__table__.create(bind=engine)
             Host.__table__.create(bind=engine)
             IPMIType.__table__.create(bind=engine)
-            Parameter.__table__.create(bind=engine)
             PasswordList.__table__.create(bind=engine)
             Permission.__table__.create(bind=engine)
             Prefix.__table__.create(bind=engine)
@@ -523,11 +493,6 @@ if __name__ == '__main__':
         for key, value in dict.action_type.items():
             with db_edit(engine) as db:
                 db.add(ActionType(id=key, name=value))
-
-        # Дефолтные значения для Parameter
-        for param in default_parameter:
-            with db_edit(engine) as db:
-                db.add(Parameter(name=param["name"], value=param["value"], description=param["description"]))
 
         with db_edit(engine) as db:
             db.add(

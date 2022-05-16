@@ -19,17 +19,15 @@
 import json
 import psutil
 import os
-import random
 import pam
 
 from sqlalchemy.orm import aliased
 
-from pyrmalib import schema, utils, mail, template, parameters, error, access, forms
+from pyrmalib import schema, utils, parameters, error, access, forms
 from functools import wraps
 import hashlib
 import sqlalchemy
 import datetime
-import string
 from flask import request, redirect, session
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy import create_engine, func, or_, and_, sql
@@ -50,32 +48,27 @@ def authorization(web_session: session, req: request, param: parameters.WebParam
     return decorator
 
 
-def login_access(username, password, ip, engine):
+def login_access(username, password, ip, param: parameters.Parameters):
     if not pam.authenticate(username=username, password=password):
         return False
 
-    with schema.db_select(engine) as db:
+    with schema.db_select(param.engine) as db:
         try:
             user = db.query(schema.User).filter(schema.User.login == username).one()
-            check_ip = db.query(schema.Parameter).filter(schema.Parameter.name == 'CHECK_IP').one()
         except NoResultFound:
             return False
         except MultipleResultsFound:
             return False
 
-    if not utils.check_ip(ip, user.ip) and check_ip.value == '1':
+    if not utils.check_ip(ip, user.ip) and param.check_source_ip == '1':
         return False
 
     if user.date_disable < datetime.datetime.now() or user.disable:
         return False
 
-    with schema.db_select(engine) as db:
-        auto_extension = db.query(schema.Parameter).filter(schema.Parameter.name == 'AUTO_EXTENSION').one()
-        extension_days = db.query(schema.Parameter).filter(schema.Parameter.name == 'EXTENSION_DAYS').one()
-
-    if auto_extension.value == '1' and user.date_disable < datetime.datetime.now() + datetime.timedelta(days=15):
-        ex_days = int(extension_days.value)
-        with schema.db_edit(engine) as db:
+    if param.auto_extension == '1' and user.date_disable < datetime.datetime.now() + datetime.timedelta(days=15):
+        ex_days = int(param.extension_days)
+        with schema.db_edit(param.engine) as db:
             db.query(schema.User).filter(schema.User.login == user.login). \
                 update({schema.User.date_disable: datetime.datetime.now() + datetime.timedelta(days=ex_days)})
 

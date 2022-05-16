@@ -72,14 +72,6 @@ else:
 appParameters.engine = engine
 
 try:
-    with schema.db_select(engine) as db:
-        appParameters.table_parameter = db.query(schema.Parameter).all()
-        appParameters.log.debug(appParameters.table_parameter)
-except sqlalchemy.orm.exc.NoResultFound:
-    error.WTF("Ошибка инициализации приложения")
-    sys.exit(13)
-
-try:
     ssh_client_ip = os.environ.get('SSH_CLIENT').split()[0]
 except AttributeError:
     ssh_client_ip = '127.0.0.1'
@@ -101,7 +93,7 @@ except sqlalchemy.orm.exc.NoResultFound:
                 'login': pw_name,
                 'full_name': pw_gecos,
                 'ip': ssh_client_ip,
-                'email': "{}@{}".format(pw_name, appParameters.users['email_domain_name']),
+                'email': "{}@{}".format(pw_name, appParameters.email['domain_name']),
                 'check': 0
             },
             appParameters
@@ -121,7 +113,7 @@ finally:
         appParameters.user_info = user_info
 
 # Проверка соответсвия IP адреса с адресом подключения.
-if list(filter(lambda x: x.name == 'CHECK_IP', appParameters.table_parameter))[0].value == '0':
+if appParameters.check_source_ip == '0':
     appParameters.log.debug("Проверка IP отключена")
 else:
     if not check_ip(ssh_client_ip, user_info.ip):
@@ -139,9 +131,9 @@ if user_info.date_disable < datetime.datetime.now() or user_info.disable:
     appParameters.log.error("Учетная запись заблокирована.", pr=True)
     sys.exit(16)
 else:
-    if list(filter(lambda x: x.name == 'AUTO_EXTENSION', appParameters.table_parameter))[0].value == '1' \
+    if appParameters.auto_extension == '1' \
             and user_info.date_disable < datetime.datetime.now() + datetime.timedelta(days=15):
-        ex_days = int(list(filter(lambda x: x.name == 'EXTENSION_DAYS', appParameters.table_parameter))[0].value)
+        ex_days = int(appParameters.extension_days)
         with schema.db_edit(engine) as db:
             status = db.query(schema.User).filter(schema.User.login == user_info.login). \
                 update({schema.User.date_disable: datetime.datetime.now() + datetime.timedelta(days=ex_days)})
