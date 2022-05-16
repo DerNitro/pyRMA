@@ -239,7 +239,7 @@ def get_content_host(param: parameters.WebParameters, host_id):
     content['group'] = ", ".join([t.name for i, t in get_group_list(param, host=host_id)])
     content['parent_group'] = ", ".join([t.name for i, t in get_group_list(param, host=host.parent)])
     if access.check_access(param, 'ShowLogin', h_object=host) \
-            or access.check_access(param, 'Administrate', h_object=host):
+            or access.check_access(param, 'Administrate'):
         content['default_login'] = host.default_login
         if host.default_login:
             content['default_login'] = host.default_login
@@ -248,7 +248,7 @@ def get_content_host(param: parameters.WebParameters, host_id):
     else:
         content['default_login'] = '*' * len(host.default_login)
     if access.check_access(param, 'ShowPassword', h_object=host) \
-            or access.check_access(param, 'Administrate', h_object=host):
+            or access.check_access(param, 'Administrate'):
         if host.default_password:
             content['default_password'] = host.default_password
         else:

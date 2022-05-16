@@ -213,6 +213,7 @@ def route(host_id):
 def hosts(directory_id=None):
     form = forms.AddHostGroup()
     search_field = forms.Search()
+    admin = access.check_access(webParameters, 'Administrate')
     if applib.get_group_host(webParameters):
         form.name.choices = [(t.id, t.name) for t in applib.get_group_host(webParameters)]
     else:
@@ -223,15 +224,12 @@ def hosts(directory_id=None):
                                                     h_object=applib.get_host(webParameters, host_id=directory_id))
         edit_directory = access.check_access(webParameters, 'EditDirectory',
                                              h_object=applib.get_host(webParameters, host_id=directory_id))
-        admin = access.check_access(webParameters, 'Administrate',
-                                    h_object=applib.get_host(webParameters, host_id=directory_id))
         folder = applib.get_host(webParameters, host_id=directory_id)
         group = ", ".join([t.name for i, t in applib.get_group_list(webParameters, host=directory_id)])
     else:
         directory_id = 0
         edit_host_information = access.check_access(webParameters, 'EditHostInformation')
         edit_directory = access.check_access(webParameters, 'EditDirectory')
-        admin = access.check_access(webParameters, 'Administrate')
         folder = None
         group = None
     host_list = applib.get_host_list(webParameters, directory_id)
@@ -481,16 +479,19 @@ def host(host_id):
         form.name.choices = [(t.id, t.name) for t in applib.get_group_host(webParameters)]
     else:
         form = False
+    object_host = applib.get_host(webParameters, host_id=host_id)
     content_host = applib.get_content_host(webParameters, host_id)
-    if access.check_access(webParameters,
-                           'ShowHostInformation',
-                           h_object=applib.get_host(webParameters, host_id=host_id)):
+    show_host_info = access.check_access(webParameters, 'ShowHostInformation', h_object=object_host)
+    admin = access.check_access(webParameters, 'Administrate')
+    if show_host_info or admin:
         return render_template(
             siteMap['host'],
-            admin=access.check_access(webParameters, 'Administrate'),
-            EditHostInformation=access.check_access(webParameters,
-                                                    'EditHostInformation',
-                                                    h_object=applib.get_host(webParameters, host_id=host_id)),
+            admin=admin,
+            EditHostInformation=access.check_access(
+                webParameters,
+                'EditHostInformation',
+                h_object=object_host
+            ),
             content=content_host,
             form=form,
             search=search_field,

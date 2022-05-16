@@ -166,13 +166,13 @@ def check_access(app_param: parameters.Parameters, access, h_object=None, check_
     if user_access_map.get(access) is not None:
         if isinstance(perm, list):
             for i in perm:
-                if UserAccess(i.user_access).get(access):
+                if UserAccess(i.user_access).get(access) or UserAccess(i.user_access).get('Administrate'):
                     return True
             return False
         elif isinstance(perm, schema.Permission):
-            return UserAccess(perm.user_access).get(access)
+            return UserAccess(perm.user_access).get(access) or UserAccess(perm.user_access).get('Administrate')
         elif isinstance(perm, dict):
-            return UserAccess(perm['user_access']).get(access)
+            return UserAccess(perm['user_access']).get(access) or UserAccess(perm['user_access']).get('Administrate')
         elif not perm:
             return False
         else:
