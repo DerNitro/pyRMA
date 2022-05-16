@@ -524,8 +524,7 @@ def add_service(host_id):
     search_field = forms.Search()
     edit_host_information = access.check_access(webParameters, 'EditHostInformation',
                                                 h_object=applib.get_host(webParameters, host_id=host_id))
-    admin = access.check_access(webParameters, 'Administrate',
-                                h_object=applib.get_host(webParameters, host_id=host_id))
+    admin = access.check_access(webParameters, 'Administrate')
     error = None
     status = None
 

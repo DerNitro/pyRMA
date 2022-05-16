@@ -65,7 +65,7 @@ class ConnectionModules(Modules):
                                  .format(name=self.NAME, host=self.HOST))
         connection = schema.Connection(
             status=0,
-            user=self.PARAMETERS.user_info.login,
+            user=self.PARAMETERS.user_info.uid,
             host=self.HOST.id,
             connection_type=self.CONNECTION_TYPE,
             date_start=datetime.datetime.now(),
