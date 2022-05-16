@@ -10,6 +10,13 @@
             {{ form.csrf_token }}
             <table>
                 <tr>
+                    <td>{{ form.Administrate.label }}</td>
+                    <td>{{ form.Administrate()}}</td>
+                </tr>
+                <tr>
+                    <td><b>Пользовательский досуп</b></td>
+                </tr>
+                <tr>
                     <td>{{ form.ShowHostInformation.label }}</td>
                     <td>{{ form.ShowHostInformation()}}</td>
                 </tr>
@@ -42,8 +49,7 @@
                     <td>{{ form.AccessRequest()}}</td>
                 </tr>
                 <tr>
-                    <td>{{ form.Administrate.label }}</td>
-                    <td>{{ form.Administrate()}}</td>
+                    <td><b>Подключение к узлам</b></td>
                 </tr>
                 <tr>
                     <td>{{ form.Connection.label }}</td>
