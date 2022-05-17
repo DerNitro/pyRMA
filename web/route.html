@@ -37,7 +37,8 @@
 </table>
 <br>
 <form action="/route/{{ host_id }}" method="POST">
-{{ form.clear_sub() }}
+    {{ form.csrf_token }}
+    {{ form.clear_sub() }}
 </form>
 {% else %}
 <h4>Нет маршрутов</h4>

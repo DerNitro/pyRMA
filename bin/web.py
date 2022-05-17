@@ -66,34 +66,38 @@ if not applib.user_info(pw_name, webParameters.engine):
 webParameters.log.info('start app')
 print(webParameters.log.handler)
 
-siteMap = {'index': 'index.html',
-           'administrate': 'admin.html',
-           'restore': 'restore.html',
-           'reset password': 'reset_password.html',
-           'hosts': 'hosts.html',
-           'host': 'host.html',
-           'login': 'login.html',
-           'registration': 'registration.html',
-           '404': '404.html',
-           'access_denied': 'access_denied.html',
-           'add_folder': 'add_folder.html',
-           'edit_folder': 'edit_folder.html',
-           'add_host': 'add_host.html',
-           'edit_host': 'edit_host.html',
-           'add_service': 'add_service.html',
-           'delete_service': 'del_service.html',
-           'route': 'route.html',
-           'admin_group': 'admin_group.html',
-           'administrate_group_delete': 'del_group.html',
-           'administrate_group_show': 'group.html',
-           'administrate_users': 'users.html',
-           'administrate_user': 'user.html',
-           'change_password': 'change_password.html',
-           'logs': 'action.html',
-           'access_list': 'access_list.html',
-           'error': 'error.html',
-           'change_ipmi': 'change_ipmi.html',
-           'access': 'access.html'}
+siteMap = {
+    'index': 'index.html',
+    '404': '404.html',
+    'error': 'error.html',
+    'access_denied': 'access_denied.html',
+    'hosts': 'hosts.html',
+    'host': 'host.html',
+    'login': 'login.html',
+    'add_folder': 'add_folder.html',
+    'edit_folder': 'edit_folder.html',
+    'add_host': 'add_host.html',
+    'edit_host': 'edit_host.html',
+    'add_service': 'add_service.html',
+    'delete_service': 'del_service.html',
+    'route': 'route.html',
+    'logs': 'action.html',
+    'access_list': 'access_list.html',
+    'change_ipmi': 'change_ipmi.html',
+    'access': 'access.html',
+    'administrate': 'administrate.html',
+    'administrate_users': 'users.html',
+    'administrate_user': 'user.html',
+    'administrate_group': 'administrate_group.html',
+    'administrate_group_show': 'group.html',
+    'administrate_group_delete': 'del_group.html',
+    'administrate_ipmi': 'administrate_ipmi.html',
+    'administrate_del_ipmi': 'del_ipmi.html',
+    'administrate_prefix': 'administrate_prefix.html',
+    'administrate_del_prefix': 'del_prefix.html',
+    'administrate_service': 'administrate_service.html',
+    'administrate_del_service': 'del_service_type.html'
+}
 
 
 def check_auth(username, password, client_ip):
@@ -198,13 +202,15 @@ def route(host_id):
     if request.method == 'POST' and form.clear_sub.data:
         applib.clear_routes(webParameters, host_id)
 
-    return render_template(siteMap['route'],
-                           form=form,
-                           admin=access.check_access(webParameters, 'Administrate'),
-                           host_id=host_id,
-                           routes=applib.get_routes(webParameters, host_id),
-                           search=search_field,
-                           username=webParameters.user_info.login)
+    return render_template(
+        siteMap['route'],
+        form=form,
+        admin=access.check_access(webParameters, 'Administrate'),
+        host_id=host_id,
+        routes=applib.get_routes(webParameters, host_id),
+        search=search_field,
+        username=webParameters.user_info.login
+    )
 
 
 @app.route('/hosts')
@@ -576,6 +582,179 @@ def administrate():
     )
 
 
+@app.route('/administrate/service', methods=['GET'])
+@applib.authorization(session, request, webParameters)
+def administrate_service():
+    search_field = forms.Search()
+    form_add_service = forms.AddService()
+    service = applib.get_service_type(webParameters, raw=True)
+    return render_template(
+        siteMap['administrate_service'],
+        admin=access.check_access(webParameters, 'Administrate'),
+        search=search_field,
+        service=service,
+        form_add_service=form_add_service,
+        username=webParameters.user_info.login
+    )
+
+@app.route('/administrate/prefix', methods=['GET'])
+@applib.authorization(session, request, webParameters)
+def administrate_prefix():
+    search_field = forms.Search()
+    form_add_prefix = forms.AddPrefix()
+    prefix = applib.get_prefix(webParameters)
+    return render_template(
+        siteMap['administrate_prefix'],
+        admin=access.check_access(webParameters, 'Administrate'),
+        search=search_field,
+        prefix=prefix,
+        form_add_prefix=form_add_prefix,
+        username=webParameters.user_info.login
+    )
+
+
+@app.route('/administrate/ipmi', methods=['GET'])
+@applib.authorization(session, request, webParameters)
+def administrate_ipmi():
+    search_field = forms.Search()
+    form_add_ipmi = forms.IPMI()
+    ipmi = applib.get_ilo_type(webParameters, raw=True)
+    return render_template(
+        siteMap['administrate_ipmi'],
+        admin=access.check_access(webParameters, 'Administrate'),
+        search=search_field,
+        ipmi=ipmi,
+        form_add_ipmi=form_add_ipmi,
+        username=webParameters.user_info.login
+    )
+
+
+@app.route('/administrate/add/ipmi', methods=['GET', 'POST'])
+@applib.authorization(session, request, webParameters)
+def administrate_ipmi_add():
+    form_add_ipmi = forms.IPMI()
+    if request.method == 'POST' and form_add_ipmi.validate_on_submit():
+        applib.add_ipmi(
+            webParameters,
+            form_add_ipmi.name.data,
+            form_add_ipmi.vendor.data,
+            form_add_ipmi.ports.data
+        )
+    return redirect('/administrate/ipmi')
+
+
+@app.route('/administrate/add/prefix', methods=['GET', 'POST'])
+@applib.authorization(session, request, webParameters)
+def administrate_prefix_add():
+    form_add_prefix = forms.AddPrefix()
+    if request.method == 'POST' and form_add_prefix.validate_on_submit():
+        applib.add_prefix(
+            webParameters,
+            form_add_prefix.name.data,
+            form_add_prefix.describe.data
+        )
+    return redirect('/administrate/prefix')
+
+
+@app.route('/administrate/add/service', methods=['GET', 'POST'])
+@applib.authorization(session, request, webParameters)
+def administrate_service_add():
+    form_add_service = forms.AddService()
+    if request.method == 'POST' and form_add_service.validate_on_submit():
+        applib.add_service_type(
+            webParameters,
+            form_add_service.name.data,
+            form_add_service.default_port.data
+        )
+    return redirect('/administrate/service')
+
+
+
+@app.route('/administrate/delete/ipmi/<ipmi_id>', methods=['GET', 'POST'])
+@applib.authorization(session, request, webParameters)
+def administrate_ipmi_delete(ipmi_id):
+    del_button = forms.DelButton()
+    search_field = forms.Search()
+    ipmi = applib.get_ilo_type(webParameters, ipmi_id=ipmi_id, raw=True)
+    if request.method == 'POST' and del_button.validate_on_submit():
+        applib.del_ipmi(webParameters, ipmi_id)
+        return redirect('/administrate/ipmi')
+    return render_template(
+        siteMap['administrate_del_ipmi'],
+        admin=access.check_access(webParameters, 'Administrate'),
+        del_button=del_button,
+        search=search_field,
+        ipmi=ipmi,
+        username=webParameters.user_info.login
+    )
+
+
+@app.route('/administrate/delete/prefix/<prefix_id>', methods=['GET', 'POST'])
+@applib.authorization(session, request, webParameters)
+def administrate_prefix_delete(prefix_id):
+    prefix = applib.get_prefix(webParameters, prefix_id=prefix_id)
+    del_button = forms.DelButton()
+    search_field = forms.Search()
+    if request.method == 'POST' and del_button.validate_on_submit():
+        applib.del_prefix(webParameters, prefix_id)
+        return redirect('/administrate/prefix')
+    return render_template(
+        siteMap['administrate_del_prefix'],
+        admin=access.check_access(webParameters, 'Administrate'),
+        del_button=del_button,
+        search=search_field,
+        prefix=prefix,
+        username=webParameters.user_info.login
+    )
+
+
+@app.route('/administrate/delete/service/<service_id>', methods=['GET', 'POST'])
+@applib.authorization(session, request, webParameters)
+def administrate_service_delete(service_id):
+    service = applib.get_service_type(webParameters, service_type_id=service_id)
+    del_button = forms.DelButton()
+    search_field = forms.Search()
+    if request.method == 'POST' and del_button.validate_on_submit():
+        applib.del_service_type(webParameters, service_id)
+        return redirect('/administrate/service')
+    return render_template(
+        siteMap['administrate_del_service'],
+        admin=access.check_access(webParameters, 'Administrate'),
+        del_button=del_button,
+        search=search_field,
+        service=service,
+        username=webParameters.user_info.login
+    )
+
+
+@app.route('/administrate/change/ipmi/<ipmi_id>', methods=['GET', 'POST'])
+@applib.authorization(session, request, webParameters)
+def administrate_ipmi_change(ipmi_id):
+    search_field = forms.Search()
+    ipmi = applib.get_ilo_type(webParameters, ipmi_id=ipmi_id, raw=True)
+    form = forms.IPMI()
+    if request.method == 'POST' and form.validate_on_submit():
+        data = {
+            'name': form.name.data,
+            'vendor': form.vendor.data,
+            'ports': form.ports.data
+        }
+        print(data)
+        applib.change_ipmi(webParameters, ipmi_id, data)
+        return redirect('/administrate/ipmi')
+    form.name.data = ipmi.name
+    form.vendor.data = ipmi.vendor
+    form.ports.data = ipmi.ports
+    form.sub.label.text = 'Изменить'
+    return render_template(
+        siteMap['change_ipmi'],
+        admin=access.check_access(webParameters, 'Administrate'),
+        search=search_field,
+        form=form,
+        ipmi=ipmi
+    )
+
+
 @app.route('/administrate/access', methods=['GET', 'POST'])
 @applib.authorization(session, request, webParameters)
 def administrate_access():
@@ -633,7 +812,7 @@ def administrate_group():
 
         applib.add_group(webParameters, g)
     return render_template(
-        siteMap['admin_group'],
+        siteMap['administrate_group'],
         admin=access.check_access(webParameters, 'Administrate'),
         form=form,
         group_user=applib.get_group_user(webParameters),
@@ -836,65 +1015,6 @@ def acc(id_access, command):
         current_url=request.full_path,
         form=form
     )
-
-
-@app.route('/registration', methods=['GET', 'POST'])
-def registration():
-    status = None
-    error = None
-    form = forms.Registration()
-    if request.method == 'POST' and form.validate_on_submit():
-        registration_data = {'username': form.login.data,
-                             'password': form.password.data,
-                             'full_name': form.full_name.data,
-                             'email': form.email.data,
-                             'ip': form.ip.data}
-        if applib.user_registration(registration_data, webParameters):
-            status = 'Пользователь создан.'
-        else:
-            error = 'Во время создания пользователя произошла ошибка!'
-
-    return render_template(siteMap['registration'], status=status, error=error, form=form)
-
-
-@app.route('/restore', methods=['GET', 'POST'])
-def get_restore():
-    form = forms.ResetPassword()
-    if request.method == 'POST' and form.validate_on_submit():
-        if applib.restore_password(form.login.data, webParameters, request):
-            status = "Инструкции отправлены"
-            return render_template(siteMap['restore'], status=status)
-        else:
-            status = "Error!!!"
-            return render_template(siteMap['restore'], status=status)
-
-    return render_template(siteMap['restore'], form=form)
-
-
-@app.route('/restore/<key>', methods=['GET', 'POST'])
-def restore(key):
-    form = forms.UserChangePassword()
-    status = None
-    if request.method == 'GET':
-        if not applib.reset_password(key, webParameters, check=True):
-            render_template(siteMap['404']), 404
-    elif request.method == 'POST':
-        if form.validate_on_submit():
-            if applib.reset_password(key, webParameters, password=form.password.data):
-                status = 'Password reset'
-            else:
-                status = 'Error reset'
-    return render_template(siteMap['reset password'], key=key, form=form, status=status)
-
-
-@app.route('/restore/deny/<key>', methods=['GET'])
-def restore_deny(key):
-    if not applib.restore_deny_password(webParameters, key):
-        render_template(siteMap['404']), 404
-    else:
-        status = "Восстановение пароля отменено"
-        return render_template(siteMap['reset password'], status=status)
-
 
 
 if webParameters.template is not None:
