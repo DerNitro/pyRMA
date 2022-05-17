@@ -29,6 +29,8 @@
 </div>
 {% if content['user'].disable or content['user'].date_disable < cur_date %}
 <h3>Пользователь - {{content['user'].full_name}}(Отключен)</h3>
+{% elif content['user'].admin %}
+<h3>Пользователь - {{content['user'].full_name}}(Администратор)</h3>
 {% else %}
 <h3>Пользователь - {{content['user'].full_name}} </h3>
 {% endif %}

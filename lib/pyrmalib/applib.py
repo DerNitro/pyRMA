@@ -31,6 +31,7 @@ import datetime
 from flask import request, redirect, session
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy import create_engine, func, or_, and_, sql
+from typing import List
 
 
 def authorization(web_session: session, req: request, param: parameters.WebParameters, ):
@@ -61,6 +62,9 @@ def login_access(username, password, ip, param: parameters.Parameters):
             return False
 
     if not utils.check_ip(ip, user.ip) and param.check_source_ip == '1':
+        return False
+
+    if not user.check:
         return False
 
     if user.date_disable < datetime.datetime.now() or user.disable:
@@ -205,7 +209,7 @@ def get_access_request(param: parameters.WebParameters, acc_id=None):
             ).all()
 
     for host, user, acc in access_list:
-        if access.check_access(param, 'AccessRequest', h_object=host) or access.check_access(param, 'Administrate'):
+        if access.check_access(param, 'AccessRequest', h_object=host) or param.user_info.admin:
             result.append(
                 {
                     'user': user,
@@ -239,7 +243,7 @@ def get_content_host(param: parameters.WebParameters, host_id):
     content['group'] = ", ".join([t.name for i, t in get_group_list(param, host=host_id)])
     content['parent_group'] = ", ".join([t.name for i, t in get_group_list(param, host=host.parent)])
     if access.check_access(param, 'ShowLogin', h_object=host) \
-            or access.check_access(param, 'Administrate'):
+            or param.user_info.admin:
         content['default_login'] = host.default_login
         if host.default_login:
             content['default_login'] = host.default_login
@@ -248,7 +252,7 @@ def get_content_host(param: parameters.WebParameters, host_id):
     else:
         content['default_login'] = '*' * len(host.default_login)
     if access.check_access(param, 'ShowPassword', h_object=host) \
-            or access.check_access(param, 'Administrate'):
+            or param.user_info.admin:
         if host.default_password:
             content['default_password'] = host.default_password
         else:
@@ -572,6 +576,14 @@ def get_user(param: parameters.Parameters, uid):
             .order_by(schema.Connection.date_start.desc()).limit(10).all()
     content['group'] = ", ".join([t.name for i, t in get_group_list(param, user=uid)])
     return content
+
+
+def get_admin_users(param: parameters.Parameters) -> List[schema.User]:
+    admins = []
+    with schema.db_select(param.engine) as db:
+        admins = db.query(schema.User).filter(schema.User.admin == True).all()
+
+    return admins
 
 
 def get_user_group(param: parameters.Parameters, uid):
@@ -952,12 +964,11 @@ def search(param: parameters.Parameters, query):
 
 
 def user_info(username, engine):
+    user = None
     with schema.db_select(engine) as db:
         try:
             user = db.query(schema.User).filter(schema.User.login == username).one()
         except NoResultFound:
-            return False
-        except MultipleResultsFound:
             return False
 
     return user
@@ -1001,6 +1012,40 @@ def user_disable(param: parameters.WebParameters, uid, disable=False, enable=Fal
     return True
 
 
+def user_admin_disable(param: parameters.WebParameters, uid, disable=False, enable=False):
+    """
+    Включение/Отключение уровня администратора.
+    :param param:   WebParameters
+    :param uid: User ID
+    :param disable: if True - Disable user
+    :param enable: if True - Enable user
+    :return: True
+    """
+    with schema.db_edit(param.engine) as db:
+        user = db.query(schema.User).filter(schema.User.uid == uid).one()
+        if disable:
+            user.admin = False
+            status = 'Отключение'
+            status_id = 41
+            db.flush()
+        if enable:
+            user.admin = True
+            status = 'Включение'
+            status_id = 40
+            db.flush()
+
+        action = schema.Action(
+            user=param.user_info.uid,
+            action_type=status_id,
+            date=datetime.datetime.now(),
+            message="{} прав администратора: {user.full_name}({user})".format(status, user=user)
+        )
+        db.add(action)
+        db.flush()
+
+    return True
+
+
 def restore_deny_password(param: parameters.WebParameters, key):
     with schema.db_select(param.engine) as db:
         try:
@@ -1035,7 +1080,8 @@ def user_registration(reg_data, param: parameters.Parameters):
             date_disable=datetime.datetime.now() + datetime.timedelta(days=365),
             ip=reg_data['ip'],
             email=reg_data['email'],
-            check=reg_data['check']
+            check=reg_data['check'],
+            admin=reg_data['admin']
         )
         db.add(user)
         db.flush()

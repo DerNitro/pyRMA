@@ -10,6 +10,7 @@
     <th>Дата отключения</th>
     <th>IP адрес</th>
     <th>Email</th>
+    <th>Администратор</th>
     <th>Отключить</th>
     {% for user in content['users'] %}
     {% if user.disable or user.date_disable < cur_date %} <tr bgcolor="#ff807a"> {% else %} <tr> {% endif %}
@@ -19,6 +20,13 @@
         <td>{{ user.date_disable }}</td>
         <td>{{ user.ip }}</td>
         <td>{{ user.email }}</td>
+        <td>
+            {% if not user.admin %}
+            <a href="/administrate/user/{{ user.uid }}/enable_admin"><button>Включить</button></a>
+            {% else %}
+            <a href="/administrate/user/{{ user.uid }}/disable_admin"><button>Выключить</button></a>
+            {% endif %}
+        </td>
         <td>
             {% if user.disable or user.date_disable < cur_date %}
             <a href="/administrate/user/{{ user.uid }}/enable"><button>Включить</button></a>
