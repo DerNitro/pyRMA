@@ -528,8 +528,11 @@ def del_service(service_id):
 @applib.authorization(session, request, webParameters)
 def add_service(host_id):
     search_field = forms.Search()
-    edit_host_information = access.check_access(webParameters, 'EditHostInformation',
-                                                h_object=applib.get_host(webParameters, host_id=host_id))
+    host = applib.get_host(webParameters, host_id=host_id)
+    edit_host_information = access.check_access(
+        webParameters, 'EditHostInformation',
+        h_object=host
+    )
     admin = access.check_access(webParameters, 'Administrate')
     error = None
     status = None
@@ -537,35 +540,33 @@ def add_service(host_id):
     if edit_host_information or admin:
         form = forms.AddServiceHost()
         form.type.choices = applib.get_service_type(webParameters)
+        form.remote_ip.choices = [host.ip, '127.0.0.1']
 
         if request.method == 'POST' and form.add_sub.data:
-            if not form.remote_port.data:
-                service_type = applib.get_service_type(webParameters, service_type_id=form.type.data)
-                form.remote_port.data = service_type.default_port
+            service_type = applib.get_service_type(webParameters, service_type_id=form.type.data)
+            
             s = schema.Service(
                 type=form.type.data,
                 host=host_id,
                 local_port=applib.get_local_port(webParameters),
-                remote_port=form.remote_port.data,
+                remote_port=service_type.default_port,
                 remote_ip=form.remote_ip.data,
-                internal=form.internal.data,
                 describe=form.describe.data
             )
 
-            if applib.check_ip_net(form.remote_ip.data, '127.0.0.0/8') and not form.internal.data:
-                error = 'Не корректное значение "Адрес назначения" или "Внутренний"!!!'
-            else:
-                if applib.add_service(webParameters, s):
-                    status = 'Сервис добавлен'
+            if applib.add_service(webParameters, s):
+                status = 'Сервис добавлен'
 
-        return render_template(siteMap['add_service'],
-                               form=form,
-                               error=error,
-                               status=status,
-                               admin=admin,
-                               host_id=host_id,
-                               search=search_field,
-                               username=webParameters.user_info.login)
+        return render_template(
+            siteMap['add_service'],
+            form=form,
+            error=error,
+            status=status,
+            admin=admin,
+            host_id=host_id,
+            search=search_field,
+            username=webParameters.user_info.login
+        )
     else:
         return render_template(siteMap['access_denied'])
 

@@ -76,6 +76,10 @@ class Parameters:
             "port": int(self.conf.get('Email', 'port', fallback='25')),
             "from": self.conf.get('Email', 'from', fallback='acs@localhost')
         }
+        self.forward_tcp_port_range = range(
+            int(self.conf.get('Main', 'forward_tcp_port_range', fallback='10000:15000').split(':')[0]),
+            int(self.conf.get('Main', 'forward_tcp_port_range', fallback='10000:15000').split(':')[1]),
+        )
 
     def check_user(self):
         if not self.user_info:
@@ -133,8 +137,3 @@ class FirewallParameters(Parameters):
             'filename': 'pyrma_firewall.log'
         }
         self.log = log.Log('pyrma_firewall', **self.log_param)
-        self.forward_tcp_port_disable = self.conf.get('Main', 'forward_tcp_port_disable', fallback='21,22').split(',')
-        self.forward_tcp_port_range = range(
-            int(self.conf.get('Main', 'forward_tcp_port_range', fallback='10000:15000').split(':')[0]),
-            int(self.conf.get('Main', 'forward_tcp_port_range', fallback='10000:15000').split(':')[1]),
-        )
