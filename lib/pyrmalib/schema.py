@@ -194,7 +194,6 @@ class Service(Base):
     local_port = sqlalchemy.Column(sqlalchemy.Integer)
     remote_port = sqlalchemy.Column(sqlalchemy.Integer)
     remote_ip = sqlalchemy.Column(sqlalchemy.String, default='127.0.0.1')
-    internal = sqlalchemy.Column(sqlalchemy.Boolean, server_default='f', default=False)
     describe = sqlalchemy.Column(sqlalchemy.String)
 
     def __repr__(self):

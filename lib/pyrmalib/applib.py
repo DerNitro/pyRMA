@@ -324,7 +324,7 @@ def get_user_content_dashboard(param: parameters.WebParameters):
     return content
 
 
-def get_host(param: parameters.WebParameters, host_id=None, name=None, parent=0):
+def get_host(param: parameters.WebParameters, host_id=None, name=None, parent=0) -> schema.Host:
     """
     Возвращает объект Host, поиск по schema.Host.id или schema.Host.name и schema.Host.parent
     :param host_id: schema.Host.id
@@ -438,12 +438,12 @@ def get_service_type(param: parameters.Parameters, service_type_id=None, raw=Fal
 
 
 def get_local_port(param: parameters.WebParameters):
+    ports = param.forward_tcp_port_range
     with schema.db_select(param.engine) as db:
         local_port = db.query(schema.Service).all()
-        ports = db.query(schema.Parameter).filter(schema.Parameter.name == 'FORWARD_TCP_PORT_RANGE').first()
 
     l = [t.local_port for t in local_port]
-    for i in range(int(str(ports.value).split(';')[0]), int(str(ports.value).split(';')[1])):
+    for i in ports:
         if i not in l:
             return i
 

@@ -55,19 +55,6 @@ class Login(FlaskForm):
     submit_login = SubmitField('Войти')
 
 
-class Registration(FlaskForm):
-    login = StringField('Логин', validators=[DataRequired()])
-    password = PasswordField('Пароль', validators=[
-        EqualTo('confirm', message='Введеные пароли не совпадают!!!'),
-        DataRequired()
-    ])
-    confirm = PasswordField('Проверка пароля')
-    full_name = StringField('ФИО', validators=[DataRequired()])
-    email = StringField('E-Mail', validators=[DataRequired(), Email()])
-    ip = StringField('IP-адрес или сеть', validators=[ip_net_check])
-    sub_reg = SubmitField('Регистрация')
-
-
 class EditFolder(FlaskForm):
     name = StringField('Имя директории')
     describe = StringField('Описание')
@@ -100,9 +87,7 @@ class EditHost(FlaskForm):
 
 class AddServiceHost(FlaskForm):
     type = SelectField('Тип подключения')
-    remote_port = IntegerField('Порт', validators=[NumberRange(min=0, max=65536)])
-    remote_ip = StringField('Адрес назначения', validators=[IPAddress()])
-    internal = BooleanField('Внутренний')
+    remote_ip = SelectField('Адрес назначения')
     describe = StringField('Описание')
 
     add_sub = SubmitField('Добавить')
@@ -155,16 +140,6 @@ class AddHostGroup(FlaskForm):
 class ResetPassword(FlaskForm):
     login = StringField('Логин или email')
     reset_sub = SubmitField('Восстановить пароль')
-
-
-class UserChangePassword(FlaskForm):
-    password = PasswordField('Пароль', validators=[
-        EqualTo('confirm', message='Введеные пароли не совпадают!!!'),
-        DataRequired()
-    ])
-    confirm = PasswordField('Проверка пароля')
-
-    change_password = SubmitField('Изменить')
 
 
 class Search(FlaskForm):
