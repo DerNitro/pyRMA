@@ -23,7 +23,7 @@ from pickle import TRUE
 import sys
 import pwd, grp
 import traceback
-from pyrmalib import parameters, interface, schema, error, modules, applib
+from pyrmalib import parameters, interface, schema, applib, mail, template
 import sqlalchemy.orm
 from sqlalchemy import create_engine
 from pyrmalib.utils import *
@@ -76,17 +76,13 @@ try:
 except AttributeError:
     ssh_client_ip = '127.0.0.1'
 
-try:
-    with schema.db_select(engine) as db:
-        user_info = db.query(schema.User). \
-            filter(schema.User.login == pw_name).one()
-        appParameters.log.debug(user_info)
-        appParameters.user_info = user_info
-except sqlalchemy.orm.exc.NoResultFound:
+
+if not applib.user_info(pw_name, engine):
     groups = [g.gr_name for g in grp.getgrall() if pw_name in g.gr_mem]
     groups.append(grp.getgrgid(pw_gid).gr_name)
     app_group = applib.get_group_user(appParameters)
-    if len(list(set(groups) & set([t.name for t in app_group]))) > 0:
+    if app_group and len(list(set(groups) & set([t.name for t in app_group]))) > 0:
+    # TODO: Добавляются только пользователи у которых есть группа идентичная группе в ACS
         applib.user_registration(
             {
                 'uid': pw_uid,
@@ -94,7 +90,8 @@ except sqlalchemy.orm.exc.NoResultFound:
                 'full_name': pw_gecos,
                 'ip': ssh_client_ip,
                 'email': "{}@{}".format(pw_name, appParameters.email['domain_name']),
-                'check': 0
+                'check': 0,
+                'admin': False
             },
             appParameters
         )
@@ -105,12 +102,25 @@ except sqlalchemy.orm.exc.NoResultFound:
                     gid = g.id
             if gid:
                 applib.add_user_group(appParameters, pw_uid, gid, action=False)
-finally:
+        
+        mail.send_mail(
+            appParameters,
+            'Регистрация нового пользователя - {}'.format(pw_gecos),
+            template.registration_user(),
+            applib.get_admin_users(appParameters),
+            {'username': pw_gecos},
+            admin_cc=False
+        )
+
+try:
     with schema.db_select(engine) as db:
         user_info = db.query(schema.User). \
-            filter(schema.User.login == appParameters.user_name).one()
+            filter(schema.User.login == pw_name).one()
         appParameters.log.debug(user_info)
         appParameters.user_info = user_info
+except sqlalchemy.orm.exc.NoResultFound:
+    appParameters.log.error("Пользователь не найден в ACS", pr=True)
+    sys.exit(14)
 
 # Проверка соответсвия IP адреса с адресом подключения.
 if appParameters.check_source_ip == '0':
@@ -164,10 +174,14 @@ with schema.db_edit(engine) as db:
     appParameters.session = session.id
 
 with schema.db_edit(engine) as db:
-    db.add(schema.Action(action_type=1,
-                         user=user_info.uid,
-                         date=datetime.datetime.now(),
-                         message="Успешное подключение к системе."))
+    db.add(
+        schema.Action(
+            action_type=1,
+            user=user_info.uid,
+            date=datetime.datetime.now(),
+            message="Успешное подключение к системе."
+        )
+    )
 
 # Запуск интерфейса.
 appParameters.log.debug("Запуск графического интерфейса.")

@@ -39,9 +39,11 @@ webParameters.engine = create_engine(
         webParameters.dbase_param["database"]
     )
 )
-app = Flask(__name__,
-            template_folder=webParameters.template,
-            static_folder=os.path.join(webParameters.template, 'static'))
+app = Flask(
+    __name__,
+    template_folder=webParameters.template,
+    static_folder=os.path.join(webParameters.template, 'static')
+)
 app.secret_key = os.urandom(64)
 app.debug = True    # TODO: Снять DEBUG
 csrf = CSRFProtect()
@@ -57,11 +59,11 @@ if not applib.user_info(pw_name, webParameters.engine):
             'full_name': pw_gecos,
             'ip': '0.0.0.0/0',
             'email': "{}@{}".format(pw_name, webParameters.email['domain_name']),
-            'check': 1
+            'check': 1,
+            'admin': True
         },
         webParameters
     )
-    applib.set_user_permission(webParameters, 511, 29, pw_uid)
 
 webParameters.log.info('start app')
 print(webParameters.log.handler)
@@ -108,13 +110,13 @@ def check_auth(username, password, client_ip):
 @applib.authorization(session, request, webParameters)
 def root():
     search_field = forms.Search()
-    if access.check_access(webParameters, 'Administrate'):
+    if webParameters.user_info.admin:
         content = applib.get_admin_content_dashboard(webParameters)
     else:
         content = applib.get_user_content_dashboard(webParameters)
     return render_template(
         siteMap['index'],
-        admin=access.check_access(webParameters, 'Administrate'),
+        admin=webParameters.user_info.admin,
         content=content,
         search=search_field,
         username=webParameters.user_info.login
@@ -127,7 +129,7 @@ def search():
     form = forms.Search()
     query = form.search.data
     host_list = applib.search(webParameters, query)
-    admin = access.check_access(webParameters, 'Administrate')
+    admin = webParameters.user_info.admin
 
     return render_template(siteMap['hosts'],
                            admin=admin,
@@ -177,7 +179,7 @@ def logs(date=None):
 
     return render_template(
         siteMap['logs'],
-        admin=access.check_access(webParameters, 'Administrate'),
+        admin=webParameters.user_info.admin,
         search=search_field,
         form=form,
         action_list=action_list,
@@ -205,7 +207,7 @@ def route(host_id):
     return render_template(
         siteMap['route'],
         form=form,
-        admin=access.check_access(webParameters, 'Administrate'),
+        admin=webParameters.user_info.admin,
         host_id=host_id,
         routes=applib.get_routes(webParameters, host_id),
         search=search_field,
@@ -219,23 +221,27 @@ def route(host_id):
 def hosts(directory_id=None):
     form = forms.AddHostGroup()
     search_field = forms.Search()
-    admin = access.check_access(webParameters, 'Administrate')
+    admin = webParameters.user_info.admin
     if applib.get_group_host(webParameters):
         form.name.choices = [(t.id, t.name) for t in applib.get_group_host(webParameters)]
     else:
         form = False
     if directory_id:
         directory_id = int(directory_id)
-        edit_host_information = access.check_access(webParameters, 'EditHostInformation',
-                                                    h_object=applib.get_host(webParameters, host_id=directory_id))
-        edit_directory = access.check_access(webParameters, 'EditDirectory',
-                                             h_object=applib.get_host(webParameters, host_id=directory_id))
+        edit_host_information = access.check_access(
+            webParameters, 'EditHostInformation',
+            h_object=applib.get_host(webParameters, host_id=directory_id)
+        ) or webParameters.user_info.admin
+        edit_directory = access.check_access(
+            webParameters, 'EditDirectory',
+            h_object=applib.get_host(webParameters, host_id=directory_id)
+        ) or webParameters.user_info.admin
         folder = applib.get_host(webParameters, host_id=directory_id)
         group = ", ".join([t.name for i, t in applib.get_group_list(webParameters, host=directory_id)])
     else:
         directory_id = 0
-        edit_host_information = access.check_access(webParameters, 'EditHostInformation')
-        edit_directory = access.check_access(webParameters, 'EditDirectory')
+        edit_host_information = access.check_access(webParameters, 'EditHostInformation') or webParameters.user_info.admin
+        edit_directory = access.check_access(webParameters, 'EditDirectory') or webParameters.user_info.admin
         folder = None
         group = None
     host_list = applib.get_host_list(webParameters, directory_id)
@@ -263,8 +269,6 @@ def add_folder(directory_id):
     search_field = forms.Search()
     error = None
     status = None
-    admin = access.check_access(webParameters, 'Administrate',
-                                h_object=applib.get_host(webParameters, host_id=directory_id))
 
     if request.method == 'POST' and form.add_sub.data:
         folder = {
@@ -284,14 +288,16 @@ def add_folder(directory_id):
             else:
                 status = 'Ошибка создания директории'
 
-    return render_template(siteMap['add_folder'],
-                           admin=admin,
-                           directory_id=directory_id,
-                           form=form,
-                           error=error,
-                           status=status,
-                           search=search_field,
-                           username=webParameters.user_info.login)
+    return render_template(
+        siteMap['add_folder'],
+        admin=webParameters.user_info.admin,
+        directory_id=directory_id,
+        form=form,
+        error=error,
+        status=status,
+        search=search_field,
+        username=webParameters.user_info.login
+    )
 
 
 @app.route('/hosts/<directory_id>/edit_folder', methods=['GET', 'POST'])
@@ -302,7 +308,6 @@ def edit_folder(directory_id):
     h = applib.get_host(webParameters, host_id=directory_id)
     error = None
     status = None
-    admin = access.check_access(webParameters, 'Administrate', h_object=h)
 
     if request.method == 'GET':
         if not h:
@@ -335,14 +340,16 @@ def edit_folder(directory_id):
         applib.delete_folder(webParameters, directory_id)
         status = "Директория удалена"
 
-    return render_template(siteMap['edit_folder'],
-                           admin=admin,
-                           directory_id=directory_id,
-                           error=error,
-                           status=status,
-                           form=form,
-                           search=search_field,
-                           username=webParameters.user_info.login)
+    return render_template(
+        siteMap['edit_folder'],
+        admin=webParameters.user_info.admin,
+        directory_id=directory_id,
+        error=error,
+        status=status,
+        form=form,
+        search=search_field,
+        username=webParameters.user_info.login
+    )
 
 
 @app.route('/hosts/<directory_id>/add_host', methods=['GET', 'POST'])
@@ -354,7 +361,6 @@ def add_host(directory_id):
     form.connection_type.choices = applib.get_connection_type(webParameters)
     form.file_transfer_type.choices = applib.get_file_transfer_type(webParameters)
     form.ilo_type.choices = applib.get_ilo_type(webParameters)
-    admin = access.check_access(webParameters, 'Administrate', h_object=folder)
     error = None
     status = None
 
@@ -393,14 +399,16 @@ def add_host(directory_id):
         finally:
             os.remove(os.path.join('/tmp/pyRMA', filename))
 
-    return render_template(siteMap['add_host'],
-                           admin=admin,
-                           directory_id=directory_id,
-                           error=error,
-                           status=status,
-                           form=form,
-                           search=search_field,
-                           username=webParameters.user_info.login)
+    return render_template(
+        siteMap['add_host'],
+        admin=webParameters.user_info.admin,
+        directory_id=directory_id,
+        error=error,
+        status=status,
+        form=form,
+        search=search_field,
+        username=webParameters.user_info.login
+    )
 
 
 @app.route('/host/<host_id>/edit', methods=['GET', 'POST'])
@@ -414,7 +422,6 @@ def edit_host(host_id):
     form.ilo_type.choices = applib.get_ilo_type(webParameters)
     error = None
     status = None
-    admin = access.check_access(webParameters, 'Administrate', h_object=h)
 
     if request.method == 'GET':
         if not h:
@@ -439,8 +446,7 @@ def edit_host(host_id):
             'ip': form.ip.data,
             'port': form.port.data,
             'connection_type': form.connection_type.data,
-            'file_transfer_type': form.file_transfer_type.data if form.file_transfer_type.data != 'None'
-            else sql.null(),
+            'file_transfer_type': form.file_transfer_type.data if form.file_transfer_type.data != 'None' else sql.null(),
             'describe': form.describe.data,
             'ilo': form.ilo.data,
             'ilo_type': form.ilo_type.data if form.ilo_type.data != 'None' else sql.null(),
@@ -463,15 +469,17 @@ def edit_host(host_id):
         applib.delete_host(webParameters, host_id)
         status = "Хост удален"
 
-    return render_template(siteMap['edit_host'],
-                           admin=admin,
-                           directory_id=h.parent,
-                           host_id=h.id,
-                           error=error,
-                           status=status,
-                           form=form,
-                           search=search_field,
-                           username=webParameters.user_info.login)
+    return render_template(
+        siteMap['edit_host'],
+        admin=webParameters.user_info.admin,
+        directory_id=h.parent,
+        host_id=h.id,
+        error=error,
+        status=status,
+        form=form,
+        search=search_field,
+        username=webParameters.user_info.login
+    )
 
 
 @app.route('/host/<host_id>')
@@ -488,7 +496,7 @@ def host(host_id):
     object_host = applib.get_host(webParameters, host_id=host_id)
     content_host = applib.get_content_host(webParameters, host_id)
     show_host_info = access.check_access(webParameters, 'ShowHostInformation', h_object=object_host)
-    admin = access.check_access(webParameters, 'Administrate')
+    admin = webParameters.user_info.admin
     if show_host_info or admin:
         return render_template(
             siteMap['host'],
@@ -497,7 +505,7 @@ def host(host_id):
                 webParameters,
                 'EditHostInformation',
                 h_object=object_host
-            ),
+            ) or webParameters.user_info.admin,
             content=content_host,
             form=form,
             search=search_field,
@@ -516,12 +524,14 @@ def del_service(service_id):
     if request.method == 'POST' and del_button.validate_on_submit():
         applib.del_service(webParameters, service=service_id)
         return redirect('/host/{service.host}'.format(service=service))
-    return render_template(siteMap['delete_service'],
-                           admin=access.check_access(webParameters, 'Administrate'),
-                           service=service,
-                           del_button=del_button,
-                           search=search_field,
-                           username=webParameters.user_info.login)
+    return render_template(
+        siteMap['delete_service'],
+        admin=webParameters.user_info.admin,
+        service=service,
+        del_button=del_button,
+        search=search_field,
+        username=webParameters.user_info.login
+    )
 
 
 @app.route('/host/<host_id>/add_service', methods=['GET', 'POST'])
@@ -533,7 +543,7 @@ def add_service(host_id):
         webParameters, 'EditHostInformation',
         h_object=host
     )
-    admin = access.check_access(webParameters, 'Administrate')
+    admin = webParameters.user_info.admin
     error = None
     status = None
 
@@ -577,7 +587,7 @@ def administrate():
     search_field = forms.Search()
     return render_template(
         siteMap['administrate'],
-        admin=access.check_access(webParameters, 'Administrate'),
+        admin=webParameters.user_info.admin,
         search=search_field,
         username=webParameters.user_info.login
     )
@@ -591,7 +601,7 @@ def administrate_service():
     service = applib.get_service_type(webParameters, raw=True)
     return render_template(
         siteMap['administrate_service'],
-        admin=access.check_access(webParameters, 'Administrate'),
+        admin=webParameters.user_info.admin,
         search=search_field,
         service=service,
         form_add_service=form_add_service,
@@ -606,7 +616,7 @@ def administrate_prefix():
     prefix = applib.get_prefix(webParameters)
     return render_template(
         siteMap['administrate_prefix'],
-        admin=access.check_access(webParameters, 'Administrate'),
+        admin=webParameters.user_info.admin,
         search=search_field,
         prefix=prefix,
         form_add_prefix=form_add_prefix,
@@ -622,7 +632,7 @@ def administrate_ipmi():
     ipmi = applib.get_ilo_type(webParameters, raw=True)
     return render_template(
         siteMap['administrate_ipmi'],
-        admin=access.check_access(webParameters, 'Administrate'),
+        admin=webParameters.user_info.admin,
         search=search_field,
         ipmi=ipmi,
         form_add_ipmi=form_add_ipmi,
@@ -682,7 +692,7 @@ def administrate_ipmi_delete(ipmi_id):
         return redirect('/administrate/ipmi')
     return render_template(
         siteMap['administrate_del_ipmi'],
-        admin=access.check_access(webParameters, 'Administrate'),
+        admin=webParameters.user_info.admin,
         del_button=del_button,
         search=search_field,
         ipmi=ipmi,
@@ -701,7 +711,7 @@ def administrate_prefix_delete(prefix_id):
         return redirect('/administrate/prefix')
     return render_template(
         siteMap['administrate_del_prefix'],
-        admin=access.check_access(webParameters, 'Administrate'),
+        admin=webParameters.user_info.admin,
         del_button=del_button,
         search=search_field,
         prefix=prefix,
@@ -720,7 +730,7 @@ def administrate_service_delete(service_id):
         return redirect('/administrate/service')
     return render_template(
         siteMap['administrate_del_service'],
-        admin=access.check_access(webParameters, 'Administrate'),
+        admin=webParameters.user_info.admin,
         del_button=del_button,
         search=search_field,
         service=service,
@@ -749,7 +759,7 @@ def administrate_ipmi_change(ipmi_id):
     form.sub.label.text = 'Изменить'
     return render_template(
         siteMap['change_ipmi'],
-        admin=access.check_access(webParameters, 'Administrate'),
+        admin=webParameters.user_info.admin,
         search=search_field,
         form=form,
         ipmi=ipmi
@@ -784,7 +794,7 @@ def administrate_access():
     access_list = applib.get_access_list(webParameters)
     return render_template(
         siteMap['access_list'],
-        admin=access.check_access(webParameters, 'Administrate'),
+        admin=webParameters.user_info.admin,
         search=search_field,
         form=add_access_form,
         access_list=access_list,
@@ -814,7 +824,7 @@ def administrate_group():
         applib.add_group(webParameters, g)
     return render_template(
         siteMap['administrate_group'],
-        admin=access.check_access(webParameters, 'Administrate'),
+        admin=webParameters.user_info.admin,
         form=form,
         group_user=applib.get_group_user(webParameters),
         group_host=applib.get_group_host(webParameters),
@@ -868,7 +878,7 @@ def administrate_group_show(group_id):
         siteMap['administrate_group_show'],
         content=content,
         form=form,
-        admin=access.check_access(webParameters, 'Administrate'),
+        admin=webParameters.user_info.admin,
         search=search_field,
         username=webParameters.user_info.login
     )
@@ -884,7 +894,7 @@ def administrate_group_delete(group_id):
         return redirect('/administrate/group')
     return render_template(
         siteMap['administrate_group_delete'],
-        admin=access.check_access(webParameters, 'Administrate'),
+        admin=webParameters.user_info.admin,
         del_button=del_button,
         group_id=group_id,
         search=search_field,
@@ -901,7 +911,7 @@ def administrate_users():
         siteMap['administrate_users'],
         content=content,
         cur_date=datetime.datetime.now(),
-        admin=access.check_access(webParameters, 'Administrate'),
+        admin=webParameters.user_info.admin,
         search=search_field,
         username=webParameters.user_info.login
     )
@@ -910,14 +920,32 @@ def administrate_users():
 @app.route('/administrate/user/<uid>/enable')
 @applib.authorization(session, request, webParameters)
 def administrate_user_enable(uid):
-    applib.user_disable(webParameters, uid, enable=True)
+    if webParameters.user_info.admin:
+        applib.user_disable(webParameters, uid, enable=True)
     return redirect(request.referrer)
 
 
 @app.route('/administrate/user/<uid>/disable')
 @applib.authorization(session, request, webParameters)
 def administrate_user_disable(uid):
-    applib.user_disable(webParameters, uid, disable=True)
+    if webParameters.user_info.admin:
+        applib.user_disable(webParameters, uid, disable=True)
+    return redirect(request.referrer)
+
+
+@app.route('/administrate/user/<uid>/enable_admin')
+@applib.authorization(session, request, webParameters)
+def administrate_user_enable_admin(uid):
+    if webParameters.user_info.admin:
+        applib.user_admin_disable(webParameters, uid, enable=True)
+    return redirect(request.referrer)
+
+
+@app.route('/administrate/user/<uid>/disable_admin')
+@applib.authorization(session, request, webParameters)
+def administrate_user_disable_admin(uid):
+    if webParameters.user_info.admin:
+        applib.user_admin_disable(webParameters, uid, disable=True)
     return redirect(request.referrer)
 
 
@@ -948,7 +976,7 @@ def administrate_user(uid):
         group_user_form=group_user_form,
         prefix_form=prefix_form,
         cur_date=datetime.datetime.now(),
-        admin=access.check_access(webParameters, 'Administrate'),
+        admin=webParameters.user_info.admin,
         search=search_field,
         username=webParameters.user_info.login
     )
@@ -1010,7 +1038,7 @@ def acc(id_access, command):
 
     return render_template(
         siteMap['access'],
-        admin=access.check_access(webParameters, 'Administrate'),
+        admin=webParameters.user_info.admin,
         title=title,
         access=access_list[0],
         current_url=request.full_path,

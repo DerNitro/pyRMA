@@ -25,8 +25,7 @@ user_access_map = {
     'ShowLogin': 4,                 # Отображение логина
     'ShowPassword': 5,              # Отображение пароля
     'ShowAllSession': 6,            # Просмотр сессии пользователя
-    'AccessRequest': 7,             # Согласование доступов
-    'Administrate': 8               # Режим "бога"
+    'AccessRequest': 7              # Согласование доступов
 }
 
 connection_access_map = {
@@ -114,8 +113,6 @@ def get_user_access(param: parameters.Parameters, user, host):
         user_acc.change('ShowAllSession', set_access=True)
     if check_access(param, 'AccessRequest', h_object=host, user=user):
         user_acc.change('AccessRequest', set_access=True)
-    if check_access(param, 'Administrate', h_object=host, user=user):
-        user_acc.change('Administrate', set_access=True)
 
     if check_access(param, 'Connection', h_object=host, user=user):
         conn_acc.change('Connection', set_access=True)
@@ -166,13 +163,13 @@ def check_access(app_param: parameters.Parameters, access, h_object=None, check_
     if user_access_map.get(access) is not None:
         if isinstance(perm, list):
             for i in perm:
-                if UserAccess(i.user_access).get(access) or UserAccess(i.user_access).get('Administrate'):
+                if UserAccess(i.user_access).get(access):
                     return True
             return False
         elif isinstance(perm, schema.Permission):
-            return UserAccess(perm.user_access).get(access) or UserAccess(perm.user_access).get('Administrate')
+            return UserAccess(perm.user_access).get(access)
         elif isinstance(perm, dict):
-            return UserAccess(perm['user_access']).get(access) or UserAccess(perm['user_access']).get('Administrate')
+            return UserAccess(perm['user_access']).get(access)
         elif not perm:
             return False
         else:

@@ -15,7 +15,7 @@
 """
 
 import sqlalchemy.orm
-from pyrmalib import schema, parameters, access
+from pyrmalib import applib, schema, parameters, access
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -73,17 +73,18 @@ class Mail:
 def send_mail(param: parameters.Parameters, subject, template, user: schema.User or list, data, admin_cc=False):
     mail = Mail(param)
     mail.subject += subject
-    if param.user_info != user:
-        mail.mail_cc.append(param.user_info.email)
     if admin_cc:
-        admins = access.users_access_list(param, 'Administrate')
+        admins = applib.get_admin_users(param)
         for a in admins:
             mail.mail_cc.append(a.email)
+    
     if isinstance(user, list):
         for i in user:
             mail.mail_to.append(i.email)
-    else:
+    elif isinstance(user, schema.User):
         mail.mail_to.append(user.email)
+        if isinstance(param.user_info, schema.User) and param.user_info != user:
+            mail.mail_cc.append(param.user_info.email)
 
     if not mail.send(template, data):
         del mail

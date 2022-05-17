@@ -73,6 +73,7 @@ class User(Base):
     email = sqlalchemy.Column(sqlalchemy.String(256), unique=True)
     prefix = sqlalchemy.Column(sqlalchemy.String(100))
     check = sqlalchemy.Column(sqlalchemy.Integer)
+    admin = sqlalchemy.Column(sqlalchemy.BOOLEAN(), default=False)
 
     def __repr__(self):
         return "{0}".format(self.__dict__)

@@ -141,7 +141,7 @@ class HostListDisplay(npyscreen.FormMutt):
         if self.Level[-1] == 'Find':
             pass
         else:
-            if access.check_access(appParameters, 'Administrate'):
+            if appParameters.user_info.admin:
                 with schema.db_select(appParameters.engine) as db:
                     self.HostList = db.query(schema.Host).filter(schema.Host.parent == self.Level[-1]). \
                         filter(schema.Host.name.like('%{0}%'.format(self.Filter)),
@@ -186,7 +186,7 @@ class HostListDisplay(npyscreen.FormMutt):
 
     def show_host_information(self, *args, **keywords):
         if access.check_access(appParameters, 'ShowHostInformation', h_object=self.SelectHost) or \
-                access.check_access(appParameters, 'Administrate'):
+                appParameters.user_info.admin:
             host_form_information = InformationForm(host=self.SelectHost)
             host_form_information.edit()
         else:
@@ -456,7 +456,7 @@ class InformationForm(npyscreen.Form):
         self.ip_address.value = self.host.ip
         self.description.value = self.host.describe
         login_password = applib.get_password(appParameters, self.host.id)
-        if access.check_access(appParameters, 'ShowLogin', h_object=self.host):
+        if access.check_access(appParameters, 'ShowLogin', h_object=self.host) or appParameters.user_info.admin:
             if isinstance(login_password, schema.PasswordList):
                 self.login.value = login_password.login
                 if access.check_access(appParameters, 'ShowPassword', h_object=self.host):
@@ -466,7 +466,7 @@ class InformationForm(npyscreen.Form):
                     self.password.value = '*' * 10
             else:
                 self.login.value = self.host.default_login
-                if access.check_access(appParameters, 'ShowPassword', h_object=self.host):
+                if access.check_access(appParameters, 'ShowPassword', h_object=self.host) or appParameters.user_info.admin:
                     self.password.value = utils.password(self.host.default_password, self.host.id, False)
                 else:
                     self.password.value = '*' * 10
@@ -525,11 +525,16 @@ class Interface(npyscreen.NPSAppManaged):
         global appParameters
         appParameters = self.appParameters
         y, x = self.xy()
-        appParameters.screen_size = {'y': y,
-                                     'x': x}
+        appParameters.screen_size = {
+            'y': y,
+            'x': x
+        }
         appParameters.log.debug('Запуск формы MAIN.')
         appParameters.log.debug('screen size: x = {0}, y = {1}'.format(x, y))
-        if x > 120 and y > 40:
+        if not appParameters.user_info.check:
+            self.addForm("MAIN", ErrorForm)
+            self.getForm("MAIN").error_text = 'Пользователь проходит проверку администратором!'
+        elif x > 120 and y > 40:
             appParameters.log.info('Запуск в обычном режиме')
             self.addForm("MAIN", HostListDisplay)
         else:
