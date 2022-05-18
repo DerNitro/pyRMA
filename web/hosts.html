@@ -22,19 +22,36 @@
         {% if EditHostInformation or admin%} <li class="host_add_button"> <a class="host_add_button" href="/hosts/{{ directory_id }}/add_host">Добавить хост</a> </li> {% endif %}
         {% if EditDirectory or admin%} <li class="host_add_button"> <a class="host_add_button" href="/hosts/{{ directory_id }}/add_folder">Добавить директорию</a> </li> {% endif %}
         {% if EditDirectory or admin%} <li class="host_add_button"> <a class="host_add_button" href="/hosts/{{ directory_id }}/edit_folder">Редактировать директорию</a> </li> {% endif %}
-        {% if EditDirectory or admin%} <li class="host_add_button"> <a class="host_add_button" href="/route/{{ directory_id }}">Маршрут</a> </li> {% endif %}
     </ul>
 </div>
 <hr>
 {% endif %}
-{% if admin and directory_id > 0 and form %}
+{% if (admin or EditDirectory) and directory_id > 0 and jump_form %}
+<div class="addJump">
+    <details>
+        <summary>Jump хост</summary>
+        <form action="/hosts/{{ directory_id }}" method="POST">
+            {{ jump_form.csrf_token }}
+            <p>
+                {{jump_form.jump.label}}: {{ jump_form.jump() }} {{ jump_form.add_sub() }}
+            </p>
+        </form>
+        <form action="/hosts/{{ directory_id }}" method="POST">
+            {{ jump_form.csrf_token }}
+            <p>{% if jump %} Текущий Jump хост: {{ jump.name }} {{ jump_form.clear_sub() }} {% endif %}</p>
+        </form>
+    </details>
+</div>
+<hr>
+{% endif %}
+{% if admin and directory_id > 0 and group_form %}
 <div class="addGroup">
     <details>
         <summary>Добавить в группу</summary>
         <form action="/administrate/host/{{ directory_id }}" method="POST">
-            {{ form.csrf_token }}
+            {{ group_form.csrf_token }}
             <p>
-                {{form.name.label}}: {{ form.name() }} {{ form.add_sub() }}
+                {{group_form.name.label}}: {{ group_form.name() }} {{ group_form.add_sub() }}
             </p>
         </form>
         Установленные группы: {{ group }}

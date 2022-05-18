@@ -215,15 +215,14 @@ class ServiceType(Base):
         return "{0}".format(self.__dict__)
 
 
-class RouteMap(Base):
+class JumpHost(Base):
     """
-    Дополнительный маршрут до узлов
+    Jump хосты
     """
-    __tablename__ = 'route'
+    __tablename__ = 'jump'
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
-    sequence = sqlalchemy.Column(sqlalchemy.Integer)
     host = sqlalchemy.Column(sqlalchemy.Integer)
-    route = sqlalchemy.Column(sqlalchemy.Integer)
+    jump = sqlalchemy.Column(sqlalchemy.Integer)
 
     def __repr__(self):
         return "{0}".format(self.__dict__)
@@ -477,7 +476,7 @@ if __name__ == '__main__':
             Prefix.__table__.create(bind=engine)
             RequestAccess.__table__.create(bind=engine)
             RestorePassword.__table__.create(bind=engine)
-            RouteMap.__table__.create(bind=engine)
+            JumpHost.__table__.create(bind=engine)
             Service.__table__.create(bind=engine)
             ServiceType.__table__.create(bind=engine)
             Session.__table__.create(bind=engine)

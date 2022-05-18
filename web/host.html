@@ -15,19 +15,36 @@
     <ul class="host_edit">
         <li class="host_edit"> <a class="host_edit" href="/host/{{ content['id'] }}/edit">Редактировать</a> </li>
         <li class="host_edit"> <a class="host_edit" href="/host/{{ content['id'] }}/add_service">Добавить сервис</a></li>
-        <li class="host_add_button"> <a class="host_add_button" href="/route/{{ content['id'] }}">Маршрут</a> </li>
     </ul>
 </div>
-{% endif %}
-{% if admin and form %}
 <hr>
+{% endif %}
+{% if (admin or EditHostInformation) and jump_form %}
+<div class="addJump">
+    <details>
+        <summary>Jump хост</summary>
+        <form action="/host/{{ content['id'] }}" method="POST">
+            {{ jump_form.csrf_token }}
+            <p>
+                {{jump_form.jump.label}}: {{ jump_form.jump() }} {{ jump_form.add_sub() }}
+            </p>
+        </form>
+        <form action="/host/{{ content['id'] }}" method="POST">
+            {{ jump_form.csrf_token }}
+            <p>{% if jump %} Текущий Jump хост: {{ jump.name }} {{ jump_form.clear_sub() }} {% endif %}</p>
+        </form>
+    </details>
+</div>
+<hr>
+{% endif %}
+{% if admin and group_form %}
 <div class="addGroup">
     <details>
         <summary>Добавить в группу</summary>
         <form action="/administrate/host/{{ content['id'] }}" method="POST">
-            {{ form.csrf_token }}
+            {{ group_form.csrf_token }}
             <p>
-                {{form.name.label}}: {{ form.name() }} {{ form.add_sub() }}
+                {{group_form.name.label}}: {{ group_form.name() }} {{ group_form.add_sub() }}
             </p>
         </form>
     </details>

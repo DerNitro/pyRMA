@@ -93,8 +93,8 @@ class AddServiceHost(FlaskForm):
     add_sub = SubmitField('Добавить')
 
 
-class AddRoute(FlaskForm):
-    route = SelectField('Промежуточный хост')
+class JumpHost(FlaskForm):
+    jump = SelectField('Jump хост')
     add_sub = SubmitField('Добавить')
 
     clear_sub = SubmitField('Очистить')
@@ -116,7 +116,6 @@ class ChangePermission(FlaskForm):
     ShowPassword = BooleanField('Отображение пароля')
     ShowAllSession = BooleanField('Просмотр сессии пользователя')
     AccessRequest = BooleanField('Согласование доступов')
-    Administrate = BooleanField('Режим "бога"')
 
     Connection = BooleanField('Подключение к узлу')
     FileTransfer = BooleanField('Передача файлов')
