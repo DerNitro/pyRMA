@@ -25,7 +25,7 @@ import os
 import shlex
 import subprocess
 
-from pyrmalib import modules, dict, applib, parameters
+from pyrmalib import modules, dict, applib, parameters, schema
 
 
 class SSH(modules.ConnectionModules):
@@ -33,12 +33,10 @@ class SSH(modules.ConnectionModules):
     Модуль подключения к удаленному узлу по SSH.
     """
 
-    def __init__(self, param: parameters.AppParameters, host):
-        super().__init__()
-        self.PARAMETERS = param
+    def __init__(self, param: parameters.AppParameters, host: schema.Host):
+        super().__init__(param, host)
         self.NAME = 'SSH'
         self.DESCRIPTION = 'Модуль подключения по протоколу SSH'
-        self.HOST = host
         self.CONNECTION_TYPE = dict.conn_type_dict['Connection']
 
         self.run_command = '/usr/bin/ssh -l {user}'
@@ -61,14 +59,14 @@ class SSH(modules.ConnectionModules):
     def connection(self):
         super().connection()
         ssh_options = '-o "StrictHostKeyChecking=no"'
-        ssh = '/usr/bin/ssh {options} {login}@{ip}'
-        sshpass = '/usr/bin/sshpass -e ssh {options} {login}@{ip}'
+        ssh = '/usr/bin/ssh {options} -p {port} {login}@{ip}'
+        sshpass = '/usr/bin/sshpass -e ssh {options} -p {port} {login}@{ip}'
         if self.PASSWORD:
             os.environ["SSHPASS"] = self.PASSWORD
             cmd = sshpass
         else:
             cmd = ssh
-        args = shlex.split(cmd.format(login=self.LOGIN, ip=self.HOST.ip, options=ssh_options))
+        args = shlex.split(cmd.format(login=self.LOGIN, ip=self.HOST.ip, port=self.HOST.tcp_port, options=ssh_options))
         proc = subprocess.Popen(args)
         stdout, stderr = proc.communicate('through stdin to stdout')
         if proc.returncode > 0:
@@ -92,13 +90,13 @@ class SFTP(modules.ConnectionModules):
     """
     Модуль передачи файлов по SSH.
     """
+    JUMP = None
 
-    def __init__(self, param: parameters.AppParameters, host):
-        super().__init__()
+    def __init__(self, param: parameters.AppParameters, host: schema.Host):
+        super().__init__(param, host)
         self.PARAMETERS = param
         self.NAME = 'SFTP'
         self.DESCRIPTION = 'Модуль передачи файлов по SFTP'
-        self.HOST = host
         self.CONNECTION_TYPE = dict.conn_type_dict['File Transfer']
 
 
@@ -107,12 +105,11 @@ class TELNET(modules.ConnectionModules):
     Модуль подключения к удаленному узлу по telnet
     """
 
-    def __init__(self, param: parameters.AppParameters, host):
-        super().__init__()
+    def __init__(self, param: parameters.AppParameters, host: schema.Host):
+        super().__init__(param, host)
         self.PARAMETERS = param
         self.NAME = 'Telnet'
         self.DESCRIPTION = 'Модуль подключения по протоколу Telnet'
-        self.HOST = host
         self.CONNECTION_TYPE = dict.conn_type_dict['Connection']
 
 
@@ -121,10 +118,9 @@ class SERVICE(modules.ConnectionModules):
     Модуль формирования подключения только сервисов.
     """
 
-    def __init__(self, param: parameters.AppParameters, host):
-        super().__init__()
+    def __init__(self, param: parameters.AppParameters, host: schema.Host):
+        super().__init__(param, host)
         self.PARAMETERS = param
         self.NAME = 'OnlyServices'
         self.DESCRIPTION = 'Модуль подключения только сервисов'
-        self.HOST = host
         self.CONNECTION_TYPE = dict.conn_type_dict['Service']

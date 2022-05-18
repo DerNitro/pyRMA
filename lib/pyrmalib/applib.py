@@ -459,11 +459,11 @@ def get_jump_hosts(param: parameters.WebParameters):
     return [(t.id, t.name) for t in jump_hosts]
 
 
-def get_jump_host(param: parameters.WebParameters, host_id):
+def get_jump_host(param: parameters.WebParameters, host_id) -> schema.Host:
     try:
         with schema.db_select(param.engine) as db:
-            jump = db.query(schema.JumpHost, schema.Host).join(schema.Host, schema.Host.id == schema.JumpHost.jump). \
-                filter(schema.JumpHost.host == host_id).one()._asdict()
+            _, jump = db.query(schema.JumpHost, schema.Host).join(schema.Host, schema.Host.id == schema.JumpHost.jump). \
+                filter(schema.JumpHost.host == host_id).one()
     except NoResultFound:
         jump = None
     except MultipleResultsFound:
@@ -865,7 +865,6 @@ def set_group_permission(param: parameters.WebParameters, group_id, form: forms.
     user_access.change('ShowPassword', set_access=form.ShowPassword.data)
     user_access.change('ShowAllSession', set_access=form.ShowAllSession.data)
     user_access.change('AccessRequest', set_access=form.AccessRequest.data)
-    user_access.change('Administrate', set_access=form.Administrate.data)
 
     connection_access = access.ConnectionAccess(0)
     connection_access.change('Connection', set_access=form.Connection.data)
@@ -1322,6 +1321,7 @@ def edit_host(param: parameters.WebParameters, d, host_id):
         host.ilo = d['ilo']
         host.ilo_type = d['ilo_type']
         host.default_login = d['default_login']
+        host.default_password = utils.password(d['default_password'], host_id, True)
         host.tcp_port = d['port']
         host.note = d['note']
         host.proxy = d['proxy']

@@ -186,7 +186,11 @@ with schema.db_edit(engine) as db:
 # Запуск интерфейса.
 appParameters.log.debug("Запуск графического интерфейса.")
 App = interface.Interface(appParameters)
-connection_host = App.run()
+try:
+    connection_host = App.run()
+except KeyboardInterrupt:
+    connection_host = None
+
 if connection_host:      # type: modules.ConnectionModules
     connection_host.run()
     try:

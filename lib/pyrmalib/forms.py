@@ -116,7 +116,6 @@ class ChangePermission(FlaskForm):
     ShowPassword = BooleanField('Отображение пароля')
     ShowAllSession = BooleanField('Просмотр сессии пользователя')
     AccessRequest = BooleanField('Согласование доступов')
-    Administrate = BooleanField('Режим "бога"')
 
     Connection = BooleanField('Подключение к узлу')
     FileTransfer = BooleanField('Передача файлов')

@@ -21,9 +21,9 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 """
-from pyrmalib import schema
+from pyrmalib import schema, parameters, applib, utils
 import datetime
-
+from sshtunnel import SSHTunnelForwarder
 
 class Modules:
     NAME = ''
@@ -47,22 +47,27 @@ class ConnectionModules(Modules):
     SERVICE = None
     LOGIN = None
     PASSWORD = None
+    JUMP = None
 
-    def __init__(self):
+    def __init__(self, param: parameters.AppParameters, host: schema.Host):
         super().__init__()
-        self.connection_id = None
+        self.PARAMETERS = param
+        self.HOST = host
         self.ERROR = None
         self.SERVICE = None
         self.LOGIN = None
         self.PASSWORD = None
+        self.JUMP = None
+        self.connection_id = None
 
     def run(self):
         """
         Запуск подключения
         :return: Возвращает код завершения
         """
-        self.PARAMETERS.log.info('Подключение {name} к хосту {host.name}({host.ip})'
-                                 .format(name=self.NAME, host=self.HOST))
+        self.PARAMETERS.log.info(
+            'Подключение {name} к хосту {host.name}({host.ip})'.format(name=self.NAME, host=self.HOST)
+        )
         connection = schema.Connection(
             status=0,
             user=self.PARAMETERS.user_info.uid,
@@ -77,6 +82,10 @@ class ConnectionModules(Modules):
             db.refresh(connection)
             self.connection_id = connection.id
 
+        self.JUMP = applib.get_jump_host(self.PARAMETERS, self.HOST.id) \
+            if applib.get_jump_host(self.PARAMETERS, self.HOST.id) \
+                else applib.get_jump_host(self.PARAMETERS, self.HOST.parent)
+
         # Строка информации о подключении
         print('=================== PyRMA ===================')
         print('Подключение {name} к хосту {host.name}({host.ip})'.format(name=self.NAME, host=self.HOST))
@@ -85,6 +94,24 @@ class ConnectionModules(Modules):
             for i in self.SERVICE:
                 print('\t[{name:15}] - {local_port} -> {remote_ip}:{remote_port}({describe})'.format(**i))
         print('=============================================')
+
+        if self.JUMP and self.JUMP.id != self.HOST.id:
+            self.jump = SSHTunnelForwarder(
+                self.JUMP.ip,
+                ssh_username=self.JUMP.default_login,
+                ssh_password=utils.password(self.JUMP.default_password, self.JUMP.id, mask=False),
+                remote_bind_address=(self.HOST.ip, self.HOST.tcp_port),
+                local_bind_address=('127.0.0.1', )
+            )
+            self.jump.start()
+            self.PARAMETERS.log.debug(
+                'self.jump: {}'.format(self.jump)
+            )
+            self.PARAMETERS.log.info(
+                'Подключение к Jump хосту: {}'.format(self.JUMP.name)
+            )
+            self.HOST.ip = '127.0.0.1'
+            self.HOST.tcp_port = self.jump.local_bind_port
         pass
 
     def close(self):
@@ -92,8 +119,13 @@ class ConnectionModules(Modules):
         Закрывает подключение
         :return: Возвращает код завершения
         """
-        self.PARAMETERS.log.info('Отключение {name} к хосту {host.name}({host.ip})'
-                                 .format(name=self.NAME, host=self.HOST))
+        self.PARAMETERS.log.info(
+            'Отключение {name} от хоста {host.name}'.format(name=self.NAME, host=self.HOST)
+        )
+        
+        if self.JUMP and self.JUMP.id != self.HOST.id:
+            self.jump.stop()
+        
         with schema.db_edit(self.PARAMETERS.engine) as db:
             connection = db.query(schema.Connection).filter(schema.Connection.id == self.connection_id).one()
             connection.date_end = datetime.datetime.now()
@@ -108,20 +140,12 @@ class ConnectionModules(Modules):
         Инициирует логику подключения к удаленному хосту.
         :return: Возвращает код завершения
         """
-        self.route()
         self.firewall()
         pass
 
     def firewall(self):
         """
         Формирует правила сетевого экрана.
-        :return: Возвращает код завершения
-        """
-        pass
-
-    def route(self):
-        """
-        формирует маршрут доступа до узла.
         :return: Возвращает код завершения
         """
         pass

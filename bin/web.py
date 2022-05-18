@@ -882,8 +882,6 @@ def administrate_group_show(group_id):
             access.check_access(webParameters, 'ShowAllSession', check_permission=content['permission'])
         form.AccessRequest.data = \
             access.check_access(webParameters, 'AccessRequest', check_permission=content['permission'])
-        form.Administrate.data = \
-            access.check_access(webParameters, 'Administrate', check_permission=content['permission'])
 
         form.Connection.data = \
             access.check_access(webParameters, 'Connection', check_permission=content['permission'])
