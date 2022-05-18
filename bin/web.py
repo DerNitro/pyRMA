@@ -82,7 +82,6 @@ siteMap = {
     'edit_host': 'edit_host.html',
     'add_service': 'add_service.html',
     'delete_service': 'del_service.html',
-    'route': 'route.html',
     'logs': 'action.html',
     'access_list': 'access_list.html',
     'change_ipmi': 'change_ipmi.html',
@@ -131,12 +130,14 @@ def search():
     host_list = applib.search(webParameters, query)
     admin = webParameters.user_info.admin
 
-    return render_template(siteMap['hosts'],
-                           admin=admin,
-                           host_list=host_list,
-                           Search=query,
-                           search=form,
-                           username=webParameters.user_info.login)
+    return render_template(
+        siteMap['hosts'],
+        admin=admin,
+        host_list=host_list,
+        Search=query,
+        search=form,
+        username=webParameters.user_info.login
+    )
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -187,45 +188,38 @@ def logs(date=None):
     )
 
 
-@app.route('/route/<host_id>', methods=['GET', 'POST'])
-@applib.authorization(session, request, webParameters)
-def route(host_id):
-    form = forms.AddRoute()
-    search_field = forms.Search()
-    form.route.choices = applib.get_route_host(webParameters)
-
-    if request.method == 'POST' and form.add_sub.data:
-        r = {
-            'host': host_id,
-            'route': form.route.data
-        }
-        applib.add_route(webParameters, r)
-
-    if request.method == 'POST' and form.clear_sub.data:
-        applib.clear_routes(webParameters, host_id)
-
-    return render_template(
-        siteMap['route'],
-        form=form,
-        admin=webParameters.user_info.admin,
-        host_id=host_id,
-        routes=applib.get_routes(webParameters, host_id),
-        search=search_field,
-        username=webParameters.user_info.login
-    )
-
 
 @app.route('/hosts')
-@app.route('/hosts/<directory_id>')
+@app.route('/hosts/<directory_id>', methods=['GET', 'POST'])
 @applib.authorization(session, request, webParameters)
 def hosts(directory_id=None):
-    form = forms.AddHostGroup()
+    group_form = forms.AddHostGroup()
+    jump_form = forms.JumpHost()
     search_field = forms.Search()
     admin = webParameters.user_info.admin
+    
+    if request.method == 'POST' and jump_form.add_sub.data:
+        applib.add_jump(
+            webParameters,
+            {
+                'host': directory_id,
+                'jump': jump_form.jump.data
+            }
+        )
+    
+    if request.method == 'POST' and jump_form.clear_sub.data:
+        applib.clear_jump(webParameters, directory_id)
+    
     if applib.get_group_host(webParameters):
-        form.name.choices = [(t.id, t.name) for t in applib.get_group_host(webParameters)]
+        group_form.name.choices = [(t.id, t.name) for t in applib.get_group_host(webParameters)]
     else:
-        form = False
+        group_form = False
+    
+    if applib.get_jump_hosts(webParameters):
+        jump_form.jump.choices = applib.get_jump_hosts(webParameters)
+    else:
+        jump_form = False
+    
     if directory_id:
         directory_id = int(directory_id)
         edit_host_information = access.check_access(
@@ -249,17 +243,21 @@ def hosts(directory_id=None):
         note = json.loads(folder.note)
     else:
         note = None
-    return render_template(siteMap['hosts'],
-                           admin=admin,
-                           host_list=host_list,
-                           note=note,
-                           form=form,
-                           search=search_field,
-                           group=group,
-                           directory_id=directory_id,
-                           EditHostInformation=edit_host_information,
-                           EditDirectory=edit_directory,
-                           username=webParameters.user_info.login)
+    return render_template(
+        siteMap['hosts'],
+        admin=admin,
+        host_list=host_list,
+        note=note,
+        jump = applib.get_jump_host(webParameters, directory_id),
+        jump_form=jump_form,
+        search=search_field,
+        group=group,
+        group_form=group_form,
+        directory_id=directory_id,
+        EditHostInformation=edit_host_information,
+        EditDirectory=edit_directory,
+        username=webParameters.user_info.login
+    )
 
 
 @app.route('/hosts/<directory_id>/add_folder', methods=['GET', 'POST'])
@@ -383,7 +381,7 @@ def add_host(directory_id):
             proxy=form.proxy.data
         )
         applib.add_host(webParameters, h, parent=directory_id, password=form.default_password.data)
-        status = "Хост добавлен"
+        return redirect(url_for('hosts', directory_id=directory_id))
 
     if request.method == 'POST' and form.upload_sub.data:
         f = form.file_host.data
@@ -394,6 +392,7 @@ def add_host(directory_id):
         try:
             applib.add_hosts_file(webParameters, os.path.join('/tmp/pyRMA', filename), parent=directory_id)
             status = "Узлы добавлены"
+            return redirect(url_for('hosts', directory_id=directory_id))
         except rma_error.WTF as e:
             error = e
         finally:
@@ -482,17 +481,38 @@ def edit_host(host_id):
     )
 
 
-@app.route('/host/<host_id>')
+@app.route('/host/<host_id>', methods=['GET', 'POST'])
 @applib.authorization(session, request, webParameters)
 def host(host_id):
+    jump_form = forms.JumpHost()
+    if request.method == 'POST' and jump_form.add_sub.data:
+        applib.add_jump(
+            webParameters,
+            {
+                'host': host_id,
+                'jump': jump_form.jump.data
+            }
+        )
+    
+    if request.method == 'POST' and jump_form.clear_sub.data:
+        applib.clear_jump(webParameters, host_id)
+    
+    if applib.get_jump_hosts(webParameters):
+        jump_form.jump.choices = applib.get_jump_hosts(webParameters)
+    else:
+        jump_form = False
+    
     if not applib.check_host(webParameters, host_id):
         return redirect(url_for('hosts', directory_id=host_id))
+    
     search_field = forms.Search()
-    form = forms.AddHostGroup()
+    group_form = forms.AddHostGroup()
+    
     if applib.get_group_host(webParameters):
-        form.name.choices = [(t.id, t.name) for t in applib.get_group_host(webParameters)]
+        group_form.name.choices = [(t.id, t.name) for t in applib.get_group_host(webParameters)]
     else:
-        form = False
+        group_form = False
+    
     object_host = applib.get_host(webParameters, host_id=host_id)
     content_host = applib.get_content_host(webParameters, host_id)
     show_host_info = access.check_access(webParameters, 'ShowHostInformation', h_object=object_host)
@@ -507,7 +527,9 @@ def host(host_id):
                 h_object=object_host
             ) or webParameters.user_info.admin,
             content=content_host,
-            form=form,
+            jump = applib.get_jump_host(webParameters, host_id),
+            jump_form=jump_form,
+            group_form=group_form,
             search=search_field,
             username=webParameters.user_info.login
         )

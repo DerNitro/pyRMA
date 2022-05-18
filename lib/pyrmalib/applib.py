@@ -452,22 +452,24 @@ def get_local_port(param: parameters.WebParameters):
             return i
 
 
-def get_route_host(param: parameters.WebParameters):
+def get_jump_hosts(param: parameters.WebParameters):
     with schema.db_select(param.engine) as db:
-        route_host = db.query(schema.Host).filter(schema.Host.proxy.is_(True)).all()
+        jump_hosts = db.query(schema.Host).filter(schema.Host.proxy.is_(True)).all()
 
-    return [(t.id, t.name) for t in route_host]
+    return [(t.id, t.name) for t in jump_hosts]
 
 
-def get_routes(param: parameters.WebParameters, host_id):
-    with schema.db_select(param.engine) as db:
-        routes = db.query(schema.RouteMap, schema.Host).join(schema.Host, schema.Host.id == schema.RouteMap.route). \
-            filter(schema.RouteMap.host == host_id). \
-            order_by(schema.RouteMap.sequence).all()
+def get_jump_host(param: parameters.WebParameters, host_id):
+    try:
+        with schema.db_select(param.engine) as db:
+            jump = db.query(schema.JumpHost, schema.Host).join(schema.Host, schema.Host.id == schema.JumpHost.jump). \
+                filter(schema.JumpHost.host == host_id).one()._asdict()
+    except NoResultFound:
+        jump = None
+    except MultipleResultsFound:
+        raise error.WTF("Дубли Jump в таблице jump!!!")
 
-    if len(routes) == 0:
-        routes = None
-    return routes
+    return jump
 
 
 def get_group(param: parameters.WebParameters, group_id):
@@ -1230,24 +1232,22 @@ def add_hosts_file(param: parameters.WebParameters, filepath: str, parent=0):
     return True
 
 
-def add_route(param: parameters.WebParameters, r):
+def add_jump(param: parameters.WebParameters, r):
     with schema.db_edit(param.engine) as db:
-        routes = db.query(schema.RouteMap).filter(schema.RouteMap.host == r['host']).all()
-
-        route = schema.RouteMap(
-            sequence=len(routes) + 1,
+        db.query(schema.JumpHost).filter(schema.JumpHost.host == r['host']).delete()
+        jump = schema.JumpHost(
             host=r['host'],
-            route=r['route']
+            jump=r['jump']
         )
-        db.add(route)
+        db.add(jump)
         db.flush()
-        db.refresh(route)
+        db.refresh(jump)
 
         action = schema.Action(
             user=param.user_info.uid,
             action_type=25,
             date=datetime.datetime.now(),
-            message="Добавлен маршрут: {route.host} - id={route.id}({route})".format(route=route)
+            message="Добавлен Jump хост: {jump.host} - id={jump.id}({jump})".format(jump=jump)
         )
         db.add(action)
         db.flush()
@@ -1524,14 +1524,14 @@ def del_ipmi(param: parameters.WebParameters, ipmi):
     return True
 
 
-def clear_routes(param: parameters.WebParameters, host_id):
+def clear_jump(param: parameters.WebParameters, host_id):
     with schema.db_edit(param.engine) as db:
-        db.query(schema.RouteMap).filter(schema.RouteMap.host == host_id).delete()
+        db.query(schema.JumpHost).filter(schema.JumpHost.host == host_id).delete()
         action = schema.Action(
             user=param.user_info.uid,
             action_type=26,
             date=datetime.datetime.now(),
-            message="Очистка маршрутов: host={}".format(host_id)
+            message="Удаление Jump хоста: host={}".format(host_id)
         )
         db.add(action)
         db.flush()
