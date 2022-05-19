@@ -39,8 +39,6 @@ class SSH(modules.ConnectionModules):
         self.DESCRIPTION = 'Модуль подключения по протоколу SSH'
         self.CONNECTION_TYPE = dict.conn_type_dict['Connection']
 
-        self.run_command = '/usr/bin/ssh -l {user}'
-
         services = applib.get_service(self.PARAMETERS, host=self.HOST.id)
         if len(services) > 0:
             self.SERVICE = []  # type: dict
@@ -94,10 +92,13 @@ class SFTP(modules.ConnectionModules):
 
     def __init__(self, param: parameters.AppParameters, host: schema.Host):
         super().__init__(param, host)
-        self.PARAMETERS = param
         self.NAME = 'SFTP'
         self.DESCRIPTION = 'Модуль передачи файлов по SFTP'
         self.CONNECTION_TYPE = dict.conn_type_dict['File Transfer']
+
+    def connection(self):
+        super().connection()
+        
 
 
 class TELNET(modules.ConnectionModules):
@@ -107,10 +108,24 @@ class TELNET(modules.ConnectionModules):
 
     def __init__(self, param: parameters.AppParameters, host: schema.Host):
         super().__init__(param, host)
-        self.PARAMETERS = param
         self.NAME = 'Telnet'
         self.DESCRIPTION = 'Модуль подключения по протоколу Telnet'
         self.CONNECTION_TYPE = dict.conn_type_dict['Connection']
+
+
+    def connection(self):
+        super().connection()
+
+        cmd = "/usr/bin/telnet {ip} {port}"
+        
+        args = shlex.split(cmd.format(ip=self.HOST.ip, port=self.HOST.tcp_port))
+        proc = subprocess.Popen(args)
+        stdout, stderr = proc.communicate('through stdin to stdout')
+
+        if proc.returncode > 0:
+            print("Error {0}: {1}; run command: {2}".format(proc.returncode, stderr, cmd))
+
+        pass
 
 
 class SERVICE(modules.ConnectionModules):
@@ -120,7 +135,6 @@ class SERVICE(modules.ConnectionModules):
 
     def __init__(self, param: parameters.AppParameters, host: schema.Host):
         super().__init__(param, host)
-        self.PARAMETERS = param
         self.NAME = 'OnlyServices'
         self.DESCRIPTION = 'Модуль подключения только сервисов'
         self.CONNECTION_TYPE = dict.conn_type_dict['Service']

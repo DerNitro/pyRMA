@@ -53,35 +53,45 @@
 {% endif %}
 <div class="host">
 <h3>{{ content['name'] }} {% if content['parent'] %}({{ content['parent'] }}){% endif %}</h3>
-<table style="width: 700px;">
+<table>
 <tbody>
 <tr>
-<td style="width: 150px;">IP</td>
-<td style="width: 550px;">{{ content['ip'] }}</td>
+    <td style="width: 450px;">IP</td>
+    <td style="width: 550px;">{{ content['ip'] }}</td>
 </tr>
 <tr>
-<td style="width: 150px;">Описание</td>
-<td style="width: 550px;">{{ content['describe'] }}</td>
+    <td style="width: 450px;">Описание</td>
+    <td style="width: 550px;">{{ content['describe'] }}</td>
 </tr>
 <tr>
-<td style="width: 150px;">Группы</td>
-<td style="width: 550px;">{{ content['group'] }} ({{content['parent_group']}})</td>
+    <td style="width: 450px;">Группы</td>
+    <td style="width: 550px;">{{ content['group'] }} ({{content['parent_group']}})</td>
 </tr>
 <tr>
-<td style="width: 150px;">IPMI</td>
-<td style="width: 550px;">{{ content['ilo_type'] }}: {{ content['ilo'] }}</td>
+    <td style="width: 450px;">IPMI</td>
+    <td style="width: 550px;">{{ content['ilo_type'] }}: {{ content['ilo'] }}</td>
 </tr>
 <tr>
-<td style="width: 150px;">Login</td>
-<td style="width: 550px;">{{ content['default_login'] }}</td>
+    <td style="width: 450px;">Login</td>
+    <td style="width: 550px;">{{ content['default_login'] }}</td>
 </tr>
 <tr>
-<td style="width: 150px;">Password</td>
-<td style="width: 550px;">{{ content['default_password'] }}</td>
+    <td style="width: 450px;">Password</td>
+    <td style="width: 550px;">{{ content['default_password'] }}</td>
 </tr>
+<tr>
+    <td style="width: 450px;">Протокол подключения</td>
+    <td style="width: 550px;">{{ content['connection_type'].name }}</td>
+</tr>
+{% if content['file_transfer_type'] %}
+<tr>
+    <td style="width: 450px;">Протокол передачи данных</td>
+    <td style="width: 550px;">{{ content['file_transfer_type'].name }}</td>
+</tr>
+{% endif %}
 {% if content['proxy'] %}
 <tr>
-    <td style="width: 150px;">Proxy</td>
+    <td style="width: 450px;">Proxy</td>
     <td style="width: 550px;">Вкл</td>
 </tr>
 {% endif %}
