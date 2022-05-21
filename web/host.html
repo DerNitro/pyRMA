@@ -14,7 +14,9 @@
 <div class="host_edit">
     <ul class="host_edit">
         <li class="host_edit"> <a class="host_edit" href="/host/{{ content['id'] }}/edit">Редактировать</a> </li>
+        {% if content['connection_type'].name == 'SSH' %}
         <li class="host_edit"> <a class="host_edit" href="/host/{{ content['id'] }}/add_service">Добавить сервис</a></li>
+        {% endif %}
     </ul>
 </div>
 <hr>

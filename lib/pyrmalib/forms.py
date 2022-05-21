@@ -78,7 +78,7 @@ class EditHost(FlaskForm):
     note = TextAreaField('Note')
     proxy = BooleanField('Прокси-сервер')
     add_sub = SubmitField('Добавить')
-    edit_sub = SubmitField('Редктировать')
+    edit_sub = SubmitField('Изменить')
     delete_sub = SubmitField('Удалить')
 
     file_host = FileField('Файл', validators=[FileRequired()])

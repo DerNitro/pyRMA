@@ -21,9 +21,10 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 """
-from pyrmalib import schema, parameters, applib, utils
+from pyrmalib import schema, parameters, applib, utils, error
 import datetime
-from sshtunnel import SSHTunnelForwarder
+from sshtunnel import SSHTunnelForwarder, BaseSSHTunnelForwarderError
+
 
 class Modules:
     NAME = ''
@@ -48,6 +49,9 @@ class ConnectionModules(Modules):
     LOGIN = None
     PASSWORD = None
     JUMP = None
+    TCP_FORWARD = None
+    TERMINATION = 0
+    ERROR = ''
 
     def __init__(self, param: parameters.AppParameters, host: schema.Host):
         super().__init__()
@@ -58,6 +62,7 @@ class ConnectionModules(Modules):
         self.LOGIN = None
         self.PASSWORD = None
         self.JUMP = None
+        self.TCP_FORWARD = []
         self.connection_id = None
 
     def run(self):
@@ -87,23 +92,35 @@ class ConnectionModules(Modules):
                 else applib.get_jump_host(self.PARAMETERS, self.HOST.parent)
 
         # Строка информации о подключении
-        print('=================== PyRMA ===================')
-        print('Подключение {name} к хосту {host.name}({host.ip})'.format(name=self.NAME, host=self.HOST))
+        print('=================== pyRMA ===================')
+        print('Подключение {name} к хосту {host.name}({host.ip}:{host.tcp_port})'.format(name=self.NAME, host=self.HOST))
         if self.SERVICE:
             print('Подключенные сервисы:')
             for i in self.SERVICE:
                 print('\t[{name:15}] - {local_port} -> {remote_ip}:{remote_port}({describe})'.format(**i))
         print('=============================================')
 
+        self.jump = None
+        self.services = None
+
         if self.JUMP and self.JUMP.id != self.HOST.id:
             self.jump = SSHTunnelForwarder(
-                self.JUMP.ip,
+                (self.JUMP.ip, self.JUMP.tcp_port),
                 ssh_username=self.JUMP.default_login,
                 ssh_password=utils.password(self.JUMP.default_password, self.JUMP.id, mask=False),
                 remote_bind_address=(self.HOST.ip, self.HOST.tcp_port),
                 local_bind_address=('127.0.0.1', )
             )
-            self.jump.start()
+            try:
+                self.jump.start()
+            except BaseSSHTunnelForwarderError as e:
+                self.PARAMETERS.log.error(
+                    'Ошибка подключения к Jump хосту({}): {}'.format(self.JUMP.name, e.value),
+                    pr=True
+                )
+                self.TERMINATION = 2
+                self.ERROR = 'Ошибка подключения к Jump хосту({}): {}'.format(self.JUMP.name, e.value)
+                raise error.ErrorConnectionJump('Ошибка подключения к Jump хосту({}): {}'.format(self.JUMP.name, e.value))
             self.PARAMETERS.log.debug(
                 'self.jump: {}'.format(self.jump)
             )
@@ -112,6 +129,42 @@ class ConnectionModules(Modules):
             )
             self.HOST.ip = '127.0.0.1'
             self.HOST.tcp_port = self.jump.local_bind_port
+
+        if self.SERVICE:
+            services = [(i['remote_ip'], i['remote_port']) for i in self.SERVICE]
+            self.services = SSHTunnelForwarder(
+                (self.HOST.ip, self.HOST.tcp_port),
+                ssh_username=self.LOGIN,
+                ssh_password=self.PASSWORD,
+                remote_bind_addresses=services,
+                local_bind_addresses=[('127.0.0.1', ) for i in self.SERVICE]
+            )
+            try:
+                self.services.start()
+            except BaseSSHTunnelForwarderError as e:
+                self.PARAMETERS.log.warning(
+                    'Ошибка подключения сервисов: {}'.format(e.value)
+                )
+                return
+
+            self.PARAMETERS.log.debug(
+                'self.services: {}'.format(self.services)
+            )
+            self.PARAMETERS.log.info(
+                'Подключение сервисов к хосту: {}'.format(", ".join([i['name'] for i in self.SERVICE]))
+            )
+
+            for service in self.SERVICE:
+                ip, port = self.services.tunnel_bindings[(service['remote_ip'],service['remote_port'])]
+                self.TCP_FORWARD.append(
+                    {
+                        'connection_id': self.connection_id,
+                        'user_ip': self.PARAMETERS.ssh_client_ip,
+                        'local_port': service['local_port'],
+                        'forward_ip': ip,
+                        'forward_port': port
+                    }
+                )
         pass
 
     def close(self):
@@ -124,13 +177,21 @@ class ConnectionModules(Modules):
         )
         
         if self.JUMP and self.JUMP.id != self.HOST.id:
-            self.jump.stop()
+            if self.jump.is_active:
+                self.jump.stop()
+
+        if self.SERVICE:
+            if self.services and self.services.is_active:
+                self.services.stop()
+
+        self.firewall('close')
         
         with schema.db_edit(self.PARAMETERS.engine) as db:
             connection = db.query(schema.Connection).filter(schema.Connection.id == self.connection_id).one()
             connection.date_end = datetime.datetime.now()
             connection.status = 2
-            connection.termination = 0
+            connection.termination = self.TERMINATION,
+            connection.error = self.ERROR
             db.flush()
             db.refresh(connection)
         pass
@@ -140,12 +201,15 @@ class ConnectionModules(Modules):
         Инициирует логику подключения к удаленному хосту.
         :return: Возвращает код завершения
         """
-        self.firewall()
+        if not applib.tcp_forward_connection_is_active(self.PARAMETERS, self.TCP_FORWARD):
+            self.firewall('open')
         pass
 
-    def firewall(self):
+    def firewall(self, state):
         """
         Формирует правила сетевого экрана.
         :return: Возвращает код завершения
         """
+        if len(self.TCP_FORWARD) > 0:
+            applib.tcp_forward_connection(self.PARAMETERS, self.TCP_FORWARD, state)
         pass

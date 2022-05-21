@@ -27,6 +27,7 @@ from pyrmalib import parameters, interface, schema, applib, mail, template
 import sqlalchemy.orm
 from sqlalchemy import create_engine
 from pyrmalib.utils import *
+from pyrmalib.error import *
 import datetime
 
 __author__ = 'Sergey Utkin'
@@ -76,6 +77,7 @@ try:
 except AttributeError:
     ssh_client_ip = '127.0.0.1'
 
+appParameters.ssh_client_ip = ssh_client_ip
 
 if not applib.user_info(pw_name, engine):
     groups = [g.gr_name for g in grp.getgrall() if pw_name in g.gr_mem]
@@ -192,10 +194,12 @@ except KeyboardInterrupt:
     connection_host = None
 
 if connection_host:      # type: modules.ConnectionModules
-    connection_host.run()
     try:
+        connection_host.run()
         connection_host.connection()
     except KeyboardInterrupt:
+        pass
+    except ErrorConnectionJump:
         pass
     finally:
         connection_host.close()

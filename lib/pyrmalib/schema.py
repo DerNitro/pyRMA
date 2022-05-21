@@ -235,6 +235,7 @@ class Connection(Base):
         0 - Создание подключения
         1 - Подключен
         2 - Отключен
+        3 - Требуется отключить
     termination:
         0 - Нормальное завершение
         1 - Принудительное завершение
@@ -434,6 +435,28 @@ class PasswordList(Base):
         return "{0}".format(self.__dict__)
 
 
+class ForwardTCP(Base):
+    """
+    Таблица активных пробросов портов
+    state:
+        0 - Ожидает 
+        1 - Активно
+        2 - Завешено
+    """
+    __tablename__ = 'tcp_port_forward'
+
+    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
+    connection_id = sqlalchemy.Column(sqlalchemy.Integer)
+    user_ip = sqlalchemy.Column(sqlalchemy.String(20))
+    local_port = sqlalchemy.Column(sqlalchemy.Integer)
+    forward_ip = sqlalchemy.Column(sqlalchemy.String(20))
+    forward_port = sqlalchemy.Column(sqlalchemy.Integer)
+    state = sqlalchemy.Column(sqlalchemy.Integer)
+
+    def __repr__(self):
+        return "{0}".format(self.__dict__)
+
+
 if __name__ == '__main__':
     arg = argparse.ArgumentParser(
         epilog='schema.py (C) "Sergey Utkin" mailto:utkins01@gmail.com',
@@ -481,6 +504,7 @@ if __name__ == '__main__':
             ServiceType.__table__.create(bind=engine)
             Session.__table__.create(bind=engine)
             User.__table__.create(bind=engine)
+            ForwardTCP.__table__.create(bind=engine)
         except sqlalchemy.exc.ProgrammingError as e:
             if 'psycopg2.errors.DuplicateTable' in str(e):
                 print("The tables are already created!")

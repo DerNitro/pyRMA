@@ -567,7 +567,6 @@ def add_service(host_id):
     )
     admin = webParameters.user_info.admin
     error = None
-    status = None
 
     if edit_host_information or admin:
         form = forms.AddServiceHost()
@@ -587,13 +586,12 @@ def add_service(host_id):
             )
 
             if applib.add_service(webParameters, s):
-                status = 'Сервис добавлен'
+                return redirect(url_for('host', host_id=host_id))
 
         return render_template(
             siteMap['add_service'],
             form=form,
             error=error,
-            status=status,
             admin=admin,
             host_id=host_id,
             search=search_field,

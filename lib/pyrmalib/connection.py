@@ -25,7 +25,7 @@ import os
 import shlex
 import subprocess
 
-from pyrmalib import modules, dict, applib, parameters, schema
+from pyrmalib import modules, dict, applib, parameters, schema, access
 
 
 class SSH(modules.ConnectionModules):
@@ -40,7 +40,7 @@ class SSH(modules.ConnectionModules):
         self.CONNECTION_TYPE = dict.conn_type_dict['Connection']
 
         services = applib.get_service(self.PARAMETERS, host=self.HOST.id)
-        if len(services) > 0:
+        if len(services) > 0 and access.check_access(self.PARAMETERS, 'ConnectionService', h_object=self.HOST):
             self.SERVICE = []  # type: dict
             for service in services:
                 service_type = applib.get_service_type(self.PARAMETERS, service_type_id=service.type)
@@ -68,20 +68,19 @@ class SSH(modules.ConnectionModules):
         proc = subprocess.Popen(args)
         stdout, stderr = proc.communicate('through stdin to stdout')
         if proc.returncode > 0:
-            print("Error {0}: {1}; run command: {2}".format(proc.returncode, stderr, cmd))
+            self.TERMINATION = 2
+            self.ERROR = "Error {0}: {1}; run command: {2}".format(proc.returncode, stderr, cmd)
+            self.PARAMETERS.log.error(
+                self.ERROR,
+                pr=True
+            )
         if proc.returncode == 5:
-            print("Неверно указан пароль для подключения!!!")
-            if cmd == sshpass:
-                print('-----------------')
-                print('Введите пароль {login} к {host.name}({host.ip})'.format(host=self.HOST, login=self.LOGIN))
-                print('-----------------')
-                proc = subprocess.Popen(shlex.split(ssh.format(login=self.LOGIN, ip=self.HOST.ip, options=ssh_options)))
-                stdout, stderr = proc.communicate('through stdin to stdout')
-                if proc.returncode > 0:
-                    print("Error {0}: {1}; run command: {2}".format(proc.returncode, stderr, ssh))
-                if proc.returncode == 5:
-                    print("Неверно указан пароль для подключения!!!")
-        pass
+            self.TERMINATION = 2
+            self.ERROR = "Неверно указан пароль для подключения!!!"
+            self.PARAMETERS.log.error(
+                self.ERROR,
+                pr=True
+            )
 
 
 class SFTP(modules.ConnectionModules):
