@@ -33,3 +33,7 @@ log_level = {{ app_log_level }}
 ip = {{ app_web_ip }}
 port = {{ app_web_port }}
 template = {{ app_folder }}/web
+
+[Firewall]
+firewall_forward_table = pyrma_forward
+firewall_ipmi_table = pyrma_ipmi

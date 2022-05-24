@@ -1600,14 +1600,14 @@ def save_password(app_param: parameters.AppParameters, host_id, user, password):
 
 def tcp_forward_connection(app_param: parameters.AppParameters, rules: list, state):
     """
-    Добавляет записи
+    Добавляет/обновляет записи в таблицу проброса портов
     state:
         - open
         - close
     """
     map = {
-        'open': 0,
-        'close': 2
+        'open': 1,
+        'close': 0
     }
     for rule in rules:
         with schema.db_edit(app_param.engine) as db:
@@ -1619,6 +1619,7 @@ def tcp_forward_connection(app_param: parameters.AppParameters, rules: list, sta
                     schema.ForwardTCP.forward_ip == rule['forward_ip'],
                     schema.ForwardTCP.forward_port == rule['forward_port'],
                 ).one()
+                ftcp.state = map[state]
             except sqlalchemy.orm.exc.NoResultFound:
                 ftcp = None
                 db.add(
@@ -1631,9 +1632,29 @@ def tcp_forward_connection(app_param: parameters.AppParameters, rules: list, sta
                         state = map[state]
                     )
                 )
-            if ftcp and ftcp.state != 1:
-                ftcp.state = map[state]
             db.flush()
+    return True
+
+
+def get_tcp_forward_connection(app_param: parameters.AppParameters) -> List[schema.ForwardTCP]:
+    """
+    Список активных пробросов портов
+    """
+    result = []
+    with schema.db_select(app_param.engine) as db:
+        result = db.query(schema.ForwardTCP).all()
+
+    return result
+
+
+def del_tcp_forward_connection(app_param: parameters.AppParameters, record: schema.ForwardTCP):
+    """
+    Удаление записи из таблицы
+    """
+    with schema.db_edit(app_param.engine) as db:
+        db.query(schema.ForwardTCP).filter(schema.ForwardTCP.id == record.id).delete()
+        db.flush()
+
     return True
 
 

@@ -18,3 +18,21 @@
     state: absent
     regexp: '^session    optional     pam_motd.so'
     backup: true
+
+- name: Set ip forwarding
+  become: true
+  ansible.posix.sysctl:
+    name: net.ipv4.ip_forward
+    value: '1'
+    sysctl_set: yes
+    state: present
+    reload: yes
+
+- name: Set route to localnet
+  become: true
+  ansible.posix.sysctl:
+    name: net.ipv4.conf.all.route_localnet
+    value: '1'
+    sysctl_set: yes
+    state: present
+    reload: yes

@@ -8,3 +8,4 @@ psutil==5.9.0
 email_validator==1.2.1
 python-pam==2.0.2
 sshtunnel==0.4.0
+python-iptables==1.0.0
