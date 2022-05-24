@@ -10,13 +10,6 @@
 
 {% block content %}
 <hr>
-{% if status %}
-<div class="addServiceStatus">
-    {{ status }}
-    <br>
-    <a href="/host/{{ host_id }}">Назад</a>
-</div>
-{% else %}
 <div class="addServiceForm">
     <h3>Добавить Хост</h3>
     <form action="/host/{{ host_id }}/add_service" method="POST" name="add_service">
@@ -47,7 +40,6 @@
         </p>
     </form>
 </div>
-{% endif %}
 {% if error %}
 <div class="addServiceError">
     <h3>{{ error }}</h3>

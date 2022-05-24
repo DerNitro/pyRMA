@@ -7,6 +7,7 @@
       - python3-pip
       - python3-psycopg2
       - acl                           # https://github.com/georchestra/ansible/issues/55#issuecomment-651043423
+      - mc                            # TODO: deleted
     update_cache: yes
     cache_valid_time: 3600
 
@@ -17,3 +18,21 @@
     state: absent
     regexp: '^session    optional     pam_motd.so'
     backup: true
+
+- name: Set ip forwarding
+  become: true
+  ansible.posix.sysctl:
+    name: net.ipv4.ip_forward
+    value: '1'
+    sysctl_set: yes
+    state: present
+    reload: yes
+
+- name: Set route to localnet
+  become: true
+  ansible.posix.sysctl:
+    name: net.ipv4.conf.all.route_localnet
+    value: '1'
+    sysctl_set: yes
+    state: present
+    reload: yes

@@ -1598,6 +1598,87 @@ def save_password(app_param: parameters.AppParameters, host_id, user, password):
         db.flush()
 
 
+def tcp_forward_connection(app_param: parameters.AppParameters, rules: list, state):
+    """
+    Добавляет/обновляет записи в таблицу проброса портов
+    state:
+        - open
+        - close
+    """
+    map = {
+        'open': 1,
+        'close': 0
+    }
+    for rule in rules:
+        with schema.db_edit(app_param.engine) as db:
+            try:
+                ftcp = db.query(schema.ForwardTCP).filter(
+                    schema.ForwardTCP.connection_id == rule['connection_id'],
+                    schema.ForwardTCP.user_ip == rule['user_ip'],
+                    schema.ForwardTCP.local_port == rule['local_port'],
+                    schema.ForwardTCP.forward_ip == rule['forward_ip'],
+                    schema.ForwardTCP.forward_port == rule['forward_port'],
+                ).one()
+                ftcp.state = map[state]
+            except sqlalchemy.orm.exc.NoResultFound:
+                ftcp = None
+                db.add(
+                    schema.ForwardTCP(
+                        connection_id = rule['connection_id'],
+                        user_ip = rule['user_ip'],
+                        local_port = rule['local_port'],
+                        forward_ip = rule['forward_ip'],
+                        forward_port = rule['forward_port'],
+                        state = map[state]
+                    )
+                )
+            db.flush()
+    return True
+
+
+def get_tcp_forward_connection(app_param: parameters.AppParameters) -> List[schema.ForwardTCP]:
+    """
+    Список активных пробросов портов
+    """
+    result = []
+    with schema.db_select(app_param.engine) as db:
+        result = db.query(schema.ForwardTCP).all()
+
+    return result
+
+
+def del_tcp_forward_connection(app_param: parameters.AppParameters, record: schema.ForwardTCP):
+    """
+    Удаление записи из таблицы
+    """
+    with schema.db_edit(app_param.engine) as db:
+        db.query(schema.ForwardTCP).filter(schema.ForwardTCP.id == record.id).delete()
+        db.flush()
+
+    return True
+
+
+def tcp_forward_connection_is_active(app_param: parameters.AppParameters, rules: list) -> bool:
+    """
+    Проверка активных соединений
+    """
+    for rule in rules:
+        with schema.db_edit(app_param.engine) as db:
+            try:
+                ftcp = db.query(schema.ForwardTCP).filter(
+                    schema.ForwardTCP.connection_id == rule['connection_id'],
+                    schema.ForwardTCP.user_ip == rule['user_ip'],
+                    schema.ForwardTCP.local_port == rule['local_port'],
+                    schema.ForwardTCP.forward_ip == rule['forward_ip'],
+                    schema.ForwardTCP.forward_port == rule['forward_port'],
+                ).one()
+            except sqlalchemy.orm.exc.NoResultFound:
+                return False
+        if ftcp.state != 1:
+            return False
+    return True
+
+
 if __name__ == '__main__':
     e = create_engine('{0}://{1}:{2}@{3}:{4}/{5}'.format('postgresql',
                                                          'acs',

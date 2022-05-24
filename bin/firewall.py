@@ -21,26 +21,17 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 """
-import datetime
-import os
-import socket
-
-from pyrmalib import parameters
+from pyrmalib import parameters, applib
 import sys
 import traceback
 import signal
 import time
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, table
 import iptc
 
 __version__ = 0.1
 
 interrupted = False
-firewall_filter_table = 'pyrma_input'
-firewall_forward_table = 'pyrma_forward'
-firewall_ipmi = 'pyrma_ipmi'
-
-SOCKET_FILE = '/var/run/pyrma/firewall.socket'
 
 
 def handle_sig_term(signum, frame):
@@ -51,28 +42,52 @@ def handle_sig_term(signum, frame):
 
 
 def app_exit(code):
-    appParameters.log.info('Завершение приложения')
+    appParameters.log.info('Завершение работы приложения')
     sys.exit(code)
 
 
-def socket_run():
-    if os.path.exists(SOCKET_FILE):
-        os.remove(SOCKET_FILE)
-
-    server = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
-    server.bind(SOCKET_FILE)
-
-    while True:
-        datagram = server.recv(1024)
-        if not datagram:
-            break
-        else:
-            print("-" * 20)
-        print(datagram)
+def connection(param: parameters.FirewallParameters):
+    pass
 
 
-def check_connection():
-    print('{date} - check connection'.format(date=datetime.datetime.now()))
+def tcp_forward(param: parameters.FirewallParameters):
+    tcp_forwards = applib.get_tcp_forward_connection(param)
+    for tcp_forward in tcp_forwards:
+        rule = iptc.Rule()
+        rule.protocol = "tcp"
+        rule.src = "{user_ip}/255.255.255.255".format(user_ip=tcp_forward.user_ip)
+        match = rule.create_match("tcp")
+        match.dport = str(tcp_forward.local_port)
+        comment = rule.create_match("comment")
+        comment.comment = "\"Connection id: {id}\"".format(id=tcp_forward.connection_id)
+        target = iptc.Target(rule, "DNAT")
+        target.to_destination = "{ip}:{port}".format(ip=tcp_forward.forward_ip, port=tcp_forward.forward_port)
+        rule.target = target
+        
+        if tcp_forward.state == 0:
+            if rule not in iptc.Chain(iptc.Table(iptc.Table.NAT), appParameters.firewall_forward_table).rules:
+                applib.del_tcp_forward_connection(param, tcp_forward)
+                appParameters.log.info(
+                    'deleted record {tcp_forward.connection_id}: {tcp_forward.user_ip}:{tcp_forward.local_port}'.format(
+                        tcp_forward=tcp_forward
+                    )
+                )
+            else:
+                iptc.Chain(iptc.Table(iptc.Table.NAT), appParameters.firewall_forward_table).delete_rule(rule)
+                appParameters.log.info(
+                    'deleted forward {tcp_forward.connection_id}: {tcp_forward.user_ip}:{tcp_forward.local_port}'.format(
+                        tcp_forward=tcp_forward
+                    )
+                )
+        elif tcp_forward.state == 1:
+            if rule not in iptc.Chain(iptc.Table(iptc.Table.NAT), appParameters.firewall_forward_table).rules:
+                iptc.Chain(iptc.Table(iptc.Table.NAT), appParameters.firewall_forward_table).append_rule(rule)
+                appParameters.log.info(
+                    'append rule {tcp_forward.connection_id}: {tcp_forward.user_ip}:{tcp_forward.local_port}'.format(
+                        tcp_forward=tcp_forward
+                    )
+                )
+
     pass
 
 
@@ -109,27 +124,47 @@ else:
 
 appParameters.engine = engine
 
-
-if not os.path.exists('/var/run/pyrma/'):
-    os.mkdir('/var/run/pyrma/')
-
-socket_run()
-
-table_filter = iptc.Table(iptc.Table.FILTER)
-table_nat = iptc.Table(iptc.Table.NAT)
-
 # создание цепочек.
-if firewall_filter_table not in table_filter.chains:
-    table_filter.create_chain(firewall_filter_table)
-    appParameters.log.info('Create chains {} in table Filter.'.format(firewall_filter_table))
+if not iptc.Table(iptc.Table.NAT).is_chain(appParameters.firewall_forward_table):
+    iptc.Table(iptc.Table.NAT).create_chain(appParameters.firewall_forward_table)
+    appParameters.log.info('Create chains {} in table NAT.'.format(appParameters.firewall_forward_table))
+else:
+    iptc.Chain(iptc.Table(iptc.Table.NAT), appParameters.firewall_forward_table).flush()
 
-if firewall_forward_table not in table_nat.chains:
-    table_nat.create_chain(firewall_filter_table)
-    appParameters.log.info('Create chains {} in table NAT.'.format(firewall_forward_table))
+if not iptc.Table(iptc.Table.NAT).is_chain(appParameters.firewall_ipmi_table):
+    iptc.Table(iptc.Table.NAT).create_chain(appParameters.firewall_ipmi_table)
+    appParameters.log.info('Create chains {} in table NAT.'.format(appParameters.firewall_ipmi_table))
+else:
+    iptc.Chain(iptc.Table(iptc.Table.NAT), appParameters.firewall_ipmi_table).flush()
+
+for chain in iptc.Table(iptc.Table.NAT).chains:
+    forward = False
+    ipmi = False
+    if chain.name == 'PREROUTING':
+        for rule in chain.rules:
+            if rule.target.name == appParameters.firewall_forward_table:
+                forward = True
+            if rule.target.name == appParameters.firewall_ipmi_table:
+                ipmi = True
+
+        if not forward:
+            rule = iptc.Rule()
+            target = iptc.Target(rule, appParameters.firewall_forward_table)
+            rule.target = target
+            chain.insert_rule(rule)
+            appParameters.log.info('Added rule: -A PREROUTING -j {}'.format(appParameters.firewall_forward_table))
+
+        if not ipmi:
+            rule = iptc.Rule()
+            target = iptc.Target(rule, appParameters.firewall_ipmi_table)
+            rule.target = target
+            chain.insert_rule(rule)
+            appParameters.log.info('Added rule: -A PREROUTING -j {}'.format(appParameters.firewall_ipmi_table))
 
 
 while True:
-    check_connection()
-    time.sleep(1)
+    tcp_forward(appParameters)
+    connection(appParameters)
+    time.sleep(0.5)
     if interrupted:
         app_exit(0)

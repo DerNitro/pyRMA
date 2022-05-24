@@ -27,6 +27,7 @@
       - email_validator==1.2.1
       - python-pam==2.0.2
       - sshtunnel==0.4.0
+      - python-iptables==1.0.0
 
 - name: Create local group {{ app_group }}
   become: true
@@ -74,6 +75,7 @@
     - ttyrec
     - ttytime
     - web.py
+    - firewall.py
   notify: Restart pyrma-web.service
 
 - name: Copy data files
@@ -165,6 +167,8 @@
     group: root
     mode: '0644'
   notify: Restart pyrma-web.service
+
+  # TODO: Добавить сервис firewall
 
 - name: Flush handlers
   meta: flush_handlers
