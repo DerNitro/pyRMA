@@ -28,6 +28,11 @@
         {% endif %}
         <li class="menu" style="float:right"><a href="/logout">Выход</a></li>
         {% if Admin %}
+            {% if Active == "connection" %}
+            <li class="menu"><a class="active" href="/connection">Подключения</a></li>
+            {% else %}
+            <li class="menu"><a href="/connection">Подключения</a></li>
+            {% endif %}
             {% if Active == "administrate" %}
                 <li class="menu" style="float:right"><a class="active" href="/administrate">Администрирование</a></li>
             {% else %}

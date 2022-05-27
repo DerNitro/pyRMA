@@ -232,7 +232,6 @@ class Connection(Base):
     """
     Список подключений
     status:
-        0 - Создание подключения
         1 - Подключен
         2 - Отключен
         3 - Требуется отключить
@@ -311,26 +310,6 @@ class Prefix(Base):
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
     name = sqlalchemy.Column(sqlalchemy.String, nullable=False, unique=True)
     note = sqlalchemy.Column(sqlalchemy.String)
-
-    def __repr__(self):
-        return "{0}".format(self.__dict__)
-
-
-class RestorePassword(Base):
-    """
-    Таблица запросов восстановления паролей.
-    status:
-    0 - Отклонен
-    1 - Запрос смены пароля
-    2 - Запрос выполнен
-    """
-    __tablename__ = 'restore_password'
-    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
-    user = sqlalchemy.Column(sqlalchemy.Integer, nullable=False, primary_key=True)
-    status = sqlalchemy.Column(sqlalchemy.Integer)
-    date = sqlalchemy.Column(sqlalchemy.DateTime)
-    date_complete = sqlalchemy.Column(sqlalchemy.DateTime)
-    key = sqlalchemy.Column(sqlalchemy.String)
 
     def __repr__(self):
         return "{0}".format(self.__dict__)
@@ -498,7 +477,6 @@ if __name__ == '__main__':
             Permission.__table__.create(bind=engine)
             Prefix.__table__.create(bind=engine)
             RequestAccess.__table__.create(bind=engine)
-            RestorePassword.__table__.create(bind=engine)
             JumpHost.__table__.create(bind=engine)
             Service.__table__.create(bind=engine)
             ServiceType.__table__.create(bind=engine)

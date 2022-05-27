@@ -196,7 +196,7 @@ li.host_edit a:hover:not(.active) {
 }
 
 ul.statusPanel {
-    list-style-type = none;
+    list-style-type: none;
     overflow: hidden;
     margin: 0;
     padding: 4px;

@@ -46,12 +46,27 @@
     {% endif %}
     <div class="currentConnection">
         <h3><a href="connection">Текущие подключения</a></h3>
-        <ul>
+        <table border="1" width="95%">
+            <th></th>
+            <th>User Name</th>
+            <th>Host</th>
+            <th>Date Start</th>
+            <th>Protocol</th>
             {% for i in content['connection'] %}
-            <li>
-                {{ i }}
-            </li>
+            {% if i['connection'].termination == 2 %} <tr bgcolor="#ff807a"> {% else %} <tr> {% endif %}
+                <td align=center><a href="connection/{{ i['connection'].id }}">
+                    <img
+                            src="{{ url_for('static', filename='icon/eye.png') }}"
+                            alt="View"
+                            height="15px"
+                    >
+                </a></td>
+                <td><a href="/administrate/user/{{ i['user'].uid }}"> {{ i['user'].full_name }}</a></td>
+                <td><a href="/host/{{ i['host'].id }}"> {{ i['host'].name }}</a></td>
+                <td>{{ i['connection'].date_start }}</td>
+                <td align=center>{{ i['connection_type'].name }}</td>
+            </tr>
             {% endfor %}
-        </ul>
+        </table>
     </div>
 {% endmacro %}

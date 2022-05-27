@@ -133,4 +133,43 @@
         {% endfor %}
     {% endif %}
 </div>
+<hr>
+<h3>Подключения</h3>
+<form action="/host/{{ content['id'] }}" method="POST" name="change_date">
+    {{ connection_filter.csrf_token }}
+    <p>
+        {{ connection_filter.date() }} {{ connection_filter.sub() }}
+    </p>
+</form>
+<table border="1" width="95%">
+    <th></th>
+    <th>Пользователь</th>
+    <th>Протокол</th>
+    <th>Статус</th>
+    <th>Завершение</th>
+    <th>Дата Начала</th>
+    <th>Дата завершения</th>
+    <th>Ошибка</th>
+    {% for i in content['connection'] %}
+    {% if i['connection'].termination == 2 %} <tr bgcolor="#ff807a"> {% else %} <tr> {% endif %}
+        <td align=center><a href="/connection/{{ i['connection'].id }}">
+            <img
+                    src="{{ url_for('static', filename='icon/eye.png') }}"
+                    alt="View"
+                    height="15px"
+            >
+        </a></td>
+        <td><a href="/administrate/user/{{ i['user'].uid }}"> {{ i['user'].full_name }}</a></td>
+        <td align=center>{{ i['connection_type'].name }}</td>
+        {% if i['connection'].status == 1 %}<td>Подключен</td>{% endif %}
+        {% if i['connection'].status == 2 %}<td>Отключен</td>{% endif %}
+        {% if i['connection'].termination == 0 %}<td>Нормальное завершение</td>{% endif %}
+        {% if i['connection'].termination == 1 %}<td>Принудительное завершение</td>{% endif %}
+        {% if i['connection'].termination == 2 %}<td>Ошибка</td>{% endif %}
+        <td>{{i['connection'].date_start}}</td>
+        <td>{{i['connection'].date_end}}</td>
+        <td>{{i['connection'].error}}</td>
+    </tr>
+    {% endfor %}
+</table>
 {% endblock %}

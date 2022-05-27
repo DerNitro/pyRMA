@@ -74,7 +74,7 @@ class ConnectionModules(Modules):
             'Подключение {name} к хосту {host.name}({host.ip})'.format(name=self.NAME, host=self.HOST)
         )
         connection = schema.Connection(
-            status=0,
+            status=1,
             user=self.PARAMETERS.user_info.uid,
             host=self.HOST.id,
             connection_type=self.CONNECTION_TYPE,
