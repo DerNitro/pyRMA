@@ -208,3 +208,7 @@ class Access(FlaskForm):
     file_transfer = BooleanField('Передача файлов')
     ipmi = BooleanField('IPMI')
     sub = SubmitField('OK')
+
+class ConnectionFilter(FlaskForm):
+    date = DateField(format='%Y-%m-%d', validators=[DataRequired()])
+    sub = SubmitField('Ок')

@@ -1,20 +1,21 @@
 #!/bin/bash
 
-export SHELL=/bin/bash
-export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
+export LC_ALL=$(locale -a|grep -ix 'c.utf-\?8' || echo C)
+export SHELL=/bin/bash 
+export TERM=linux
 
 umask 0002
 
-TTYREC={{ app_folder }}/bin/ttyrec
+TTYREC=/usr/bin/asciinema
 
 data_dir={{ app_data_dir }}
 file_rec=$(id -u)_$(date +%Y-%m-%d_%H:%M:%S.%s)
-file_path=$data_dir/filerecords/$(date +%Y/%m/%d)
+file_path=filerecords/$(date +%Y/%m/%d)
 
 export file_rec file_path
 
-mkdir -p "$file_path"
+mkdir -p "$data_dir"/"$file_path"
 
-$TTYREC -e "/usr/bin/python3 {{ app_folder }}/bin/pyrma.py" "$file_path"/"$file_rec"
+$TTYREC rec -c "/usr/bin/python3 {{ app_folder }}/bin/pyrma.py" "$data_dir"/"$file_path"/"$file_rec"
 
 exit 0

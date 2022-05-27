@@ -14,7 +14,6 @@
    limitations under the License.
 """
 
-import sqlalchemy.orm
 from pyrmalib import applib, schema, parameters, access
 import smtplib
 from email.mime.multipart import MIMEMultipart
@@ -32,6 +31,7 @@ class Mail:
         self.port = param.email['port']
         self.type = param.email['type']
         self.mail_from = param.email['from']
+        self.log = param.log
 
 
     def send(self, template, data):
@@ -46,23 +46,35 @@ class Mail:
             s = smtplib.SMTP(host=self.host, port=self.port)
             s.sendmail(self.mail_from, self.mail_to, msg.as_string())
             s.quit()
-        except smtplib.SMTPServerDisconnected:
+        except smtplib.SMTPServerDisconnected as e:
+            self.log.warning(e)
             return False
-        except smtplib.SMTPSenderRefused:
+        except smtplib.SMTPSenderRefused as e:
+            self.log.warning(e)
             return False
-        except smtplib.SMTPDataError:
+        except smtplib.SMTPDataError as e:
+            self.log.warning(e)
             return False
-        except smtplib.SMTPConnectError:
+        except smtplib.SMTPConnectError as e:
+            self.log.warning(e)
             return False
-        except smtplib.SMTPAuthenticationError:
+        except smtplib.SMTPAuthenticationError as e:
+            self.log.warning(e)
             return False
-        except smtplib.SMTPHeloError:
+        except smtplib.SMTPHeloError as e:
+            self.log.warning(e)
             return False
-        except smtplib.SMTPResponseException:
+        except smtplib.SMTPResponseException as e:
+            self.log.warning(e)
             return False
-        except smtplib.SMTPRecipientsRefused:
+        except smtplib.SMTPRecipientsRefused as e:
+            self.log.warning(e)
             return False
-        except smtplib.SMTPNotSupportedError:
+        except smtplib.SMTPNotSupportedError as e:
+            self.log.warning(e)
+            return False
+        except OSError as e:
+            self.log.warning(e)
             return False
         return True
 

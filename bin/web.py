@@ -20,7 +20,7 @@
 import datetime
 import json
 
-from flask import Flask, render_template, request, redirect, session, url_for
+from flask import Flask, render_template, request, redirect, session, url_for, send_from_directory
 from flask_wtf.csrf import CSRFProtect
 from pyrmalib import schema, parameters, applib, access, forms, error as rma_error
 import os
@@ -70,6 +70,8 @@ print(webParameters.log.handler)
 
 siteMap = {
     'index': 'index.html',
+    'connection': 'connection.html',
+    'connections': 'connections.html',
     '404': '404.html',
     'error': 'error.html',
     'access_denied': 'access_denied.html',
@@ -122,6 +124,59 @@ def root():
     )
 
 
+@app.route('/connection', methods=['GET', 'POST'])
+@applib.authorization(session, request, webParameters)
+def connections():
+    search_field = forms.Search()
+    filter_field = forms.ConnectionFilter()
+
+    if not webParameters.user_info.admin:
+        return render_template(siteMap['access_denied'])
+
+    if request.method == 'POST' and filter_field.validate_on_submit():
+        message = "Подключения за {}".format(filter_field.date.data)
+        connection = applib.get_connections(webParameters,date=filter_field.date.data)
+    else:
+        message = 'Подключения за последние сутки'
+        connection = applib.get_connections(webParameters)
+
+    return render_template(
+        siteMap['connections'],
+        admin=webParameters.user_info.admin,
+        search=search_field,
+        username=webParameters.user_info.login,
+        connections=connection,
+        message=message,
+        filter_field=filter_field
+    )
+
+
+@app.route('/ttyrec/<path:path>')
+@applib.authorization(session, request, webParameters)
+def ttyrec(path):
+    return send_from_directory(webParameters.data_dir, path)
+
+
+@app.route('/connection/<connection_id>', methods=['GET'])
+@applib.authorization(session, request, webParameters)
+def connection(connection_id=None):
+    search_field = forms.Search()
+
+    content = applib.get_connection(webParameters, connection_id)
+
+    if not webParameters.user_info.admin \
+        and not applib.access.check_access(webParameters, 'ShowAllSession', h_object=content['host']):
+        return render_template(siteMap['access_denied'])
+
+    return render_template(
+        siteMap['connection'],
+        admin=webParameters.user_info.admin,
+        search=search_field,
+        username=webParameters.user_info.login,
+        content=content
+    )
+
+
 @app.route('/search', methods=['POST'])
 @applib.authorization(session, request, webParameters)
 def search():
@@ -165,6 +220,9 @@ def logout():
 @app.route('/administrate/logs', methods=['GET', 'POST'])
 @applib.authorization(session, request, webParameters)
 def logs(date=None):
+    if not webParameters.user_info.admin:
+        return render_template(siteMap['access_denied'])
+    
     search_field = forms.Search()
     form = forms.ShowLog()
     form.user.choices = [(0, "Все")]
@@ -282,7 +340,7 @@ def add_folder(directory_id):
 
         if not error:
             if applib.add_folder(webParameters, folder):
-                status = 'Директория добавлена'
+                return redirect(url_for('hosts', directory_id=directory_id))
             else:
                 status = 'Ошибка создания директории'
 
@@ -330,7 +388,7 @@ def edit_folder(directory_id):
 
         if not error:
             if applib.edit_folder(webParameters, folder, directory_id):
-                status = 'Директория отредактирована'
+                return redirect(url_for('hosts', directory_id=directory_id))
             else:
                 status = 'Ошибка редактирования директории'
 
@@ -466,7 +524,7 @@ def edit_host(host_id):
 
     elif request.method == 'POST' and form.delete_sub.data:
         applib.delete_host(webParameters, host_id)
-        status = "Хост удален"
+        return redirect(url_for('hosts', directory_id=h.parent))
 
     return render_template(
         siteMap['edit_host'],
@@ -496,7 +554,7 @@ def host(host_id):
     
     if request.method == 'POST' and jump_form.clear_sub.data:
         applib.clear_jump(webParameters, host_id)
-    
+
     if applib.get_jump_hosts(webParameters):
         jump_form.jump.choices = applib.get_jump_hosts(webParameters)
     else:
@@ -507,6 +565,11 @@ def host(host_id):
     
     search_field = forms.Search()
     group_form = forms.AddHostGroup()
+    connection_filter = forms.ConnectionFilter()
+
+    cdate = None
+    if request.method == 'POST' and connection_filter.validate_on_submit():
+        cdate = connection_filter.date.data
     
     if applib.get_group_host(webParameters):
         group_form.name.choices = [(t.id, t.name) for t in applib.get_group_host(webParameters)]
@@ -514,7 +577,7 @@ def host(host_id):
         group_form = False
     
     object_host = applib.get_host(webParameters, host_id=host_id)
-    content_host = applib.get_content_host(webParameters, host_id)
+    content_host = applib.get_content_host(webParameters, host_id, connection_date=cdate)
     show_host_info = access.check_access(webParameters, 'ShowHostInformation', h_object=object_host)
     admin = webParameters.user_info.admin
     if show_host_info or admin:
@@ -531,6 +594,7 @@ def host(host_id):
             jump_form=jump_form,
             group_form=group_form,
             search=search_field,
+            connection_filter=connection_filter,
             username=webParameters.user_info.login
         )
     else:
@@ -604,6 +668,9 @@ def add_service(host_id):
 @app.route('/administrate')
 @applib.authorization(session, request, webParameters)
 def administrate():
+    if not webParameters.user_info.admin:
+        return render_template(siteMap['access_denied'])
+
     search_field = forms.Search()
     return render_template(
         siteMap['administrate'],
@@ -616,6 +683,9 @@ def administrate():
 @app.route('/administrate/service', methods=['GET'])
 @applib.authorization(session, request, webParameters)
 def administrate_service():
+    if not webParameters.user_info.admin:
+        return render_template(siteMap['access_denied'])
+    
     search_field = forms.Search()
     form_add_service = forms.AddService()
     service = applib.get_service_type(webParameters, raw=True)
@@ -631,6 +701,9 @@ def administrate_service():
 @app.route('/administrate/prefix', methods=['GET'])
 @applib.authorization(session, request, webParameters)
 def administrate_prefix():
+    if not webParameters.user_info.admin:
+        return render_template(siteMap['access_denied'])
+    
     search_field = forms.Search()
     form_add_prefix = forms.AddPrefix()
     prefix = applib.get_prefix(webParameters)
@@ -647,6 +720,9 @@ def administrate_prefix():
 @app.route('/administrate/ipmi', methods=['GET'])
 @applib.authorization(session, request, webParameters)
 def administrate_ipmi():
+    if not webParameters.user_info.admin:
+        return render_template(siteMap['access_denied'])
+
     search_field = forms.Search()
     form_add_ipmi = forms.IPMI()
     ipmi = applib.get_ilo_type(webParameters, raw=True)
@@ -663,6 +739,9 @@ def administrate_ipmi():
 @app.route('/administrate/add/ipmi', methods=['GET', 'POST'])
 @applib.authorization(session, request, webParameters)
 def administrate_ipmi_add():
+    if not webParameters.user_info.admin:
+        return render_template(siteMap['access_denied'])
+    
     form_add_ipmi = forms.IPMI()
     if request.method == 'POST' and form_add_ipmi.validate_on_submit():
         applib.add_ipmi(
@@ -677,6 +756,9 @@ def administrate_ipmi_add():
 @app.route('/administrate/add/prefix', methods=['GET', 'POST'])
 @applib.authorization(session, request, webParameters)
 def administrate_prefix_add():
+    if not webParameters.user_info.admin:
+        return render_template(siteMap['access_denied'])
+
     form_add_prefix = forms.AddPrefix()
     if request.method == 'POST' and form_add_prefix.validate_on_submit():
         applib.add_prefix(
@@ -690,6 +772,8 @@ def administrate_prefix_add():
 @app.route('/administrate/add/service', methods=['GET', 'POST'])
 @applib.authorization(session, request, webParameters)
 def administrate_service_add():
+    if not webParameters.user_info.admin:
+        return render_template(siteMap['access_denied'])
     form_add_service = forms.AddService()
     if request.method == 'POST' and form_add_service.validate_on_submit():
         applib.add_service_type(
@@ -704,6 +788,9 @@ def administrate_service_add():
 @app.route('/administrate/delete/ipmi/<ipmi_id>', methods=['GET', 'POST'])
 @applib.authorization(session, request, webParameters)
 def administrate_ipmi_delete(ipmi_id):
+    if not webParameters.user_info.admin:
+        return render_template(siteMap['access_denied'])
+
     del_button = forms.DelButton()
     search_field = forms.Search()
     ipmi = applib.get_ilo_type(webParameters, ipmi_id=ipmi_id, raw=True)
@@ -723,6 +810,9 @@ def administrate_ipmi_delete(ipmi_id):
 @app.route('/administrate/delete/prefix/<prefix_id>', methods=['GET', 'POST'])
 @applib.authorization(session, request, webParameters)
 def administrate_prefix_delete(prefix_id):
+    if not webParameters.user_info.admin:
+        return render_template(siteMap['access_denied'])
+
     prefix = applib.get_prefix(webParameters, prefix_id=prefix_id)
     del_button = forms.DelButton()
     search_field = forms.Search()
@@ -742,6 +832,9 @@ def administrate_prefix_delete(prefix_id):
 @app.route('/administrate/delete/service/<service_id>', methods=['GET', 'POST'])
 @applib.authorization(session, request, webParameters)
 def administrate_service_delete(service_id):
+    if not webParameters.user_info.admin:
+        return render_template(siteMap['access_denied'])
+
     service = applib.get_service_type(webParameters, service_type_id=service_id)
     del_button = forms.DelButton()
     search_field = forms.Search()
@@ -761,6 +854,9 @@ def administrate_service_delete(service_id):
 @app.route('/administrate/change/ipmi/<ipmi_id>', methods=['GET', 'POST'])
 @applib.authorization(session, request, webParameters)
 def administrate_ipmi_change(ipmi_id):
+    if not webParameters.user_info.admin:
+        return render_template(siteMap['access_denied'])
+
     search_field = forms.Search()
     ipmi = applib.get_ilo_type(webParameters, ipmi_id=ipmi_id, raw=True)
     form = forms.IPMI()
@@ -789,6 +885,9 @@ def administrate_ipmi_change(ipmi_id):
 @app.route('/administrate/access', methods=['GET', 'POST'])
 @applib.authorization(session, request, webParameters)
 def administrate_access():
+    if not webParameters.user_info.admin:
+        return render_template(siteMap['access_denied'])
+    
     search_field = forms.Search()
     if not applib.get_group_user(webParameters):
         return render_template(siteMap['error'], error="Не созданы группы пользователей!!!")
@@ -826,6 +925,9 @@ def administrate_access():
 @app.route('/administrate/access/delete/<aid>')
 @applib.authorization(session, request, webParameters)
 def administrate_access_delete(aid):
+    if not webParameters.user_info.admin:
+        return render_template(siteMap['access_denied'])
+    
     applib.del_access(webParameters, aid)
     return redirect(request.referrer)
 
@@ -833,6 +935,9 @@ def administrate_access_delete(aid):
 @app.route('/administrate/group', methods=['GET', 'POST'])
 @applib.authorization(session, request, webParameters)
 def administrate_group():
+    if not webParameters.user_info.admin:
+        return render_template(siteMap['access_denied'])
+
     search_field = forms.Search()
     form = forms.AddGroup()
     if request.method == 'POST' and form.validate_on_submit():
@@ -856,6 +961,9 @@ def administrate_group():
 @app.route('/administrate/group/<group_id>', methods=['GET', 'POST'])
 @applib.authorization(session, request, webParameters)
 def administrate_group_show(group_id):
+    if not webParameters.user_info.admin:
+        return render_template(siteMap['access_denied'])
+    
     search_field = forms.Search()
     form = forms.ChangePermission()
     if request.method == 'POST' and form.edit_sub.data:
@@ -905,6 +1013,9 @@ def administrate_group_show(group_id):
 @app.route('/administrate/group/<group_id>/delete', methods=['GET', 'POST'])
 @applib.authorization(session, request, webParameters)
 def administrate_group_delete(group_id):
+    if not webParameters.user_info.admin:
+        return render_template(siteMap['access_denied'])
+    
     search_field = forms.Search()
     del_button = forms.DelButton()
     if request.method == 'POST' and del_button.validate_on_submit():
@@ -923,6 +1034,9 @@ def administrate_group_delete(group_id):
 @app.route('/administrate/users')
 @applib.authorization(session, request, webParameters)
 def administrate_users():
+    if not webParameters.user_info.admin:
+        return render_template(siteMap['access_denied'])
+
     search_field = forms.Search()
     content = applib.get_users(webParameters)
     return render_template(
@@ -938,6 +1052,9 @@ def administrate_users():
 @app.route('/administrate/user/<uid>/enable')
 @applib.authorization(session, request, webParameters)
 def administrate_user_enable(uid):
+    if not webParameters.user_info.admin:
+        return render_template(siteMap['access_denied'])
+    
     if webParameters.user_info.admin:
         applib.user_disable(webParameters, uid, enable=True)
     return redirect(request.referrer)
@@ -946,6 +1063,9 @@ def administrate_user_enable(uid):
 @app.route('/administrate/user/<uid>/disable')
 @applib.authorization(session, request, webParameters)
 def administrate_user_disable(uid):
+    if not webParameters.user_info.admin:
+        return render_template(siteMap['access_denied'])
+    
     if webParameters.user_info.admin:
         applib.user_disable(webParameters, uid, disable=True)
     return redirect(request.referrer)
@@ -954,6 +1074,9 @@ def administrate_user_disable(uid):
 @app.route('/administrate/user/<uid>/enable_admin')
 @applib.authorization(session, request, webParameters)
 def administrate_user_enable_admin(uid):
+    if not webParameters.user_info.admin:
+        return render_template(siteMap['access_denied'])
+    
     if webParameters.user_info.admin:
         applib.user_admin_disable(webParameters, uid, enable=True)
     return redirect(request.referrer)
@@ -962,6 +1085,9 @@ def administrate_user_enable_admin(uid):
 @app.route('/administrate/user/<uid>/disable_admin')
 @applib.authorization(session, request, webParameters)
 def administrate_user_disable_admin(uid):
+    if not webParameters.user_info.admin:
+        return render_template(siteMap['access_denied'])
+
     if webParameters.user_info.admin:
         applib.user_admin_disable(webParameters, uid, disable=True)
     return redirect(request.referrer)
@@ -970,8 +1096,17 @@ def administrate_user_disable_admin(uid):
 @app.route('/administrate/user/<uid>', methods=['GET', 'POST'])
 @applib.authorization(session, request, webParameters)
 def administrate_user(uid):
+    if not webParameters.user_info.admin:
+        return render_template(siteMap['access_denied'])
+
     search_field = forms.Search()
     prefix_form = forms.ChangePrefix()
+    connection_filter = forms.ConnectionFilter()
+
+    cdate = None
+    if request.method == 'POST' and connection_filter.validate_on_submit():
+        cdate = connection_filter.date.data
+    
     if applib.get_group_user(webParameters):
         group_user_form = forms.AddUserGroup()
         group_user_form.name.choices = [(t.id, t.name) for t in applib.get_group_user(webParameters)]
@@ -990,12 +1125,13 @@ def administrate_user(uid):
         applib.set_user_prefix(webParameters, prefix, uid)
     return render_template(
         siteMap['administrate_user'],
-        content=applib.get_user(webParameters, uid),
+        content=applib.get_user(webParameters, uid, connection_date=cdate),
         group_user_form=group_user_form,
         prefix_form=prefix_form,
         cur_date=datetime.datetime.now(),
         admin=webParameters.user_info.admin,
         search=search_field,
+        connection_filter=connection_filter,
         username=webParameters.user_info.login
     )
 
@@ -1003,6 +1139,9 @@ def administrate_user(uid):
 @app.route('/administrate/user/<user>/group/<group>/delete')
 @applib.authorization(session, request, webParameters)
 def administrate_user_group_delete(user, group):
+    if not webParameters.user_info.admin:
+        return render_template(siteMap['access_denied'])
+
     applib.del_group_user(webParameters, group=group, user=user)
     return redirect(request.referrer)
 
@@ -1010,6 +1149,9 @@ def administrate_user_group_delete(user, group):
 @app.route('/administrate/host/<host_id>/group/<group>/delete')
 @applib.authorization(session, request, webParameters)
 def administrate_host_group_delete(host_id, group):
+    if not webParameters.user_info.admin:
+        return render_template(siteMap['access_denied'])
+
     applib.del_group_host(webParameters, group=group, host=host_id)
     return redirect(request.referrer)
 
@@ -1017,6 +1159,9 @@ def administrate_host_group_delete(host_id, group):
 @app.route('/administrate/host/<host_id>', methods=['POST'])
 @applib.authorization(session, request, webParameters)
 def administrate_host(host_id):
+    if not webParameters.user_info.admin:
+        return render_template(siteMap['access_denied'])
+    
     form = forms.AddHostGroup()
     if request.method == 'POST' and form.add_sub.data:
         applib.add_host_group(webParameters, host_id, form.name.data)

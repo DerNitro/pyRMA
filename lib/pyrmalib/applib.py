@@ -221,11 +221,114 @@ def get_access_request(param: parameters.WebParameters, acc_id=None):
     return result
 
 
-def get_connection(param: parameters.WebParameters):
-    return []
+def get_connection(param: parameters.WebParameters, id):
+    """
+    Возвращает информацию о подключении
+    """
+
+    with schema.db_select(param.engine) as db:
+        try:
+            record = db.query(schema.User, schema.Host, schema.Connection, schema.ConnectionType, schema.Session).filter(
+                schema.User.uid == schema.Connection.user,
+                schema.Host.id == schema.Connection.host,
+                schema.ConnectionType.id == schema.Connection.connection_type,
+                schema.Session.id == schema.Connection.session,
+                schema.Connection.id == id
+            ).one()
+        except NoResultFound:
+            return None
+    
+    user, host, connection, connection_type, session = record
+
+    return {
+        'user': user,
+        'host': host,
+        'connection': connection, 
+        'connection_type': connection_type, 
+        'session': session
+    }
 
 
-def get_content_host(param: parameters.WebParameters, host_id):
+
+def get_connections(param: parameters.WebParameters, active=False, date=None, user=None, host=None):
+    """
+    Возвращает список подключений к хостам
+    """
+    connections = []
+    
+    with schema.db_select(param.engine) as db:
+        if active:
+            tables = db.query(schema.User, schema.Host, schema.Connection, schema.ConnectionType).filter(
+                schema.User.uid == schema.Connection.user,
+                schema.Host.id == schema.Connection.host,
+                schema.ConnectionType.id == schema.Connection.connection_type,
+                schema.Connection.status == 1
+            ).all()
+        elif date:
+            if host:
+                tables = db.query(schema.User, schema.Host, schema.Connection, schema.ConnectionType).filter(
+                    schema.User.uid == schema.Connection.user,
+                    schema.Host.id == schema.Connection.host,
+                    schema.ConnectionType.id == schema.Connection.connection_type,
+                    schema.Connection.host == host.id,
+                    schema.Connection.date_start > utils.date_to_datetime(date),
+                    schema.Connection.date_start < utils.date_to_datetime(date) + datetime.timedelta(days=1)
+                ).order_by(schema.Connection.date_start.desc()).all()
+            elif user:
+                tables = db.query(schema.User, schema.Host, schema.Connection, schema.ConnectionType).filter(
+                    schema.User.uid == schema.Connection.user,
+                    schema.Host.id == schema.Connection.host,
+                    schema.ConnectionType.id == schema.Connection.connection_type,
+                    schema.Connection.user == user.uid,
+                    schema.Connection.date_start > utils.date_to_datetime(date),
+                    schema.Connection.date_start < utils.date_to_datetime(date) + datetime.timedelta(days=1)
+                ).order_by(schema.Connection.date_start.desc()).all()
+            else:
+                tables = db.query(schema.User, schema.Host, schema.Connection, schema.ConnectionType).filter(
+                    schema.User.uid == schema.Connection.user,
+                    schema.Host.id == schema.Connection.host,
+                    schema.ConnectionType.id == schema.Connection.connection_type,
+                    schema.Connection.date_start > utils.date_to_datetime(date),
+                    schema.Connection.date_start < utils.date_to_datetime(date) + datetime.timedelta(days=1)
+                ).order_by(schema.Connection.date_start.desc()).all()
+        elif host:
+            tables = db.query(schema.User, schema.Host, schema.Connection, schema.ConnectionType).filter(
+                schema.User.uid == schema.Connection.user,
+                schema.Host.id == schema.Connection.host,
+                schema.ConnectionType.id == schema.Connection.connection_type,
+                schema.Connection.host == host.id,
+                schema.Connection.date_start > datetime.datetime.now() - datetime.timedelta(days=1)
+            ).order_by(schema.Connection.date_start.desc()).all()
+        elif user:
+            tables = db.query(schema.User, schema.Host, schema.Connection, schema.ConnectionType).filter(
+                schema.User.uid == schema.Connection.user,
+                schema.Host.id == schema.Connection.host,
+                schema.ConnectionType.id == schema.Connection.connection_type,
+                schema.Connection.user == user.uid,
+                schema.Connection.date_start > datetime.datetime.now() - datetime.timedelta(days=1)
+            ).order_by(schema.Connection.date_start.desc()).all()
+        else:
+            tables = db.query(schema.User, schema.Host, schema.Connection, schema.ConnectionType).filter(
+                schema.User.uid == schema.Connection.user,
+                schema.Host.id == schema.Connection.host,
+                schema.ConnectionType.id == schema.Connection.connection_type,
+                schema.Connection.date_start > datetime.datetime.now() - datetime.timedelta(days=1)
+            ).order_by(schema.Connection.date_start.desc()).all()
+
+    for user_tables, host_tables, connection_tables, c_type_tables in tables:
+        connections.append(
+            {
+                'user': user_tables,
+                'host': host_tables,
+                'connection': connection_tables,
+                'connection_type': c_type_tables
+            }
+        )
+
+    return connections
+
+
+def get_content_host(param: parameters.WebParameters, host_id, connection_date=None):
     """
     Возвращает форматированную информацию о хосте.
     :param param: param: WebParameters
@@ -234,6 +337,7 @@ def get_content_host(param: parameters.WebParameters, host_id):
     """
     content = {}
     host = get_host(param, host_id)
+    content['connection'] = get_connections(param, host=host, date=connection_date)
     content['id'] = host_id
     content['proxy'] = host.proxy
     content['name'] = host.name
@@ -306,7 +410,7 @@ def get_admin_content_dashboard(param: parameters.WebParameters):
         connection_count = db.query(schema.Connection).filter(schema.Connection.status == 1).count()
     content = {
         'access_request': get_access_request(param),
-        'connection': get_connection(param),
+        'connection': get_connections(param, active=True),
         'connection_count': connection_count,
         'la': os.getloadavg()[2],
         'free': psutil.virtual_memory().percent,
@@ -561,7 +665,7 @@ def get_parameters(param: parameters.WebParameters):
     return p
 
 
-def get_user(param: parameters.Parameters, uid):
+def get_user(param: parameters.Parameters, uid, connection_date=None):
     content = {}
     with schema.db_select(param.engine) as db:
         content['user'] = db.query(schema.User) \
@@ -570,12 +674,9 @@ def get_user(param: parameters.Parameters, uid):
             .one()
         content['action'] = db.query(schema.Action) \
             .filter(schema.Action.user == uid) \
-            .order_by(schema.Action.date.desc()).limit(10).all()
-        content['connection'] = db.query(schema.Connection, schema.Host, schema.ConnectionType) \
-            .join(schema.Host, schema.Host.id == schema.Connection.host) \
-            .join(schema.ConnectionType, schema.ConnectionType.id == schema.Connection.connection_type) \
-            .filter(schema.Connection.user == uid) \
-            .order_by(schema.Connection.date_start.desc()).limit(10).all()
+            .order_by(schema.Action.date.desc()).limit(10)
+    
+    content['connection'] = get_connections(param, user=content['user'], date=connection_date)
     content['group'] = ", ".join([t.name for i, t in get_group_list(param, user=uid)])
     return content
 
@@ -1190,7 +1291,11 @@ def add_hosts_file(param: parameters.WebParameters, filepath: str, parent=0):
             if str(i).upper() == 'Name'.upper():
                 n_host.name = h[i]
             elif str(i).upper() == 'IP'.upper():
-                n_host.ip = h[i]
+                n_host.ip, n_host.tcp_port = str(h[i]).split(':')
+                if not n_host.tcp_port:
+                    n_host.tcp_port = 22
+                else:
+                    n_host.tcp_port = int(n_host.tcp_port)
             elif str(i).upper() == 'Password'.upper():
                 password = h[i]
             elif str(i).upper() == 'Login'.upper():
@@ -1222,10 +1327,6 @@ def add_hosts_file(param: parameters.WebParameters, filepath: str, parent=0):
             with schema.db_select(param.engine) as db:
                 n_host.file_transfer_type = db.query(schema.FileTransferType). \
                     order_by(schema.FileTransferType.id).first().id
-        if not n_host.ilo_type:
-            with schema.db_select(param.engine) as db:
-                n_host.ilo_type = db.query(schema.IPMIType). \
-                    order_by(schema.IPMIType.id).first().id
         add_host(param, n_host, password=password, parent=parent)
         del n_host
     return True
