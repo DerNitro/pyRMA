@@ -171,6 +171,13 @@ class File(object):
         return str(self.__dict__)
 
 
+class Mkdir(npyscreen.ActionPopup):
+    is_ok = False
+    
+    def on_ok(self):
+        self.is_ok = True
+        return False
+
 class LocalMultiLineAction (npyscreen.MultiLineAction):
     def display_value(self, vl):
         return str(vl)
@@ -185,7 +192,6 @@ class LocalMultiLineAction (npyscreen.MultiLineAction):
 
         ftParameters.log.debug('local_path: {}'.format(local_path))
         self.parent.update_files()
-        self.parent.source.update()
 
 class RemoteMultiLineAction (npyscreen.MultiLineAction):
     def display_value(self, vl):
@@ -201,8 +207,6 @@ class RemoteMultiLineAction (npyscreen.MultiLineAction):
 
         ftParameters.log.debug('remote_path: {}'.format(remote_path))
         self.parent.update_files()
-        self.parent.source.update()
-
 
 class LocalBoxBasic(npyscreen.BoxTitle):
     bx_width = 0
@@ -226,16 +230,64 @@ class FT(npyscreen.FormBaseNew):
     def create(self):
         self.cycle_widgets = True
 
-    def update_files(self):
+    def update_files(self, *args, **keywords):
         self.source.values = self.get_local_files(os.path.join(*local_path))
+        self.source.update()
         self.dest.values = self.get_remote_files()
+        self.dest.update()
+
+    def mkdir(self, *args, **keywords):
+        form = Mkdir()
+        path = form.add_widget(npyscreen.TitleText, name='Имя')
+        form.edit()
+        ftParameters.log.debug('FT(mkdir) form: {}'.format(str(form.__dict__)))
+        if self.source.editing and form.is_ok:
+            if os.path.isdir(os.path.join(*local_path, path.value)):
+                ftParameters.log.warning(
+                    'не возможно создать директорию {} - уже существует'.format(
+                        str(os.path.join(*local_path, path.value))
+                    )
+                )
+                npyscreen.notify_confirm("Директория уже существует", title="Создание директории", wide=True)
+            else:
+                try:
+                    os.mkdir(os.path.join(*local_path, path.value))
+                    ftParameters.log.info(
+                            "создана директория: {}".format(str(os.path.join(*local_path, path.value)))
+                        )
+                except OSError as e:
+                    ftParameters.log.warning("{}".format(str(e)))
+                    npyscreen.notify_confirm("{}".format(str(e)), title="Создание директории", wide=True)
+        
+        if self.dest.editing and form.is_ok:
+            with pysftp.Connection(**cinfo) as sftp:
+                if sftp.isdir(os.path.join(*remote_path, path.value)):
+                    ftParameters.log.warning(
+                        'не возможно создать директорию {} - уже существует'.format(
+                            str(os.path.join(*remote_path, path.value))
+                        )
+                    )
+                    npyscreen.notify_confirm("Директория уже существует", title="Создание директории", wide=True)
+                else:
+                    try:
+                        sftp.mkdir(os.path.join(*remote_path, path.value))
+                        ftParameters.log.info(
+                            "создана директория: {}".format(str(os.path.join(*remote_path, path.value)))
+                        )
+                    except OSError as e:
+                        ftParameters.log.warning("{}".format(str(e)))
+                        npyscreen.notify_confirm("{}".format(str(e)), title="Создание директории", wide=True)
+        self.update_files()
 
     def beforeEditing(self):
         self.add_handlers(
             {
                 '^Q': self.app_exit,
+                '^R': self.update_files,
                 "KEY_F(5)": self.transfer,
-                curses.KEY_F5: self.transfer
+                curses.KEY_F5: self.transfer,
+                "KEY_F(7)": self.mkdir,
+                curses.KEY_F7: self.mkdir
             }
         )
         self.help = template.help_ft_form().format(program=__program__, version=__version__)
@@ -256,7 +308,11 @@ class FT(npyscreen.FormBaseNew):
                 File(os.stat(os.path.join(path)), name='..')
             )
 
-        for f in sorted(os.listdir(path)):
+        dirs = [d for d in sorted(os.listdir(path)) if os.path.isdir(os.path.join(path, d))]
+        files = [f for f in sorted(os.listdir(path)) if os.path.isfile(os.path.join(path, f))]
+        allList = sorted(dirs) + sorted(files)
+
+        for f in allList:
             file_list.append(
                 File(os.stat(os.path.join(path, f)), name=f)
             )
@@ -269,29 +325,86 @@ class FT(npyscreen.FormBaseNew):
         with pysftp.Connection(**cinfo) as sftp:
             parent_folder = sftp.stat(remotepath=os.path.join(*remote_path))
             remote_files = sftp.listdir_attr(remotepath=os.path.join(*remote_path))
+            dirs = [d for d in remote_files if sftp.isdir(remotepath=os.path.join(*remote_path, d.filename))]
+            files = [f for f in remote_files if sftp.isfile(remotepath=os.path.join(*remote_path, f.filename))]
+
+        allList = dirs + files
 
         if len(remote_path) > 1:
             file_list.append(File(parent_folder, name='..'))
         
-        for f in remote_files:
+        for f in allList:
             file_list.append(File(f))
         ftParameters.log.debug('FT(get_remote_files): - {}'.format(file_list))
         return file_list
     
     def transfer(self, *args, **keywords):
-        if self.source.editing:
-            for widget in self.source._my_widgets:
-                if isinstance(widget, LocalMultiLineAction):
-                    selected = self.source.values[widget.cursor_line]
-                    break
-            ftParameters.log.debug('FT(transfer): upload - {}'.format(str(os.path.join(*local_path, selected.name))))
-        if self.dest.editing:
-            for widget in self.source._my_widgets:
-                if isinstance(widget, LocalMultiLineAction):
-                    selected = self.source.values[widget.cursor_line]
-                    break
-            ftParameters.log.debug('FT(transfer): download - {}'.format(str(os.path.join(*remote_path, selected.name))))
+        try:
+            if self.source.editing:
+                for widget in self.source._my_widgets:
+                    if isinstance(widget, LocalMultiLineAction):
+                        selected = self.source.values[widget.cursor_line]
+                        break
+                ftParameters.log.debug('FT(transfer): upload - {}'.format(str(os.path.join(*local_path, selected.name))))
+                with pysftp.Connection(**cinfo) as sftp:
+                    if stat.S_IFMT(selected.st_mode) == stat.S_IFDIR:
+                        self.notify('start')
+                        if not sftp.isdir(os.path.join(*remote_path, selected.name)):
+                            sftp.mkdir(remotepath=os.path.join(*remote_path, selected.name))
+                        sftp.put_r(
+                            os.path.join(*local_path, selected.name), remotepath=os.path.join(*remote_path, selected.name)
+                        )
+                        self.store_backup_file(os.path.join(*local_path, selected.name))
+                        self.notify('stop')
+                        ftParameters.log.info('передана директория: {}'.format(str(os.path.join(*local_path, selected.name))))
+                    if stat.S_IFMT(selected.st_mode) == stat.S_IFREG:
+                        self.notify('start')
+                        sftp.put(
+                            os.path.join(*local_path, selected.name), remotepath=os.path.join(*remote_path, selected.name)
+                        )
+                        self.store_backup_file(os.path.join(*local_path, selected.name))
+                        self.notify('stop')
+                        ftParameters.log.info('передан файл: {}'.format(str(os.path.join(*local_path, selected.name))))
+            
+            if self.dest.editing:
+                for widget in self.dest._my_widgets:
+                    if isinstance(widget, RemoteMultiLineAction):
+                        selected = self.dest.values[widget.cursor_line]
+                        break
+                ftParameters.log.debug('FT(transfer): download - {}'.format(str(os.path.join(*remote_path, selected.name))))
+                with pysftp.Connection(**cinfo) as sftp:
+                    if stat.S_IFMT(selected.st_mode) == stat.S_IFDIR:
+                        self.notify('start')
+                        sftp.cwd(os.path.join(*remote_path))
+                        sftp.get_r(
+                            os.path.join(selected.name), localdir=os.path.join(*local_path)
+                        )
+                        self.store_backup_file(os.path.join(*local_path, selected.name))
+                        self.notify('stop')
+                        ftParameters.log.info('загружена директория: {}'.format(str(os.path.join(*local_path, selected.name))))
+                    if stat.S_IFMT(selected.st_mode) == stat.S_IFREG:
+                        self.notify('start')
+                        sftp.get(
+                            os.path.join(*remote_path, selected.name), localpath=os.path.join(*local_path, selected.name)
+                        )
+                        self.store_backup_file(os.path.join(*local_path, selected.name))
+                        self.notify('stop')
+                        ftParameters.log.info('загружен файл: {}'.format(str(os.path.join(*local_path, selected.name))))
+        except FileExistsError as e:
+            npyscreen.notify_confirm(
+                "Возникла проблема в передаче данных! Обратитесь к администратору.\n" + e.strerror,
+                title="Передача данных", wide=True)
+            ftParameters.log.warning('Ошибка передачи файлов ' + str(e))
+        self.update_files()
+
+    def store_backup_file(self, path):
         pass
+
+    def notify(self, action):
+        if action == 'start':
+            npyscreen.notify_wait("Началась передача данных", title="Передача данных",)
+        elif action == 'stop':
+            npyscreen.notify_wait("Закончилась передача данных", title="Передача данных",)
 
 
 class ErrorForm(npyscreen.FormBaseNew):
