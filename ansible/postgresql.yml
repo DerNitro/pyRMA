@@ -59,8 +59,8 @@
         source: "{{ pyrma_database.source }}"
       notify: Restart postgresql.service
 
-    - name: Flush handlers
-      meta: flush_handlers
+- name: Flush handlers
+  meta: flush_handlers
 
 - name: Ping PostgreSQL server
   community.postgresql.postgresql_ping:

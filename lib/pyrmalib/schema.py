@@ -295,8 +295,6 @@ class FileTransferType(Base):
     __tablename__ = 'file_transfer_type'
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
     name = sqlalchemy.Column(sqlalchemy.String(20), unique=True)
-    default_port = sqlalchemy.Column(sqlalchemy.Integer)
-    plugin = sqlalchemy.Column(sqlalchemy.String)
 
     def __repr__(self):
         return "{0}".format(self.__dict__)

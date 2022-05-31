@@ -18,7 +18,6 @@
 """
 
 import getpass
-from this import s
 from pyrmalib import log, schema
 import configparser
 import os
@@ -137,5 +136,18 @@ class FirewallParameters(Parameters):
             'filename': 'pyrma_firewall.log'
         }
         self.log = log.Log('pyrma_firewall', **self.log_param)
-        self.firewall_forward_table = self.conf.get('Firewall','firewall_forward_table')
-        self.firewall_ipmi_table = self.conf.get('Firewall','firewall_ipmi_table')
+        self.firewall_forward_table = self.conf.get('Firewall', 'firewall_forward_table')
+        self.firewall_ipmi_table = self.conf.get('Firewall', 'firewall_ipmi_table')
+
+
+class FileTransfer(Parameters):
+    def __init__(self):
+        super().__init__()
+        self.user_name = getpass.getuser()
+        self.log_param = {
+            'level': self.conf.get('Main', 'log_level', fallback='INFO'),
+            'filename': 'ft_' + self.user_name + '.log'
+        }
+        self.log = log.Log(self.user_name, **self.log_param)
+        self.file_transfer_folder = self.conf.get('FileTransfer', 'file_transfer_folder')
+        self.file_transfer_backup_folder = self.conf.get('FileTransfer', 'file_transfer_backup_folder')

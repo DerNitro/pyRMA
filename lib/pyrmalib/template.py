@@ -67,6 +67,20 @@ def help_main_form():
     return msg + footer
 
 
+def help_ft_form():
+    msg = '{program} version: {version}\n\n' \
+          'Руководсво пользователя\n' \
+          '1. Горячиие клавиши\n' \
+          '\tCtrl + Q   - выход\n' \
+          '\tF5         - передача файлов\n' \
+          '\tl          - Подсветка\n' \
+          '\tL          - Отключить подсветку\n' \
+
+    msg = textwrap.dedent(msg)
+
+    return msg + footer
+
+
 def information_host(note):
     msg = ''
     if not isinstance(note, dict) and note:

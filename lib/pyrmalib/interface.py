@@ -128,14 +128,19 @@ class HostListDisplay(npyscreen.FormMutt):
         self.keypress_timeout = 1
         self.update_list()
 
-        self.add_handlers({'^Q': self.app_exit,
-                           '+': self.filter,
-                           'i': self.show_host_information,
-                           'f': self.find
-                           })
+        self.add_handlers(
+            {
+                '^Q': self.app_exit,
+                '+': self.filter,
+                'i': self.show_host_information,
+                'f': self.find
+            }
+        )
 
-        self.help = template.help_main_form().format(program=appParameters.program,
-                                                     version=appParameters.version)
+        self.help = template.help_main_form().format(
+            program=appParameters.program,
+            version=appParameters.version
+        )
 
     def update_list(self):
         if self.Level[-1] == 'Find':
