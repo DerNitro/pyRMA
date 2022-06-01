@@ -14,6 +14,7 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 """
+import os
 import datetime
 import weakref
 import npyscreen
@@ -423,7 +424,37 @@ class ConnectionForm(npyscreen.Popup):
             access_form.edit()
 
     def file_transfer(self):
-        pass
+        global connection_host
+        if access.check_access(appParameters, "FileTransfer", h_object=self.host):
+            if len(self.save_pass.value) > 0:
+                applib.save_password(appParameters, self.host.id, self.login.value, self.password.value)
+            conn_type = applib.get_file_transfer_type(appParameters)
+            conn_type_name = None
+            for type_id, name in conn_type:
+                if type_id == self.host.file_transfer_type:
+                    conn_type_name = name
+            if conn_type_name == 'SFTP':
+                connection_host = connection.SFTP(appParameters, self.host)
+            connection_host.LOGIN = self.login.value
+
+            if isinstance(self.login_password, schema.PasswordList) \
+                    and self.password.value == '*' * len(self.login_password.password):
+                connection_host.PASSWORD = utils.password(self.login_password.password, self.host.id, mask=False)
+            elif self.password.value == '*' * len(self.host.default_password):
+                connection_host.PASSWORD = utils.password(self.host.default_password, self.host.id, mask=False)
+            else:
+                connection_host.PASSWORD = self.password.value
+            connection_host.ft_bin = os.path.join(appParameters.app_folder, 'bin', 'ft.py')
+            self.editing = False
+        else:
+            access_list = ['Подключение']
+            if not self.btn_file_transfer.hidden:
+                access_list.append('Передача файлов')
+            if not self.btn_ipmi.hidden:
+                access_list.append('IPMI')
+            access_form = AccessRequest(name=self.host.name, access_list=access_list)
+            access_form.host = self.host
+            access_form.edit()
 
     def connection_ilo(self):
         pass

@@ -20,7 +20,7 @@
     <th></th>
     <th>Хост</th>
     <th>Пользователь</th>
-    <th>Протокол</th>
+    <th>Подключение</th>
     <th>Статус</th>
     <th>Завершение</th>
     <th>Дата Начала</th>
@@ -37,7 +37,10 @@
         </a></td>
         <td><a href="/host/{{ i['host'].id }}"> {{ i['host'].name }}</a></td>
         <td><a href="/administrate/user/{{ i['user'].uid }}"> {{ i['user'].full_name }}</a></td>
-        <td align=center>{{ i['connection_type'].name }}</td>
+        {% if i['connection'].connection_type == 1 %}<td>Терминальное</td>{% endif %}
+        {% if i['connection'].connection_type == 2 %}<td>Передача данных</td>{% endif %}
+        {% if i['connection'].connection_type == 3 %}<td>Сервисы</td>{% endif %}
+        {% if i['connection'].connection_type == 4 %}<td>IPMI</td>{% endif %}
         {% if i['connection'].status == 1 %}<td>Подключен</td>{% endif %}
         {% if i['connection'].status == 2 %}<td>Отключен</td>{% endif %}
         {% if i['connection'].termination == 0 %}<td>Нормальное завершение</td>{% endif %}

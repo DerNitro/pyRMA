@@ -108,6 +108,7 @@ class AppParameters(Parameters):
             'filename': 'pyrma_' + self.user_name + '.log'
         }
         self.log = log.Log(self.user_name, **self.log_param)
+        self.app_folder = self.conf.get('Main', 'app_dir')
 
 
 class WebParameters(Parameters):

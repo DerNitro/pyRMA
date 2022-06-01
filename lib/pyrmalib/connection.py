@@ -88,6 +88,7 @@ class SFTP(modules.ConnectionModules):
     Модуль передачи файлов по SSH.
     """
     JUMP = None
+    ft_bin = None
 
     def __init__(self, param: parameters.AppParameters, host: schema.Host):
         super().__init__(param, host)
@@ -97,6 +98,26 @@ class SFTP(modules.ConnectionModules):
 
     def connection(self):
         super().connection()
+        cmd = '/usr/bin/python3 {bin} --host {host} --port {port} --user {user} --password {password} --id {id}'
+        args = shlex.split(
+            cmd.format(
+                bin=self.ft_bin, 
+                user=self.LOGIN, 
+                password=self.PASSWORD,
+                host=self.HOST.ip, 
+                port=self.HOST.tcp_port, 
+                id=self.connection_id
+            )
+        )
+        proc = subprocess.Popen(args)
+        stdout, stderr = proc.communicate('through stdin to stdout')
+        if proc.returncode > 0:
+            self.TERMINATION = 2
+            self.ERROR = "Error {0}: {1}".format(proc.returncode, stderr)
+            self.PARAMETERS.log.error(
+                self.ERROR,
+                pr=True
+            )
         
 
 

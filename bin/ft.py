@@ -22,15 +22,19 @@
 
 import sys
 import os
+import shutil
 import stat
 import time
 import argparse
-from pyrmalib import parameters, template
+import tarfile
+import tempfile
+from pyrmalib import parameters, template, error, applib, utils
 import npyscreen
 import curses
 import pysftp
 from paramiko import ssh_exception, SFTPAttributes
 from paramiko.py3compat import strftime
+from sqlalchemy import create_engine
 
 __author__ = 'Sergey Utkin'
 __email__ = 'utkins01@gmail.com'
@@ -42,6 +46,18 @@ __program__ = 'pyRMA'
 
 ftParameters = parameters.FileTransfer()
 
+engine = create_engine(
+    '{0}://{1}:{2}@{3}:{4}/{5}'.format(
+        ftParameters.dbase,
+        ftParameters.dbase_param["user"],
+        ftParameters.dbase_param["password"],
+        ftParameters.dbase_param["host"],
+        ftParameters.dbase_param["port"],
+        ftParameters.dbase_param["database"]
+    )
+)
+ftParameters.engine = engine
+
 ftParameters.log.info('запуск модуля передачи файлов - {} v.{}'.format(__program__, __version__))
 
 parser = argparse.ArgumentParser(description='Модуль передачи файлов pyRMA')
@@ -52,6 +68,8 @@ parser.add_argument('--password', help='Пароль пользователя', 
 parser.add_argument('--id',   help='ID подключения', required=True)
 
 args = parser.parse_args()
+
+ftParameters.connection = applib.get_connection(ftParameters, args.id)
 
 cnopts = pysftp.CnOpts()
 cnopts.hostkeys = None
@@ -183,7 +201,7 @@ class LocalMultiLineAction (npyscreen.MultiLineAction):
         return str(vl)
 
     def actionHighlighted(self, record, keypress):
-        ftParameters.log.debug('LocalMultiLineAction(actionHighlighted): {}'.format(str(record)))
+        ftParameters.log.debug('LocalMultiLineAction(actionHighlighted): {}'.format(str(record.name)))
         global local_path
         if stat.S_IFMT(record.st_mode) == stat.S_IFDIR and record.name != '..':
             local_path.append(record.name)
@@ -198,7 +216,7 @@ class RemoteMultiLineAction (npyscreen.MultiLineAction):
         return str(vl)
 
     def actionHighlighted(self, record, keypress):
-        ftParameters.log.debug('RemoteMultiLineAction(actionHighlighted): {}'.format(str(record)))
+        ftParameters.log.debug('RemoteMultiLineAction(actionHighlighted): {}'.format(str(record.name)))
         global remote_path
         if stat.S_IFMT(record.st_mode) == stat.S_IFDIR and record.name != '..':
             remote_path.append(record.name)
@@ -231,9 +249,17 @@ class FT(npyscreen.FormBaseNew):
         self.cycle_widgets = True
 
     def update_files(self, *args, **keywords):
-        self.source.values = self.get_local_files(os.path.join(*local_path))
+        try:
+            self.source.values = self.get_local_files(os.path.join(*local_path))
+        except error.ErrorGetListFiles as e:
+            local_path.pop()
+            ftParameters.log.warning(e)
         self.source.update()
-        self.dest.values = self.get_remote_files()
+        try:
+            self.dest.values = self.get_remote_files()
+        except error.ErrorGetListFiles as e:
+            remote_path.pop()
+            ftParameters.log.warning(e)
         self.dest.update()
 
     def mkdir(self, *args, **keywords):
@@ -294,11 +320,21 @@ class FT(npyscreen.FormBaseNew):
 
         lines, columns = self.xy()
         self.bx_width = (columns // 2) - 2
-        self.source = self.add(LocalBoxBasic, name = 'source', max_width=self.bx_width)
-        self.dest = self.add(RemoteBoxBasic, name = 'dest', rely=2, max_width=self.bx_width, relx=self.bx_width + 2)
+        self.source = self.add(LocalBoxBasic, name = 'acs', max_width=self.bx_width)
+        self.dest = self.add(
+            RemoteBoxBasic, 
+            name = ftParameters.connection['host'].name, rely=2, max_width=self.bx_width, relx=self.bx_width + 2
+        )
         self.source.bx_width = self.bx_width
         self.dest.bx_width = self.bx_width
-        self.source.values = self.get_local_files(os.path.join(*local_path))
+        try:
+            self.source.values = self.get_local_files(os.path.join(*local_path))
+        except PermissionError:
+            error.WTF('Нет доступа к локальной директории')
+            ftParameters.log.error(
+                'Нет доступа к локальной директории передачи файлов: {}'.format(str(os.path.join(*local_path)))
+            )
+            sys.exit('PermissionError: '.format(str(os.path.join(*local_path))))
         self.dest.values = self.get_remote_files()
 
     def get_local_files(self, path=ftParameters.file_transfer_folder):
@@ -308,8 +344,15 @@ class FT(npyscreen.FormBaseNew):
                 File(os.stat(os.path.join(path)), name='..')
             )
 
-        dirs = [d for d in sorted(os.listdir(path)) if os.path.isdir(os.path.join(path, d))]
-        files = [f for f in sorted(os.listdir(path)) if os.path.isfile(os.path.join(path, f))]
+        try:
+            dirs = [d for d in sorted(os.listdir(path)) if os.path.isdir(os.path.join(path, d))]
+            files = [f for f in sorted(os.listdir(path)) if os.path.isfile(os.path.join(path, f))]
+        except PermissionError as e:
+            npyscreen.notify_confirm(
+                "Ошибка получения списка файлов\n" + e.strerror,
+                title="Передача данных", wide=True)
+            raise error.ErrorGetListFiles('Ошибка получения списка файлов: {}'.format(path))
+        
         allList = sorted(dirs) + sorted(files)
 
         for f in allList:
@@ -324,9 +367,17 @@ class FT(npyscreen.FormBaseNew):
         file_list = []
         with pysftp.Connection(**cinfo) as sftp:
             parent_folder = sftp.stat(remotepath=os.path.join(*remote_path))
-            remote_files = sftp.listdir_attr(remotepath=os.path.join(*remote_path))
-            dirs = [d for d in remote_files if sftp.isdir(remotepath=os.path.join(*remote_path, d.filename))]
-            files = [f for f in remote_files if sftp.isfile(remotepath=os.path.join(*remote_path, f.filename))]
+            try:
+                remote_files = sftp.listdir_attr(remotepath=os.path.join(*remote_path))
+                dirs = [d for d in remote_files if sftp.isdir(remotepath=os.path.join(*remote_path, d.filename))]
+                files = [f for f in remote_files if sftp.isfile(remotepath=os.path.join(*remote_path, f.filename))]
+            except PermissionError as e:
+                npyscreen.notify_confirm(
+                    "Ошибка получения списка файлов\n" + e.strerror,
+                    title="Передача данных", wide=True)
+                raise error.ErrorGetListFiles(
+                    'Ошибка получения списка файлов удаленного узла: {}'.format(os.path.join(*remote_path))
+                )
 
         allList = dirs + files
 
@@ -354,7 +405,7 @@ class FT(npyscreen.FormBaseNew):
                         sftp.put_r(
                             os.path.join(*local_path, selected.name), remotepath=os.path.join(*remote_path, selected.name)
                         )
-                        self.store_backup_file(os.path.join(*local_path, selected.name))
+                        self.store_backup_file(os.path.join(*local_path, selected.name), 'upload')
                         self.notify('stop')
                         ftParameters.log.info('передана директория: {}'.format(str(os.path.join(*local_path, selected.name))))
                     if stat.S_IFMT(selected.st_mode) == stat.S_IFREG:
@@ -362,7 +413,7 @@ class FT(npyscreen.FormBaseNew):
                         sftp.put(
                             os.path.join(*local_path, selected.name), remotepath=os.path.join(*remote_path, selected.name)
                         )
-                        self.store_backup_file(os.path.join(*local_path, selected.name))
+                        self.store_backup_file(os.path.join(*local_path, selected.name), 'upload')
                         self.notify('stop')
                         ftParameters.log.info('передан файл: {}'.format(str(os.path.join(*local_path, selected.name))))
             
@@ -379,7 +430,7 @@ class FT(npyscreen.FormBaseNew):
                         sftp.get_r(
                             os.path.join(selected.name), localdir=os.path.join(*local_path)
                         )
-                        self.store_backup_file(os.path.join(*local_path, selected.name))
+                        self.store_backup_file(os.path.join(*local_path, selected.name), 'download')
                         self.notify('stop')
                         ftParameters.log.info('загружена директория: {}'.format(str(os.path.join(*local_path, selected.name))))
                     if stat.S_IFMT(selected.st_mode) == stat.S_IFREG:
@@ -387,17 +438,47 @@ class FT(npyscreen.FormBaseNew):
                         sftp.get(
                             os.path.join(*remote_path, selected.name), localpath=os.path.join(*local_path, selected.name)
                         )
-                        self.store_backup_file(os.path.join(*local_path, selected.name))
+                        self.store_backup_file(os.path.join(*local_path, selected.name), 'download')
                         self.notify('stop')
                         ftParameters.log.info('загружен файл: {}'.format(str(os.path.join(*local_path, selected.name))))
         except FileExistsError as e:
-            npyscreen.notify_confirm(
-                "Возникла проблема в передаче данных! Обратитесь к администратору.\n" + e.strerror,
-                title="Передача данных", wide=True)
+            npyscreen.notify_confirm(e.strerror, title="Передача данных", wide=True)
             ftParameters.log.warning('Ошибка передачи файлов ' + str(e))
         self.update_files()
 
-    def store_backup_file(self, path):
+    def store_backup_file(self, path, direction):
+        backup_folder = '{}'.format(
+            os.path.join(ftParameters.file_transfer_backup_folder, ftParameters.connection['host'].name)
+        )
+        if not os.path.isdir(backup_folder):
+            os.mkdir(backup_folder)
+        tar_name = '{}_{}.tar'.format(args.id, os.path.basename(path))
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            tar = tarfile.open(os.path.join(tmpdirname, tar_name), "w")
+            tar.add(path)
+            tar.close()
+            md5 = utils.md5(os.path.join(tmpdirname, tar_name))
+            backup_files = applib.get_file_transfer(ftParameters, md5=md5)
+            if len(backup_files) == 0:
+                shutil.move(os.path.join(tmpdirname, tar_name), os.path.join(backup_folder, tar_name))
+            else:
+                hardlink = False
+                for backup_file in backup_files:
+                    if os.path.isfile(backup_file.file_name_tgz) \
+                    and backup_file.file_name_tgz == str(os.path.join(backup_folder, tar_name)):
+                        os.link(backup_file.file_name_tgz, os.path.join(backup_folder, tar_name))
+                        hardlink = True
+                        break
+                if not hardlink:
+                    shutil.move(os.path.join(tmpdirname, tar_name), os.path.join(backup_folder, tar_name))
+        applib.set_file_transfer(
+            ftParameters, 
+            args.id, 
+            os.path.basename(path),
+            os.path.join(backup_folder, tar_name),
+            md5,
+            direction
+        )
         pass
 
     def notify(self, action):

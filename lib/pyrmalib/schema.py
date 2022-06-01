@@ -434,6 +434,24 @@ class ForwardTCP(Base):
         return "{0}".format(self.__dict__)
 
 
+class FileTransfer(Base):
+    """
+    Таблица регистрации переданных файлов
+    """
+    __tablename__ = 'file_transfer'
+
+    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
+    connection_id = sqlalchemy.Column(sqlalchemy.Integer)
+    file_name = sqlalchemy.Column(sqlalchemy.String)
+    file_name_tgz = sqlalchemy.Column(sqlalchemy.String)
+    date_transfer = sqlalchemy.Column(sqlalchemy.DateTime, nullable=False)
+    md5 = sqlalchemy.Column(sqlalchemy.String)
+    direction = sqlalchemy.Column(sqlalchemy.String)
+
+    def __repr__(self):
+        return "{0}".format(self.__dict__)
+
+
 if __name__ == '__main__':
     arg = argparse.ArgumentParser(
         epilog='schema.py (C) "Sergey Utkin" mailto:utkins01@gmail.com',
@@ -481,6 +499,7 @@ if __name__ == '__main__':
             Session.__table__.create(bind=engine)
             User.__table__.create(bind=engine)
             ForwardTCP.__table__.create(bind=engine)
+            FileTransfer.__table__.create(bind=engine)
         except sqlalchemy.exc.ProgrammingError as e:
             if 'psycopg2.errors.DuplicateTable' in str(e):
                 print("The tables are already created!")

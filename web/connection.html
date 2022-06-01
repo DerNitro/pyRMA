@@ -8,7 +8,13 @@
 {{ super() }}
 {% endblock %}
 {% block content %}
-<h2>Подключение по {{ content['connection_type']['name'] }} к <a href="/host/{{ content['host']['id'] }}">{{ content['host']['name'] }}</a></h2>
+<h2>Подключение к <a href="/host/{{ content['host']['id'] }}">{{ content['host']['name'] }}</a></h2>
+<h3>
+    {% if content['connection'].connection_type == 1 %}Терминальное подключени{% endif %}
+    {% if content['connection'].connection_type == 2 %}Передача данных{% endif %}
+    {% if content['connection'].connection_type == 3 %}Сервисы{% endif %}
+    {% if content['connection'].connection_type == 4 %}IPMI{% endif %}
+</h3>
 <table border="1"">
     <tr>
         <td>Пользователь</td>
