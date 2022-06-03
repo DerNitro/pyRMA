@@ -156,6 +156,11 @@ def connections():
 def ttyrec(path):
     return send_from_directory(webParameters.data_dir, path)
 
+@app.route('/file/<path:path>')
+@applib.authorization(session, request, webParameters)
+def file(path):
+    return send_from_directory(webParameters.data_dir, path)
+
 
 @app.route('/connection/<connection_id>', methods=['GET'])
 @applib.authorization(session, request, webParameters)

@@ -27,6 +27,7 @@ import stat
 import time
 import argparse
 import tarfile
+from checksumdir import dirhash
 import tempfile
 from pyrmalib import parameters, template, error, applib, utils
 import npyscreen
@@ -85,7 +86,7 @@ ftParameters.log.info('параметры запуска: {}:{} user {}'.format(
 
 local_path = []
 remote_path = []
-local_path.append(ftParameters.file_transfer_folder)
+local_path.append(os.path.join(ftParameters.data_dir, ftParameters.file_transfer_folder))
 
 
 class File(object):
@@ -337,9 +338,9 @@ class FT(npyscreen.FormBaseNew):
             sys.exit('PermissionError: '.format(str(os.path.join(*local_path))))
         self.dest.values = self.get_remote_files()
 
-    def get_local_files(self, path=ftParameters.file_transfer_folder):
+    def get_local_files(self, path=os.path.join(ftParameters.data_dir, ftParameters.file_transfer_folder)):
         file_list = []
-        if not path == os.path.join(ftParameters.file_transfer_folder):
+        if not path == os.path.join(ftParameters.data_dir, ftParameters.file_transfer_folder):
             file_list.append(
                 File(os.stat(os.path.join(path)), name='..')
             )
@@ -448,8 +449,17 @@ class FT(npyscreen.FormBaseNew):
 
     def store_backup_file(self, path, direction):
         backup_folder = '{}'.format(
-            os.path.join(ftParameters.file_transfer_backup_folder, ftParameters.connection['host'].name)
+            os.path.join(
+                ftParameters.data_dir, 
+                ftParameters.file_transfer_backup_folder,
+                ftParameters.connection['host'].name)
         )
+
+        if os.path.isfile(path):
+            md5 = utils.md5(os.path.join(path))
+        if os.path.isdir(path):
+            md5 = dirhash(path, 'md5')
+
         if not os.path.isdir(backup_folder):
             os.mkdir(backup_folder)
         tar_name = '{}_{}.tar'.format(args.id, os.path.basename(path))
@@ -457,7 +467,6 @@ class FT(npyscreen.FormBaseNew):
             tar = tarfile.open(os.path.join(tmpdirname, tar_name), "w")
             tar.add(path)
             tar.close()
-            md5 = utils.md5(os.path.join(tmpdirname, tar_name))
             backup_files = applib.get_file_transfer(ftParameters, md5=md5)
             if len(backup_files) == 0:
                 shutil.move(os.path.join(tmpdirname, tar_name), os.path.join(backup_folder, tar_name))
@@ -465,7 +474,7 @@ class FT(npyscreen.FormBaseNew):
                 hardlink = False
                 for backup_file in backup_files:
                     if os.path.isfile(backup_file.file_name_tgz) \
-                    and backup_file.file_name_tgz == str(os.path.join(backup_folder, tar_name)):
+                    and backup_file.file_name_tgz != str(os.path.join(backup_folder, tar_name)):
                         os.link(backup_file.file_name_tgz, os.path.join(backup_folder, tar_name))
                         hardlink = True
                         break
@@ -473,9 +482,9 @@ class FT(npyscreen.FormBaseNew):
                     shutil.move(os.path.join(tmpdirname, tar_name), os.path.join(backup_folder, tar_name))
         applib.set_file_transfer(
             ftParameters, 
-            args.id, 
+            args.id,
             os.path.basename(path),
-            os.path.join(backup_folder, tar_name),
+            os.path.join(ftParameters.file_transfer_backup_folder, ftParameters.connection['host'].name, tar_name),
             md5,
             direction
         )

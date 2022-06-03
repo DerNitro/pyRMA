@@ -227,6 +227,7 @@ def get_connection(param: parameters.Parameters, id):
     """
 
     with schema.db_select(param.engine) as db:
+        file_transfer = db.query(schema.FileTransfer).filter(schema.FileTransfer.connection_id == id).all()
         try:
             record = db.query(schema.User, schema.Host, schema.Connection, schema.Session).filter(
                 schema.User.uid == schema.Connection.user,
@@ -243,7 +244,8 @@ def get_connection(param: parameters.Parameters, id):
         'user': user,
         'host': host,
         'connection': connection, 
-        'session': session
+        'session': session,
+        'file': file_transfer
     }
 
 def get_file_transfer(param: parameters.FileTransfer, md5=None, cid=None) -> List[schema.FileTransfer]:
