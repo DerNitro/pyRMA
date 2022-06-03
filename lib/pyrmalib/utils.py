@@ -15,6 +15,7 @@
 """
 
 import os
+import hashlib
 import ipaddress
 import pyrmalib.error
 from datetime import date, datetime
@@ -194,6 +195,15 @@ def date_to_datetime(d):
         return datetime(year=d.year, month=d.month, day=d.day)
     else:
         raise pyrmalib.error.WTF('Error instance date_to_datetime!')
+
+
+def md5(fname):
+    # https://stackoverflow.com/questions/3431825/generating-an-md5-checksum-of-a-file
+    hash_md5 = hashlib.md5()
+    with open(fname, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hash_md5.update(chunk)
+    return hash_md5.hexdigest()
 
 
 if __name__ == '__main__':

@@ -221,34 +221,45 @@ def get_access_request(param: parameters.WebParameters, acc_id=None):
     return result
 
 
-def get_connection(param: parameters.WebParameters, id):
+def get_connection(param: parameters.Parameters, id):
     """
     Возвращает информацию о подключении
     """
 
     with schema.db_select(param.engine) as db:
+        file_transfer = db.query(schema.FileTransfer).filter(schema.FileTransfer.connection_id == id).all()
         try:
-            record = db.query(schema.User, schema.Host, schema.Connection, schema.ConnectionType, schema.Session).filter(
+            record = db.query(schema.User, schema.Host, schema.Connection, schema.Session).filter(
                 schema.User.uid == schema.Connection.user,
                 schema.Host.id == schema.Connection.host,
-                schema.ConnectionType.id == schema.Connection.connection_type,
                 schema.Session.id == schema.Connection.session,
                 schema.Connection.id == id
             ).one()
         except NoResultFound:
             return None
     
-    user, host, connection, connection_type, session = record
+    user, host, connection, session = record
 
     return {
         'user': user,
         'host': host,
         'connection': connection, 
-        'connection_type': connection_type, 
-        'session': session
+        'session': session,
+        'file': file_transfer
     }
 
-
+def get_file_transfer(param: parameters.FileTransfer, md5=None, cid=None) -> List[schema.FileTransfer]:
+    with schema.db_select(param.engine) as db:
+        if md5:
+            records = db.query(schema.FileTransfer).filter(
+                schema.FileTransfer.md5 == md5
+            ).all()
+        elif cid:
+            records = db.query(schema.FileTransfer).filter(
+                schema.FileTransfer.connection_id == cid
+            ).all()
+    
+    return records
 
 def get_connections(param: parameters.WebParameters, active=False, date=None, user=None, host=None):
     """
@@ -258,70 +269,62 @@ def get_connections(param: parameters.WebParameters, active=False, date=None, us
     
     with schema.db_select(param.engine) as db:
         if active:
-            tables = db.query(schema.User, schema.Host, schema.Connection, schema.ConnectionType).filter(
+            tables = db.query(schema.User, schema.Host, schema.Connection).filter(
                 schema.User.uid == schema.Connection.user,
                 schema.Host.id == schema.Connection.host,
-                schema.ConnectionType.id == schema.Connection.connection_type,
                 schema.Connection.status == 1
             ).all()
         elif date:
             if host:
-                tables = db.query(schema.User, schema.Host, schema.Connection, schema.ConnectionType).filter(
+                tables = db.query(schema.User, schema.Host, schema.Connection).filter(
                     schema.User.uid == schema.Connection.user,
                     schema.Host.id == schema.Connection.host,
-                    schema.ConnectionType.id == schema.Connection.connection_type,
                     schema.Connection.host == host.id,
                     schema.Connection.date_start > utils.date_to_datetime(date),
                     schema.Connection.date_start < utils.date_to_datetime(date) + datetime.timedelta(days=1)
                 ).order_by(schema.Connection.date_start.desc()).all()
             elif user:
-                tables = db.query(schema.User, schema.Host, schema.Connection, schema.ConnectionType).filter(
+                tables = db.query(schema.User, schema.Host, schema.Connection).filter(
                     schema.User.uid == schema.Connection.user,
                     schema.Host.id == schema.Connection.host,
-                    schema.ConnectionType.id == schema.Connection.connection_type,
                     schema.Connection.user == user.uid,
                     schema.Connection.date_start > utils.date_to_datetime(date),
                     schema.Connection.date_start < utils.date_to_datetime(date) + datetime.timedelta(days=1)
                 ).order_by(schema.Connection.date_start.desc()).all()
             else:
-                tables = db.query(schema.User, schema.Host, schema.Connection, schema.ConnectionType).filter(
+                tables = db.query(schema.User, schema.Host, schema.Connection).filter(
                     schema.User.uid == schema.Connection.user,
                     schema.Host.id == schema.Connection.host,
-                    schema.ConnectionType.id == schema.Connection.connection_type,
                     schema.Connection.date_start > utils.date_to_datetime(date),
                     schema.Connection.date_start < utils.date_to_datetime(date) + datetime.timedelta(days=1)
                 ).order_by(schema.Connection.date_start.desc()).all()
         elif host:
-            tables = db.query(schema.User, schema.Host, schema.Connection, schema.ConnectionType).filter(
+            tables = db.query(schema.User, schema.Host, schema.Connection).filter(
                 schema.User.uid == schema.Connection.user,
                 schema.Host.id == schema.Connection.host,
-                schema.ConnectionType.id == schema.Connection.connection_type,
                 schema.Connection.host == host.id,
                 schema.Connection.date_start > datetime.datetime.now() - datetime.timedelta(days=1)
             ).order_by(schema.Connection.date_start.desc()).all()
         elif user:
-            tables = db.query(schema.User, schema.Host, schema.Connection, schema.ConnectionType).filter(
+            tables = db.query(schema.User, schema.Host, schema.Connection).filter(
                 schema.User.uid == schema.Connection.user,
                 schema.Host.id == schema.Connection.host,
-                schema.ConnectionType.id == schema.Connection.connection_type,
                 schema.Connection.user == user.uid,
                 schema.Connection.date_start > datetime.datetime.now() - datetime.timedelta(days=1)
             ).order_by(schema.Connection.date_start.desc()).all()
         else:
-            tables = db.query(schema.User, schema.Host, schema.Connection, schema.ConnectionType).filter(
+            tables = db.query(schema.User, schema.Host, schema.Connection).filter(
                 schema.User.uid == schema.Connection.user,
                 schema.Host.id == schema.Connection.host,
-                schema.ConnectionType.id == schema.Connection.connection_type,
                 schema.Connection.date_start > datetime.datetime.now() - datetime.timedelta(days=1)
             ).order_by(schema.Connection.date_start.desc()).all()
 
-    for user_tables, host_tables, connection_tables, c_type_tables in tables:
+    for user_tables, host_tables, connection_tables in tables:
         connections.append(
             {
                 'user': user_tables,
                 'host': host_tables,
-                'connection': connection_tables,
-                'connection_type': c_type_tables
+                'connection': connection_tables
             }
         )
 
@@ -406,12 +409,11 @@ def get_admin_content_dashboard(param: parameters.WebParameters):
     :param param: WebParameters
     :return: dict
     """
-    with schema.db_select(param.engine) as db:
-        connection_count = db.query(schema.Connection).filter(schema.Connection.status == 1).count()
+    connection = get_connections(param, active=True)
     content = {
         'access_request': get_access_request(param),
-        'connection': get_connections(param, active=True),
-        'connection_count': connection_count,
+        'connection': connection,
+        'connection_count': len(connection),
         'la': os.getloadavg()[2],
         'free': psutil.virtual_memory().percent,
         'disk': psutil.disk_usage(param.data_dir).percent,
@@ -1044,6 +1046,19 @@ def set_parameters(param: parameters.WebParameters, name: str, value: str):
 
     return True
 
+def set_file_transfer(param: parameters.FileTransfer, connection_id, file_name, file_name_tgz, md5, direction):
+    with schema.db_edit(param.engine) as db:
+        db.add(
+            schema.FileTransfer(
+                connection_id = connection_id,
+                file_name = file_name,
+                file_name_tgz = file_name_tgz,
+                date_transfer = datetime.datetime.now(),
+                md5 = md5,
+                direction = direction
+            )
+        )
+        db.flush()
 
 def search(param: parameters.Parameters, query):
     """

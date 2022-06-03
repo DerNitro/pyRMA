@@ -13,6 +13,8 @@
     email_smtp_host:    "{{ email_smtp_host | default('localhost') }}"
     email_smtp_port:    "{{ email_smtp_port | default('25') }}"
     email_send_from:    "{{ email_send_from | default('acs@localhost') }}"
+  tags:
+    - dev
 
 - name: Install multi python packages with version specifiers
   become: true
@@ -28,6 +30,8 @@
       - python-pam==2.0.2
       - sshtunnel==0.4.0
       - python-iptables==1.0.0
+      - pysftp==0.2.9
+      - checksumdir==1.2.0
 
 - name: Create local group {{ app_group }}
   become: true
@@ -71,12 +75,12 @@
     mode: '0755'
   with_items: 
     - pyrma.py
-    - ttyplay
-    - ttyrec
-    - ttytime
     - web.py
     - firewall.py
+    - ft.py
   notify: Restart pyrma-web.service
+  tags:
+    - dev
 
 - name: Copy data files
   become: true
@@ -89,6 +93,8 @@
     - web
     - lib
   notify: Restart pyrma-web.service
+  tags:
+    - dev
 
 - name: Create link pyRMA lib
   become: true
@@ -134,6 +140,17 @@
     path: /etc/shells
     line: "{{ app_folder }}/bin/pyrma.sh"
 
+- name: Create folder {{ app_data_dir }}
+  become: true
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0755'
+  with_items: 
+    - "{{ app_data_dir }}"
+
 - name: Change owner and group pyRMA folders
   become: true
   ansible.builtin.file:
@@ -142,10 +159,11 @@
     owner: "{{ app_user }}"
     group: "{{ app_group }}"
     mode: '6775'
-  with_items: 
-    - "{{ app_data_dir }}"
+  with_items:
+    - "{{ app_data_dir }}/backup"
+    - "{{ app_data_dir }}/transfer"
+    - "{{ app_data_dir }}/filerecords"
     - /var/log/pyRMA/
-    - /home/acs
     - /etc/pyrma
     
 - name: Configure pyRMA
@@ -167,6 +185,17 @@
     group: root
     mode: '0644'
   notify: Restart pyrma-web.service
+
+- name: Configure SSHD for group {{ app_group }}
+  become: true
+  notify: Restart ssh.service
+  blockinfile:
+    path: /etc/ssh/sshd_config
+    block: |
+      Match Group {{ app_group }}
+        ForceCommand {{ app_folder }}/bin/pyrma.sh
+        AllowTcpForwarding no
+        X11Forwarding no
 
   # TODO: Добавить сервис firewall
 

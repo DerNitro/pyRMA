@@ -5,6 +5,7 @@ log_level = {{ app_log_level }}
 
 # Расположение файлов записи и бекапов файлов передачи
 data_dir = {{ app_data_dir }}
+app_dir = {{ app_folder }}
 
 auto_extension = 1
 extension_days = 21
@@ -37,3 +38,7 @@ template = {{ app_folder }}/web
 [Firewall]
 firewall_forward_table = pyrma_forward
 firewall_ipmi_table = pyrma_ipmi
+
+[FileTransfer]
+file_transfer_folder = transfer
+file_transfer_backup_folder = backup

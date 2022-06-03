@@ -11,6 +11,11 @@
     
     - name: Include tasks install pyRMA
       include_tasks: ansible/install.yml
+      tags:
+      - dev
+
+    - name: Include tasks install vsFTPd
+      include_tasks: ansible/vsftpd.yml
 
     - name: Include tasks start pyRMA
       include_tasks: ansible/start.yml
@@ -26,4 +31,16 @@
       become: true
       ansible.builtin.systemd:
         name: pyrma-web.service
+        state: restarted
+
+    - name: Restart ssh.service
+      become: true
+      ansible.builtin.systemd:
+        name: ssh.service
+        state: restarted
+
+    - name: Restart vsftpd.service
+      become: true
+      ansible.builtin.systemd:
+        name: vsftpd.service
         state: restarted

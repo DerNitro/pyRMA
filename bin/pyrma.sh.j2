@@ -2,7 +2,6 @@
 
 export LC_ALL=$(locale -a|grep -ix 'c.utf-\?8' || echo C)
 export SHELL=/bin/bash 
-export TERM=linux
 
 umask 0002
 
@@ -16,6 +15,6 @@ export file_rec file_path
 
 mkdir -p "$data_dir"/"$file_path"
 
-$TTYREC rec -c "/usr/bin/python3 {{ app_folder }}/bin/pyrma.py" "$data_dir"/"$file_path"/"$file_rec"
+$TTYREC rec -q -c "/usr/bin/python3 {{ app_folder }}/bin/pyrma.py" "$data_dir"/"$file_path"/"$file_rec"
 
 exit 0

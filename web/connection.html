@@ -8,7 +8,13 @@
 {{ super() }}
 {% endblock %}
 {% block content %}
-<h2>Подключение по {{ content['connection_type']['name'] }} к <a href="/host/{{ content['host']['id'] }}">{{ content['host']['name'] }}</a></h2>
+<h2>Подключение к <a href="/host/{{ content['host']['id'] }}">{{ content['host']['name'] }}</a></h2>
+<h3>
+    {% if content['connection'].connection_type == 1 %}Терминальное подключени{% endif %}
+    {% if content['connection'].connection_type == 2 %}Передача данных{% endif %}
+    {% if content['connection'].connection_type == 3 %}Сервисы{% endif %}
+    {% if content['connection'].connection_type == 4 %}IPMI{% endif %}
+</h3>
 <table border="1"">
     <tr>
         <td>Пользователь</td>
@@ -44,6 +50,22 @@
     </tr>
     {% endif %}
 </table>
+{% if content['file']|length > 0 %}
+<hr>
+<h3>Переданные файлы:</h3>
+<table border="1" width="95%">
+    <th>Файл</th>
+    <th>Дата</th>
+    <th>Направление</th>
+{% for i in content['file'] %}
+    <tr>
+        <td><a href="/file/{{ i.file_name_tgz }}">{{ i.file_name }}</a></td>
+        <td>{{ i.date_transfer }}</td>
+        <td>{{ i.direction }}</td>
+    </tr>
+{% endfor %}
+</table>
+{% endif %}
 <hr>
 <center><div id="tty"></div></center>
 <script>

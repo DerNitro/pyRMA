@@ -37,3 +37,14 @@
     sysctl_set: yes
     state: present
     reload: yes
+
+- name: Disable sFTP over SSH
+  become: true
+  ansible.builtin.replace:
+    path: /etc/ssh/sshd_config
+    regexp: '^(Subsystem sftp.*)$'
+    replace: '# \1'
+  notify: Restart ssh.service
+
+- name: Flush handlers
+  meta: flush_handlers

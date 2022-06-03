@@ -18,6 +18,7 @@
 """
 
 import logging
+import os
 from logging import handlers, Formatter
 
 
@@ -30,7 +31,7 @@ class Log:
                 '/var/log/pyRMA/' + filename,
                 maxBytes=1024*1024*1024,
                 backupCount=10)
-            log_format = Formatter('[{0:<10}] [%(levelname)-8s] [%(asctime)s] - %(message)s'.format(name))
+            log_format = Formatter('[%(process)d] [%(levelname)-8s] [%(asctime)s] - %(message)s')
             self.handler.setFormatter(log_format)
             self.log.addHandler(self.handler)
 
