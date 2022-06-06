@@ -206,10 +206,8 @@ class ServiceType(Base):
     Список доступных подключений к сервисов
     """
     __tablename__ = 'service_type'
-    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
     name = sqlalchemy.Column(sqlalchemy.String(20))
-    default_port = sqlalchemy.Column(sqlalchemy.Integer)
-    plugin = sqlalchemy.Column(sqlalchemy.String)
+    default_port = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, unique=True)
 
     def __repr__(self):
         return "{0}".format(self.__dict__)
@@ -452,6 +450,21 @@ class FileTransfer(Base):
         return "{0}".format(self.__dict__)
 
 
+class CaptureTraffic(Base):
+    """
+    Таблица хранения данных о tcp дампах
+    """
+    __tablename__ = 'capture_traffic'
+
+    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
+    connection_id = sqlalchemy.Column(sqlalchemy.Integer)
+    file_name = sqlalchemy.Column(sqlalchemy.String)
+    service_port = sqlalchemy.Column(sqlalchemy.Integer)
+
+    def __repr__(self):
+        return "{0}".format(self.__dict__)
+
+
 if __name__ == '__main__':
     arg = argparse.ArgumentParser(
         epilog='schema.py (C) "Sergey Utkin" mailto:utkins01@gmail.com',
@@ -500,6 +513,7 @@ if __name__ == '__main__':
             User.__table__.create(bind=engine)
             ForwardTCP.__table__.create(bind=engine)
             FileTransfer.__table__.create(bind=engine)
+            CaptureTraffic.__table__.create(bind=engine)
         except sqlalchemy.exc.ProgrammingError as e:
             if 'psycopg2.errors.DuplicateTable' in str(e):
                 print("The tables are already created!")

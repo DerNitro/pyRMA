@@ -226,8 +226,25 @@ def get_connection(param: parameters.Parameters, id):
     Возвращает информацию о подключении
     """
 
+    services_traffic = []
+
     with schema.db_select(param.engine) as db:
         file_transfer = db.query(schema.FileTransfer).filter(schema.FileTransfer.connection_id == id).all()
+        capture_traffic = db.query(schema.CaptureTraffic, schema.ServiceType, schema.Service).filter(
+            schema.CaptureTraffic.connection_id == id,
+            schema.CaptureTraffic.service_port == schema.Service.local_port,
+            schema.Service.type == schema.ServiceType.default_port
+        ).all()
+        for capture, service_type, service in capture_traffic:
+            services_traffic.append(
+                {
+                    'file_name': capture.file_name,
+                    'name': service_type.name,
+                    'port': service.remote_port,
+                    'ip': service.remote_ip,
+                    'size': os.stat(os.path.join(param.data_dir, capture.file_name)).st_size
+                }
+            )
         try:
             record = db.query(schema.User, schema.Host, schema.Connection, schema.Session).filter(
                 schema.User.uid == schema.Connection.user,
@@ -245,7 +262,8 @@ def get_connection(param: parameters.Parameters, id):
         'host': host,
         'connection': connection, 
         'session': session,
-        'file': file_transfer
+        'file': file_transfer,
+        'capture_traffic': services_traffic
     }
 
 def get_file_transfer(param: parameters.FileTransfer, md5=None, cid=None) -> List[schema.FileTransfer]:
@@ -537,14 +555,14 @@ def get_ilo_type(param: parameters.WebParameters, ipmi_id=None, raw=False):
 def get_service_type(param: parameters.Parameters, service_type_id=None, raw=False):
     with schema.db_select(param.engine) as db:
         if service_type_id:
-            service_type = db.query(schema.ServiceType).filter(schema.ServiceType.id == service_type_id).one()
+            service_type = db.query(schema.ServiceType).filter(schema.ServiceType.default_port == service_type_id).one()
         else:
             service_type = db.query(schema.ServiceType).all()
 
     if raw or service_type_id:
         return service_type
     else:
-        return [(t.id, t.name) for t in service_type]
+        return [(t.default_port, t.name) for t in service_type]
 
 
 def get_local_port(param: parameters.WebParameters):
@@ -1274,14 +1292,20 @@ def add_service_type(param: parameters.WebParameters, name, default_port):
             name=name,
             default_port=default_port
         )
-        db.add(service_type)
-        db.flush()
+        try:
+            db.add(service_type)
+            db.flush()
+        except sqlalchemy.exc.IntegrityError as e:
+            if 'duplicate key value' in str(e):
+                raise error.InsertError('Дубль "Порт по умолчанию"')
+            else:
+                raise error.WTF(e)
         db.refresh(service_type)
         action = schema.Action(
             user=param.user_info.uid,
             action_type=8,
             date=datetime.datetime.now(),
-            message="Добавление сервиса: id={service.id}({service})".format(service=service_type)
+            message="Добавление сервиса: id={service.default_port}({service})".format(service=service_type)
         )
         db.add(action)
         db.flush()
@@ -1614,13 +1638,13 @@ def del_prefix(param: parameters.WebParameters, prefix):
 
 def del_service_type(param: parameters.WebParameters, service):
     with schema.db_edit(param.engine) as db:
-        s = db.query(schema.ServiceType).filter(schema.ServiceType.id == service).one()
-        db.query(schema.ServiceType).filter(schema.ServiceType.id == service).delete()
+        s = db.query(schema.ServiceType).filter(schema.ServiceType.default_port == service).one()
+        db.query(schema.ServiceType).filter(schema.ServiceType.default_port == service).delete()
         action = schema.Action(
             user=param.user_info.uid,
             action_type=9,
             date=datetime.datetime.now(),
-            message="Удаление сервиса: {service.name}({service.id})".format(service=s)
+            message="Удаление сервиса: {service.name}({service.default_port})".format(service=s)
         )
         db.add(action)
         db.flush()
@@ -1794,6 +1818,20 @@ def tcp_forward_connection_is_active(app_param: parameters.AppParameters, rules:
         if ftcp.state != 1:
             return False
     return True
+
+def add_capture_traffic(app_param: parameters.FirewallParameters, connection_id, file_name, service_port):
+    """
+    Добавление записи в СУБД о файле записи дампа
+    """
+    with schema.db_edit(app_param.engine) as db:
+        db.add(
+            schema.CaptureTraffic(
+                connection_id=connection_id,
+                file_name=file_name,
+                service_port=service_port
+            )
+        )
+        db.flush()
 
 
 if __name__ == '__main__':

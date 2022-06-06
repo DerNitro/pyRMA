@@ -161,6 +161,11 @@ def ttyrec(path):
 def file(path):
     return send_from_directory(webParameters.data_dir, path)
 
+@app.route('/pcap/<path:path>')
+@applib.authorization(session, request, webParameters)
+def capture(path):
+    return send_from_directory(webParameters.data_dir, path)
+
 
 @app.route('/connection/<connection_id>', methods=['GET'])
 @applib.authorization(session, request, webParameters)
@@ -763,13 +768,18 @@ def administrate_service_add():
         return render_template(siteMap['access_denied'])
     form_add_service = forms.AddService()
     if request.method == 'POST' and form_add_service.validate_on_submit():
-        applib.add_service_type(
-            webParameters,
-            form_add_service.name.data,
-            form_add_service.default_port.data
-        )
+        try:
+            applib.add_service_type(
+                webParameters,
+                form_add_service.name.data,
+                form_add_service.default_port.data
+            )
+        except rma_error.InsertError as e:
+            return render_template(
+                siteMap['error'],
+                error=e
+            )
     return redirect('/administrate/service')
-
 
 
 @app.route('/administrate/delete/ipmi/<ipmi_id>', methods=['GET', 'POST'])

@@ -51,3 +51,6 @@ class Log:
 
     def critical(self, text):
         self.log.critical(text)
+
+    def exception(self):
+        self.log.exception("Tracert error")

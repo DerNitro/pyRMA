@@ -6,3 +6,11 @@
     state: started
     enabled: yes
     daemon_reload: yes
+
+- name: Start pyRMA Firewall
+  become: true
+  ansible.builtin.systemd:
+    name: pyrma-firewall.service
+    state: started
+    enabled: yes
+    daemon_reload: yes

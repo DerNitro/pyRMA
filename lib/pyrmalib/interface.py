@@ -370,12 +370,12 @@ class ConnectionForm(npyscreen.Popup):
             self.btn_ipmi.hidden = False
         if self.host.file_transfer_type:
             self.btn_file_transfer.hidden = False
-        if len(services) > 0:
+        if len(services) > 0 and access.check_access(appParameters, 'ConnectionService', h_object=self.host):
             service_string_list = []
             for s in services:
                 service_type = None
                 for st in service_types:
-                    if s.type == st.id:
+                    if s.type == st.default_port:
                         service_type = st.name
                         break
                 service_string_list.append(
