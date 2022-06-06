@@ -25,7 +25,8 @@ user_access_map = {
     'ShowLogin': 4,                 # Отображение логина
     'ShowPassword': 5,              # Отображение пароля
     'ShowAllSession': 6,            # Просмотр сессии пользователя
-    'AccessRequest': 7              # Согласование доступов
+    'AccessRequest': 7,             # Согласование доступов
+    'EditCredential': 8             # Редактирование учетных данных подключения
 }
 
 connection_access_map = {
@@ -113,6 +114,8 @@ def get_user_access(param: parameters.Parameters, user, host):
         user_acc.change('ShowAllSession', set_access=True)
     if check_access(param, 'AccessRequest', h_object=host, user=user):
         user_acc.change('AccessRequest', set_access=True)
+    if check_access(param, 'EditCredential', h_object=host, user=user):
+        user_acc.change('EditCredential', set_access=True)
 
     if check_access(param, 'Connection', h_object=host, user=user):
         conn_acc.change('Connection', set_access=True)

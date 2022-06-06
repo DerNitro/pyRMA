@@ -968,6 +968,7 @@ def set_group_permission(param: parameters.WebParameters, group_id, form: forms.
     user_access.change('ShowPassword', set_access=form.ShowPassword.data)
     user_access.change('ShowAllSession', set_access=form.ShowAllSession.data)
     user_access.change('AccessRequest', set_access=form.AccessRequest.data)
+    user_access.change('EditCredential', set_access=form.EditCredential.data)
 
     connection_access = access.ConnectionAccess(0)
     connection_access.change('Connection', set_access=form.Connection.data)
