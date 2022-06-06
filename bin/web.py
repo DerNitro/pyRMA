@@ -703,24 +703,6 @@ def administrate_service():
         username=webParameters.user_info.login
     )
 
-@app.route('/administrate/prefix', methods=['GET'])
-@applib.authorization(session, request, webParameters)
-def administrate_prefix():
-    if not webParameters.user_info.admin:
-        return render_template(siteMap['access_denied'])
-    
-    search_field = forms.Search()
-    form_add_prefix = forms.AddPrefix()
-    prefix = applib.get_prefix(webParameters)
-    return render_template(
-        siteMap['administrate_prefix'],
-        admin=webParameters.user_info.admin,
-        search=search_field,
-        prefix=prefix,
-        form_add_prefix=form_add_prefix,
-        username=webParameters.user_info.login
-    )
-
 
 @app.route('/administrate/ipmi', methods=['GET'])
 @applib.authorization(session, request, webParameters)
@@ -808,28 +790,6 @@ def administrate_ipmi_delete(ipmi_id):
         del_button=del_button,
         search=search_field,
         ipmi=ipmi,
-        username=webParameters.user_info.login
-    )
-
-
-@app.route('/administrate/delete/prefix/<prefix_id>', methods=['GET', 'POST'])
-@applib.authorization(session, request, webParameters)
-def administrate_prefix_delete(prefix_id):
-    if not webParameters.user_info.admin:
-        return render_template(siteMap['access_denied'])
-
-    prefix = applib.get_prefix(webParameters, prefix_id=prefix_id)
-    del_button = forms.DelButton()
-    search_field = forms.Search()
-    if request.method == 'POST' and del_button.validate_on_submit():
-        applib.del_prefix(webParameters, prefix_id)
-        return redirect('/administrate/prefix')
-    return render_template(
-        siteMap['administrate_del_prefix'],
-        admin=webParameters.user_info.admin,
-        del_button=del_button,
-        search=search_field,
-        prefix=prefix,
         username=webParameters.user_info.login
     )
 
@@ -993,6 +953,8 @@ def administrate_group_show(group_id):
             access.check_access(webParameters, 'ShowAllSession', check_permission=content['permission'])
         form.AccessRequest.data = \
             access.check_access(webParameters, 'AccessRequest', check_permission=content['permission'])
+        form.EditCredential.data = \
+            access.check_access(webParameters, 'EditCredential', check_permission=content['permission'])
 
         form.Connection.data = \
             access.check_access(webParameters, 'Connection', check_permission=content['permission'])

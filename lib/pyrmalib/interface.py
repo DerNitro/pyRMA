@@ -323,9 +323,9 @@ class ConnectionForm(npyscreen.Popup):
         self.cycle_widgets = True
         self.ip_address = self.add(npyscreen.TitleFixedText, name='IP адрес')
         self.description = self.add(npyscreen.TitleFixedText, name='Описание')
-        self.login = self.add(npyscreen.TitleText, name='Login')
-        self.password = self.add(npyscreen.TitlePassword, name='Password')
-        self.save_pass = self.add(npyscreen.MultiSelect, max_height=2, values=["Сохранить пароль?"])
+        self.login = self.add(npyscreen.TitleText, name='Login', hidden=True)
+        self.password = self.add(npyscreen.TitlePassword, name='Password', hidden=True)
+        self.save_pass = self.add(npyscreen.MultiSelect, max_height=2, values=["Сохранить пароль?"], hidden=True)
         self.service = self.add(npyscreen.BoxTitle, name='Service', max_height=7)
         self.add(npyscreen.FixedText)
         self.btn_connection = self.add(
@@ -362,6 +362,10 @@ class ConnectionForm(npyscreen.Popup):
                 self.password.value = '*' * len(self.host.default_password)
         services = applib.get_service(appParameters, self.host.id)
         service_types = applib.get_service_type(appParameters, raw=True)
+        if access.check_access(appParameters, 'EditCredential', h_object=self.host):
+            self.login.hidden = False
+            self.password.hidden = False
+            self.save_pass.hidden = False
         if self.host.ilo_type:
             self.btn_ipmi.hidden = False
         if self.host.file_transfer_type:
@@ -387,7 +391,7 @@ class ConnectionForm(npyscreen.Popup):
     def connection(self):
         global connection_host
         if access.check_access(appParameters, "Connection", h_object=self.host):
-            if len(self.save_pass.value) > 0:
+            if not self.save_pass.hidden and len(self.save_pass.value) > 0:
                 applib.save_password(appParameters, self.host.id, self.login.value, self.password.value)
             conn_type = applib.get_connection_type(appParameters)
             conn_type_name = None
