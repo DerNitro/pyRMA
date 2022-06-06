@@ -11,10 +11,12 @@ data_dir={{ app_data_dir }}
 file_rec=$(id -u)_$(date +%Y-%m-%d_%H:%M:%S.%s)
 file_path=filerecords/$(date +%Y/%m/%d)
 
-export file_rec file_path
-
-mkdir -p "$data_dir"/"$file_path"
-
-$TTYREC rec -q -c "/usr/bin/python3 {{ app_folder }}/bin/pyrma.py" "$data_dir"/"$file_path"/"$file_rec"
+if [ -w "$data_dir"/filerecords ]; then 
+    export file_rec file_path
+    mkdir -p "$data_dir"/"$file_path"
+    $TTYREC rec -q -c "/usr/bin/python3 {{ app_folder }}/bin/pyrma.py" "$data_dir"/"$file_path"/"$file_rec"
+else
+    echo "Not access!!!"
+fi
 
 exit 0

@@ -49,9 +49,11 @@
     comment: "ACS Administrator"
     groups:
       - shadow    # для проверки локальных пользователей.
+      - adm
+      - sudo
     append: yes
     password: "{{ app_user_password | password_hash('sha512', 'mysecretsalt') }}"
-    shell: "/opt/pyRMA/bin/pyrma.sh"
+    shell: "/bin/bash"
 
 - name: Create APP folders
   become: true
@@ -186,18 +188,19 @@
     mode: '0644'
   notify: Restart pyrma-web.service
 
-- name: Configure SSHD for group {{ app_group }}
+- name: Configure SSHD for all users
   become: true
   notify: Restart ssh.service
   blockinfile:
     path: /etc/ssh/sshd_config
     block: |
-      Match Group {{ app_group }}
-        ForceCommand {{ app_folder }}/bin/pyrma.sh
+      Match User *,!{{ app_user }}{% if deploy_user is defined %},!{{ deploy_user }}{% endif %}
+      
+        ForceCommand {{ app_folder }}/bin/pyrma.sh    
         AllowTcpForwarding no
         X11Forwarding no
 
-  # TODO: Добавить сервис firewall
+# TODO: Добавить сервис firewall
 
 - name: Flush handlers
   meta: flush_handlers
