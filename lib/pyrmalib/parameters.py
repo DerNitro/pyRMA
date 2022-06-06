@@ -139,6 +139,7 @@ class FirewallParameters(Parameters):
         self.log = log.Log('pyrma_firewall', **self.log_param)
         self.firewall_forward_table = self.conf.get('Firewall', 'firewall_forward_table')
         self.firewall_ipmi_table = self.conf.get('Firewall', 'firewall_ipmi_table')
+        self.tcp_capture_folder = self.conf.get('Firewall', 'tcp_capture_folder')
 
 
 class FileTransfer(Parameters):

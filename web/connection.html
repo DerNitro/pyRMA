@@ -66,6 +66,20 @@
 {% endfor %}
 </table>
 {% endif %}
+{% if content['capture_traffic']|length > 0 %}
+<hr>
+<h3>Подключенные сервисы:</h3>
+<table border="1" width="95%">
+{% for i in content['capture_traffic'] %}
+    {% if i.size > 24 %} <tr bgcolor="#00ff40"> {% else %} <tr bgcolor="#ff807a"> {% endif %}
+        <td>{{ i.name }}</td>
+        <td>{{ i.port }}</td>
+        <td>{{ i.ip }}</td>
+        <td><a href="/pcap/{{ i.file_name }}"><button>Загрузить</button></a></td>
+    </tr>
+{% endfor %}
+</table>
+{% endif %}
 <hr>
 <center><div id="tty"></div></center>
 <script>

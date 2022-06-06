@@ -80,7 +80,9 @@
     - web.py
     - firewall.py
     - ft.py
-  notify: Restart pyrma-web.service
+  notify: 
+   - Restart pyrma-web.service
+   - Restart pyrma-firewall.service
   tags:
     - dev
 
@@ -94,7 +96,9 @@
   with_items: 
     - web
     - lib
-  notify: Restart pyrma-web.service
+  notify: 
+   - Restart pyrma-web.service
+   - Restart pyrma-firewall.service
   tags:
     - dev
 
@@ -165,6 +169,7 @@
     - "{{ app_data_dir }}/backup"
     - "{{ app_data_dir }}/transfer"
     - "{{ app_data_dir }}/filerecords"
+    - "{{ app_data_dir }}/capture"
     - /var/log/pyRMA/
     - /etc/pyrma
     
@@ -176,7 +181,9 @@
     owner: "{{ app_user }}"
     group: "{{ app_group }}"
     mode: '0640'
-  notify: Restart pyrma-web.service
+  notify: 
+   - Restart pyrma-web.service
+   - Restart pyrma-firewall.service
   
 - name: Add pyRMA Web service
   become: true
@@ -187,6 +194,16 @@
     group: root
     mode: '0644'
   notify: Restart pyrma-web.service
+
+- name: Add pyRMA Firewall service
+  become: true
+  ansible.builtin.template:
+    src: "etc/systemd/system/pyrma-firewall.service.j2"
+    dest: /etc/systemd/system/pyrma-firewall.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart pyrma-firewall.service
 
 - name: Configure SSHD for all users
   become: true
@@ -199,8 +216,6 @@
         ForceCommand {{ app_folder }}/bin/pyrma.sh    
         AllowTcpForwarding no
         X11Forwarding no
-
-# TODO: Добавить сервис firewall
 
 - name: Flush handlers
   meta: flush_handlers

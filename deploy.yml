@@ -33,6 +33,12 @@
         name: pyrma-web.service
         state: restarted
 
+    - name: Restart pyrma-firewall.service
+      become: true
+      ansible.builtin.systemd:
+        name: pyrma-firewall.service
+        state: restarted
+
     - name: Restart ssh.service
       become: true
       ansible.builtin.systemd:
