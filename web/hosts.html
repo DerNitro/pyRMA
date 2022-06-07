@@ -77,9 +77,9 @@
     {% for host in host_list %}
     <tr>
         {% if host.type == 1 %}
-        <td><a href="/host/{{ host.id }}">{{ host.name }}</a></td>
+        <td width="25%"><a href="/host/{{ host.id }}">{{ host.name }}</a></td>
         {% else %}
-        <td><a href="/hosts/{{ host.id }}"><b>{{ host.name }}</b></a></td>
+        <td width="25%"><a href="/hosts/{{ host.id }}"><b>{{ host.name }}</b></a></td>
         {% endif %}
         <td>{{ host.describe }}</td>
     {% else %}
