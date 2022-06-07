@@ -19,6 +19,16 @@ body {
 	font-family: sans-serif;
 }
 
+a {
+    text-decoration: none;
+}
+a:link, a:visited {
+    color: rgb(47, 0, 255);
+}
+a:hover {
+    color: #4CAF50;
+}
+
 ul.menu {
     list-style-type: none;
     margin: 0;
