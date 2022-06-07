@@ -423,6 +423,7 @@ class ForwardTCP(Base):
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
     connection_id = sqlalchemy.Column(sqlalchemy.Integer)
     user_ip = sqlalchemy.Column(sqlalchemy.String(20))
+    acs_ip = sqlalchemy.Column(sqlalchemy.String(20))
     local_port = sqlalchemy.Column(sqlalchemy.Integer)
     forward_ip = sqlalchemy.Column(sqlalchemy.String(20))
     forward_port = sqlalchemy.Column(sqlalchemy.Integer)

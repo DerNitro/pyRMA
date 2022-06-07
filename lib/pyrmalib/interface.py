@@ -342,7 +342,7 @@ class ConnectionForm(npyscreen.Popup):
         )
         self.button_line_relx += self._widgets__[-1].label_width + 2
         self.btn_ipmi = self.add(
-            npyscreen.ButtonPress, name='iLo|IPMI',
+            npyscreen.ButtonPress, name='IPMI',
             rely=self._widgets__[-1].rely,
             relx=self.button_line_relx,
             when_pressed_function=self.connection_ilo,
@@ -473,7 +473,20 @@ class ConnectionForm(npyscreen.Popup):
             access_form.edit()
 
     def connection_ilo(self):
-        pass
+        global connection_host
+
+        if access.check_access(appParameters, "ConnectionIlo", h_object=self.host):
+            connection_host = connection.IPMI(appParameters, self.host)
+            self.editing = False
+        else:
+            access_list = ['Подключение']
+            if not self.btn_file_transfer.hidden:
+                access_list.append('Передача файлов')
+            if not self.btn_ipmi.hidden:
+                access_list.append('IPMI')
+            access_form = AccessRequest(name=self.host.name, access_list=access_list)
+            access_form.host = self.host
+            access_form.edit()
 
 
 class InformationForm(npyscreen.Form):

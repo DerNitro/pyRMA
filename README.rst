@@ -25,6 +25,7 @@ pyRMA
     hosts:
       pyrma.vmlocal:  
     vars:
+      app_ip_address: 192.168.0.1
       install_postgresql: yes
       pyrma_database:
         name: 'acs'
@@ -39,6 +40,7 @@ pyRMA
 * **app_group**: локальная группа, по умолчанию 'acs'
 * **app_folder**: директория установки приложения, по умолчанию '/opt/pyRMA'
 * **app_data_dir**: директория данных приложения, по умолчанию '/data/pyRMA'
+* **app_ip_address**: IP адрес ACS
 * **app_log_level**: уровень логирования, по умолчанию 'INFO'
 * **app_web_ip**: адрес веб интрефеса приложения, по умолчанию '0.0.0.0'
 * **app_web_port**: порт веб приложения, по умолчанию '8080'
@@ -53,6 +55,8 @@ pyRMA
 * **email_smtp_port**: Порт SMPT сервера, по умолчанию '25'
 * **email_send_from**: Имя пользователя под которым будут отправляться сообщения, по умолчанию 'acs@localhost'
 * **email_domain_name**: доменное имя элекронной почты, по умолчанию 'localhost'
+* **ipmi_local_ip_addresses**: список IP адресов на ACS для проброса подключения к IPMI интерфейсу узла
+* **tcp_forward_interface**: исходящий интерфейс в сторону узлов
 
 Установка
 ---------

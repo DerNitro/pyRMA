@@ -65,6 +65,7 @@ class Parameters:
             "database": self.conf.get('DataBase', 'dbname', fallback='acs')
         }
         self.data_dir = self.conf.get('Main', 'data_dir', fallback='/data/pyRMA')
+        self.app_ip_address = self.conf.get('Main', 'app_ip_address')
         self.auto_extension = int(self.conf.get('Main', 'auto_extension', fallback='1'))
         self.extension_days = int(self.conf.get('Main', 'extension_days', fallback='21'))
         self.check_source_ip = int(self.conf.get('Main', 'check_source_ip', fallback='0'))
@@ -79,6 +80,7 @@ class Parameters:
             int(self.conf.get('Main', 'forward_tcp_port_range', fallback='10000:15000').split(':')[0]),
             int(self.conf.get('Main', 'forward_tcp_port_range', fallback='10000:15000').split(':')[1]),
         )
+        self.ipmi_local_ip_list = self.conf.get('IPMI', 'local_ips', fallback='').split(',')
 
     def check_user(self):
         if not self.user_info:
@@ -138,8 +140,8 @@ class FirewallParameters(Parameters):
         }
         self.log = log.Log('pyrma_firewall', **self.log_param)
         self.firewall_forward_table = self.conf.get('Firewall', 'firewall_forward_table')
-        self.firewall_ipmi_table = self.conf.get('Firewall', 'firewall_ipmi_table')
         self.tcp_capture_folder = self.conf.get('Firewall', 'tcp_capture_folder')
+        self.tcp_forward_interface = self.conf.get('Firewall', 'tcp_forward_interface')
 
 
 class FileTransfer(Parameters):

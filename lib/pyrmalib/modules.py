@@ -42,7 +42,7 @@ class Modules:
 
 
 class ConnectionModules(Modules):
-    HOST = None  # type: schema.Host
+    HOST = None             # type: schema.Host
     CONNECTION_TYPE = None  # type:int
     ERROR = None
     SERVICE = None
@@ -132,6 +132,7 @@ class ConnectionModules(Modules):
 
         if self.SERVICE:
             services = [(i['remote_ip'], i['remote_port']) for i in self.SERVICE]
+            self.PARAMETERS.log.debug('ConnectionModules(run) services: {}'.format(services))
             self.services = SSHTunnelForwarder(
                 (self.HOST.ip, self.HOST.tcp_port),
                 ssh_username=self.LOGIN,
@@ -159,6 +160,7 @@ class ConnectionModules(Modules):
                 self.TCP_FORWARD.append(
                     {
                         'connection_id': self.connection_id,
+                        'acs_ip': self.PARAMETERS.app_ip_address,
                         'user_ip': self.PARAMETERS.ssh_client_ip,
                         'local_port': service['local_port'],
                         'forward_ip': ip,

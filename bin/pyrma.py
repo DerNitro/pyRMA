@@ -201,6 +201,8 @@ if connection_host:      # type: modules.ConnectionModules
         pass
     except ErrorConnectionJump:
         pass
+    except ErrorConectionIPMI as e:
+        print(e)
     finally:
         connection_host.close()
 appParameters.log.info('Выход из приложения.')

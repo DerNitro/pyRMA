@@ -24,8 +24,10 @@
 import os
 import shlex
 import subprocess
+import datetime
+from sshtunnel import SSHTunnelForwarder, BaseSSHTunnelForwarderError
 
-from pyrmalib import modules, dict, applib, parameters, schema, access
+from pyrmalib import modules, dict, applib, parameters, schema, access, error, utils
 
 
 class SSH(modules.ConnectionModules):
@@ -179,3 +181,145 @@ class SERVICE(modules.ConnectionModules):
         user_input = ''
         while user_input.lower() != 'exit'.lower():
             user_input = input('Для завершения сессии введите "exit": ')
+
+class IPMI:
+    HOST = None
+    CONNECTION_TYPE = 4
+    JUMP = None
+    NAME = None
+    TERMINATION = 0
+
+    def __init__(self, param: parameters.AppParameters, host: schema.Host):
+        super().__init__()
+        self.PARAMETERS = param
+        self.HOST = host
+        self.JUMP = None
+        self.TCP_FORWARD = []
+        self.connection_id = None
+        self.NAME = 'IPMI'
+        self.ERROR = None
+
+    def run(self):
+        self.PARAMETERS.log.info(
+            'Подключение {name} к хосту {host.name}({host.ilo})'.format(name=self.NAME, host=self.HOST)
+        )
+        connection = schema.Connection(
+            status=1,
+            user=self.PARAMETERS.user_info.uid,
+            host=self.HOST.id,
+            connection_type=self.CONNECTION_TYPE,
+            date_start=datetime.datetime.now(),
+            session=self.PARAMETERS.session
+        )
+        with schema.db_edit(self.PARAMETERS.engine) as db:
+            db.add(connection)
+            db.flush()
+            db.refresh(connection)
+            self.connection_id = connection.id
+
+        self.JUMP = applib.get_jump_host(self.PARAMETERS, self.HOST.id) \
+            if applib.get_jump_host(self.PARAMETERS, self.HOST.id) \
+                else applib.get_jump_host(self.PARAMETERS, self.HOST.parent)
+
+        self.ilo_type = applib.get_ilo_type(self.PARAMETERS, ipmi_id=self.HOST.ilo_type)
+        tcp_forwards = applib.get_tcp_forward_connection(self.PARAMETERS)
+        acs_ips = []
+        for tcp_forward in tcp_forwards:
+            if tcp_forward.user_ip == self.PARAMETERS.ssh_client_ip:
+                acs_ips.append(tcp_forward.acs_ip)
+
+        self.local_ip_ipmi = None
+        for ip in self.PARAMETERS.ipmi_local_ip_list:
+            if ip not in acs_ips:
+                self.local_ip_ipmi = ip
+                break
+        
+        if not self.local_ip_ipmi:
+            raise error.ErrorConectionIPMI('Нет свободных IP адресов для подключения по IPMI!')
+
+    def close(self):
+        self.PARAMETERS.log.info(
+            'Отключение {name} от хоста {host.name}'.format(name=self.NAME, host=self.HOST)
+        )
+        
+        if self.JUMP and self.JUMP.id != self.HOST.id:
+            if getattr(self, 'jump', False) and self.jump.is_active:
+                self.jump.stop()
+
+        self.firewall('close')
+        
+        with schema.db_edit(self.PARAMETERS.engine) as db:
+            connection = db.query(schema.Connection).filter(schema.Connection.id == self.connection_id).one()
+            connection.date_end = datetime.datetime.now()
+            connection.status = 2
+            connection.termination = self.TERMINATION,
+            connection.error = self.ERROR
+            db.flush()
+            db.refresh(connection)
+        pass
+
+    def connection(self):
+        if self.JUMP and self.JUMP.id != self.HOST.id:
+            ipmi = [(self.HOST.ilo, int(i)) for i in str(self.ilo_type.ports).split(',')]
+            self.PARAMETERS.log.debug('IPMI(connection) ipmi: {}'.format(ipmi))
+            self.jump = SSHTunnelForwarder(
+                (self.JUMP.ip, self.JUMP.tcp_port),
+                ssh_username=self.JUMP.default_login,
+                ssh_password=utils.password(self.JUMP.default_password, self.JUMP.id, mask=False),
+                remote_bind_addresses=ipmi,
+                local_bind_addresses=[('127.0.0.1', ) for i in str(self.ilo_type.ports).split(',')]
+            )
+            try:
+                self.jump.start()
+            except BaseSSHTunnelForwarderError as e:
+                self.PARAMETERS.log.error(
+                    'Ошибка подключения к Jump хосту({}): {}'.format(self.JUMP.name, e.value),
+                    pr=True
+                )
+                self.TERMINATION = 2
+                self.ERROR = 'Ошибка подключения к Jump хосту({}): {}'.format(self.JUMP.name, e.value)
+                raise error.ErrorConnectionJump('Ошибка подключения к Jump хосту({}): {}'.format(self.JUMP.name, e.value))
+            self.PARAMETERS.log.debug(
+                'self.jump: {}'.format(self.jump)
+            )
+            self.PARAMETERS.log.info(
+                'Подключение к Jump хосту: {}'.format(self.JUMP.name)
+            )
+
+            for ipmi_port in str(self.ilo_type.ports).split(','):
+                ip, port = self.jump.tunnel_bindings[(self.HOST.ilo, int(ipmi_port))]
+                self.TCP_FORWARD.append(
+                    {
+                        'connection_id': self.connection_id,
+                        'acs_ip': self.local_ip_ipmi,
+                        'user_ip': self.PARAMETERS.ssh_client_ip,
+                        'local_port': ipmi_port,
+                        'forward_ip': ip,
+                        'forward_port': port
+                    }
+                )
+
+        else:
+            for ipmi_port in str(self.ilo_type.ports).split(','):
+                self.TCP_FORWARD.append(
+                    {
+                        'connection_id': self.connection_id,
+                        'acs_ip': self.local_ip_ipmi,
+                        'user_ip': self.PARAMETERS.ssh_client_ip,
+                        'local_port': ipmi_port,
+                        'forward_ip': self.HOST.ilo,
+                        'forward_port': ipmi_port
+                    }
+                )
+
+        if not applib.tcp_forward_connection_is_active(self.PARAMETERS, self.TCP_FORWARD):
+            self.firewall('open')
+        
+        user_input = ''
+        while user_input.lower() != 'exit'.lower():
+            user_input = input('Для завершения сессии введите "exit": ')
+
+    def firewall(self, state):
+        if len(self.TCP_FORWARD) > 0:
+            applib.tcp_forward_connection(self.PARAMETERS, self.TCP_FORWARD, state)
+        pass

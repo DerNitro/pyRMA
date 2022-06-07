@@ -227,6 +227,7 @@ def get_connection(param: parameters.Parameters, id):
     """
 
     services_traffic = []
+    ipmi_traffic = []
 
     with schema.db_select(param.engine) as db:
         file_transfer = db.query(schema.FileTransfer).filter(schema.FileTransfer.connection_id == id).all()
@@ -235,6 +236,11 @@ def get_connection(param: parameters.Parameters, id):
             schema.CaptureTraffic.service_port == schema.Service.local_port,
             schema.Service.type == schema.ServiceType.default_port
         ).all()
+        ipmi = db.query(schema.CaptureTraffic, schema.Connection).filter(
+            schema.CaptureTraffic.connection_id == id,
+            schema.CaptureTraffic.connection_id == schema.Connection.id,
+            schema.Connection.connection_type == 4
+        ).all()
         for capture, service_type, service in capture_traffic:
             services_traffic.append(
                 {
@@ -242,6 +248,14 @@ def get_connection(param: parameters.Parameters, id):
                     'name': service_type.name,
                     'port': service.remote_port,
                     'ip': service.remote_ip,
+                    'size': os.stat(os.path.join(param.data_dir, capture.file_name)).st_size
+                }
+            )
+        for capture, connection in ipmi:
+            ipmi_traffic.append(
+                {
+                    'port': capture.service_port,
+                    'file_name': capture.file_name,
                     'size': os.stat(os.path.join(param.data_dir, capture.file_name)).st_size
                 }
             )
@@ -263,7 +277,8 @@ def get_connection(param: parameters.Parameters, id):
         'connection': connection, 
         'session': session,
         'file': file_transfer,
-        'capture_traffic': services_traffic
+        'capture_traffic': services_traffic,
+        'ipmi': ipmi_traffic
     }
 
 def get_file_transfer(param: parameters.FileTransfer, md5=None, cid=None) -> List[schema.FileTransfer]:
@@ -1756,6 +1771,7 @@ def tcp_forward_connection(app_param: parameters.AppParameters, rules: list, sta
                 ftcp = db.query(schema.ForwardTCP).filter(
                     schema.ForwardTCP.connection_id == rule['connection_id'],
                     schema.ForwardTCP.user_ip == rule['user_ip'],
+                    schema.ForwardTCP.acs_ip == rule['acs_ip'],
                     schema.ForwardTCP.local_port == rule['local_port'],
                     schema.ForwardTCP.forward_ip == rule['forward_ip'],
                     schema.ForwardTCP.forward_port == rule['forward_port'],
@@ -1767,6 +1783,7 @@ def tcp_forward_connection(app_param: parameters.AppParameters, rules: list, sta
                     schema.ForwardTCP(
                         connection_id = rule['connection_id'],
                         user_ip = rule['user_ip'],
+                        acs_ip = rule['acs_ip'],
                         local_port = rule['local_port'],
                         forward_ip = rule['forward_ip'],
                         forward_port = rule['forward_port'],
