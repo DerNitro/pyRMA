@@ -370,7 +370,10 @@ class ConnectionForm(npyscreen.Popup):
             self.btn_ipmi.hidden = False
         if self.host.file_transfer_type:
             self.btn_file_transfer.hidden = False
-        if len(services) > 0 and access.check_access(appParameters, 'ConnectionService', h_object=self.host):
+        if len(services) > 0 and (
+            access.check_access(appParameters, 'ConnectionService', h_object=self.host) or 
+            access.check_access(appParameters, 'ConnectionOnlyService', h_object=self.host)
+        ):
             service_string_list = []
             for s in services:
                 service_type = None
@@ -390,6 +393,7 @@ class ConnectionForm(npyscreen.Popup):
 
     def connection(self):
         global connection_host
+
         if access.check_access(appParameters, "Connection", h_object=self.host):
             if not self.save_pass.hidden and len(self.save_pass.value) > 0:
                 applib.save_password(appParameters, self.host.id, self.login.value, self.password.value)
@@ -416,6 +420,14 @@ class ConnectionForm(npyscreen.Popup):
         elif access.check_access(appParameters, "ConnectionOnlyService", h_object=self.host):
             # connection only service
             connection_host = connection.SERVICE(appParameters, self.host)
+            connection_host.LOGIN = self.login.value
+            if isinstance(self.login_password, schema.PasswordList) \
+                    and self.password.value == '*' * len(self.login_password.password):
+                connection_host.PASSWORD = utils.password(self.login_password.password, self.host.id, mask=False)
+            elif self.password.value == '*' * len(self.host.default_password):
+                connection_host.PASSWORD = utils.password(self.host.default_password, self.host.id, mask=False)
+            else:
+                connection_host.PASSWORD = self.password.value
             self.editing = False
         else:
             access_list = ['Подключение']

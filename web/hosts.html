@@ -72,16 +72,20 @@
 <hr>
 {% endif %}
 {% endif %}
-Перевести в табличный вид.
 <div class="hosts">
+    <table width="95%">
     {% for host in host_list %}
+    <tr>
         {% if host.type == 1 %}
-            <div class="host_line"><a href="/host/{{ host.id }}">{{ host.name }}</a> - {{ host.describe }}</div>
+        <td><a href="/host/{{ host.id }}">{{ host.name }}</a></td>
         {% else %}
-            <div class="dir_line"><a href="/hosts/{{ host.id }}"><b>{{ host.name }}</b></a> - {{ host.describe }}</div>
+        <td><a href="/hosts/{{ host.id }}"><b>{{ host.name }}</b></a></td>
         {% endif %}
+        <td>{{ host.describe }}</td>
     {% else %}
         Нет хостов для отображения
+    </tr>
     {% endfor %}
+    </table>
 </div>
 {% endblock %}

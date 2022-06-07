@@ -158,3 +158,24 @@ class SERVICE(modules.ConnectionModules):
         self.NAME = 'OnlyServices'
         self.DESCRIPTION = 'Модуль подключения только сервисов'
         self.CONNECTION_TYPE = dict.conn_type_dict['Service']
+
+        services = applib.get_service(self.PARAMETERS, host=self.HOST.id)
+        if len(services) > 0:
+            self.SERVICE = []  # type: dict
+            for service in services:
+                service_type = applib.get_service_type(self.PARAMETERS, service_type_id=service.type)
+                self.SERVICE.append(
+                    {
+                        'name': service_type.name,
+                        'local_port': service.local_port,
+                        'remote_port': service.remote_port,
+                        'remote_ip': service.remote_ip,
+                        'describe': service.describe
+                    }
+                )
+
+    def connection(self):
+        super().connection()
+        user_input = ''
+        while user_input.lower() != 'exit'.lower():
+            user_input = input('Для завершения сессии введите "exit": ')
