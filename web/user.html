@@ -103,9 +103,10 @@
         {% if i['connection'].connection_type == 4 %}<td>IPMI</td>{% endif %}
         {% if i['connection'].status == 1 %}<td>Подключен</td>{% endif %}
         {% if i['connection'].status == 2 %}<td>Отключен</td>{% endif %}
-        {% if i['connection'].termination == 0 %}<td>Нормальное завершение</td>{% endif %}
-        {% if i['connection'].termination == 1 %}<td>Принудительное завершение</td>{% endif %}
-        {% if i['connection'].termination == 2 %}<td>Ошибка</td>{% endif %}
+        {% if i['connection'].termination == 0 %}<td>Нормальное завершение</td>
+        {% elif i['connection'].termination == 1 %}<td>Принудительное завершение</td>
+        {% elif i['connection'].termination == 2 %}<td>Ошибка</td>
+        {% else %}<td></td>{% endif %}
         <td>{{i['connection'].date_start}}</td>
         <td>{{i['connection'].date_end}}</td>
         <td>{{i['connection'].error}}</td>

@@ -52,6 +52,13 @@ class ErrorGetListFiles(Exception):
     def __repr__(self):
         return self.desc
 
+class ErrorConectionIPMI(Exception):
+    def __init__(self, desc):
+        self.desc = desc
+
+    def __repr__(self):
+        return self.desc
+
 class InsertError(Exception):
     def __init__(self, desc):
         self.desc = desc

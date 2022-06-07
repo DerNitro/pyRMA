@@ -71,7 +71,7 @@ class EditHost(FlaskForm):
     connection_type = SelectField('Протокол подключения')
     file_transfer_type = SelectField('Протокол передачи данных')
     describe = StringField('Описание')
-    ilo = StringField('iLo адрес', validators=[IPAddress()])
+    ilo = StringField('IPMI адрес', validators=[IPAddress()])
     ilo_type = SelectField('Вендор IPMI')
     default_login = StringField('Логин')
     default_password = StringField('Пароль')

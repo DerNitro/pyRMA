@@ -7,14 +7,12 @@
     app_folder:         "{{ app_folder | default('/opt/pyRMA') }}"
     app_data_dir:       "{{ app_data_dir | default('/data/pyRMA') }}"
     app_log_level:      "{{ app_log_level | default('DEBUG') }}"
-    app_web_ip:         "{{ app_web_ip | default('0.0.0.0') }}"
+    app_web_ip:         "{{ app_web_ip | default(app_ip_address) }}"
     app_web_port:       "{{ app_web_port | default('8080') }}"
     email_domain_name:  "{{ email_domain_name | default('localhost') }}"
     email_smtp_host:    "{{ email_smtp_host | default('localhost') }}"
     email_smtp_port:    "{{ email_smtp_port | default('25') }}"
     email_send_from:    "{{ email_send_from | default('acs@localhost') }}"
-  tags:
-    - dev
 
 - name: Install multi python packages with version specifiers
   become: true
@@ -83,8 +81,6 @@
   notify: 
    - Restart pyrma-web.service
    - Restart pyrma-firewall.service
-  tags:
-    - dev
 
 - name: Copy data files
   become: true
@@ -99,8 +95,6 @@
   notify: 
    - Restart pyrma-web.service
    - Restart pyrma-firewall.service
-  tags:
-    - dev
 
 - name: Create link pyRMA lib
   become: true
@@ -184,7 +178,16 @@
   notify: 
    - Restart pyrma-web.service
    - Restart pyrma-firewall.service
-  
+  vars:
+    ipmi_local_ip_list: >-
+      {% for item in ipmi_local_ip_addresses -%}
+        {%- if loop.last -%}
+          {{ item }}
+        {%- else -%}
+          {{ item }},
+        {%- endif -%}
+      {%- endfor -%}
+
 - name: Add pyRMA Web service
   become: true
   ansible.builtin.template:
@@ -204,6 +207,15 @@
     group: root
     mode: '0644'
   notify: Restart pyrma-firewall.service
+
+- name: Configure SSHD listen IP address 
+  become: true
+  notify: Restart ssh.service
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^ListenAddress'
+    line: "ListenAddress {{ app_ip_address }}"
+    insertafter: "^#ListenAddress"
 
 - name: Configure SSHD for all users
   become: true
