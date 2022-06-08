@@ -13,9 +13,9 @@
             <th>Deny</th>
             {% for acc in access %}
             <tr>
-                <td>{{acc['user'].full_name}}</td>
+                <td><a href="/administrate/user/{{ acc['user'].uid }}">{{acc['user'].full_name}}</a></td>
                 <td>{{acc['user'].email}}</td>
-                <td>{{acc['host'].name}}</td>
+                <td><a href="/host/{{ acc['host'].id }}">{{acc['host'].name}}</a></td>
                 <td>{{acc['access'].date_access}}</td>
                 <td align="center">{{acc['access'].ticket}}</td>
                 <td align="center">{{acc['access'].connection}}</td>
