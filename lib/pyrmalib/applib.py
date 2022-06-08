@@ -740,8 +740,7 @@ def get_user_access(param: parameters.Parameters, uid, hid=None):
                     schema.AccessList.subject == uid,
                     schema.AccessList.t_object == 0,
                     schema.AccessList.object == hid,
-                    schema.AccessList.date_disable > datetime.datetime.now(),
-                    schema.AccessList.status != 2
+                    schema.AccessList.date_disable > datetime.datetime.now()
                 ).one()
             except NoResultFound:
                 return None
@@ -752,8 +751,7 @@ def get_user_access(param: parameters.Parameters, uid, hid=None):
                 schema.AccessList.status == 1,
                 schema.AccessList.t_subject == 0,
                 schema.AccessList.subject == uid,
-                schema.AccessList.date_disable > datetime.datetime.now(),
-                schema.AccessList.status != 2
+                schema.AccessList.date_disable > datetime.datetime.now()
             ).all()
             if len(user_access) == 0:
                 return None
