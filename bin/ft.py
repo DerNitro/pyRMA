@@ -401,22 +401,34 @@ class FT(npyscreen.FormBaseNew):
                 with pysftp.Connection(**cinfo) as sftp:
                     if stat.S_IFMT(selected.st_mode) == stat.S_IFDIR:
                         self.notify('start')
-                        if not sftp.isdir(os.path.join(*remote_path, selected.name)):
-                            sftp.mkdir(remotepath=os.path.join(*remote_path, selected.name))
-                        sftp.put_r(
-                            os.path.join(*local_path, selected.name), remotepath=os.path.join(*remote_path, selected.name)
-                        )
-                        self.store_backup_file(os.path.join(*local_path, selected.name), 'upload')
-                        self.notify('stop')
-                        ftParameters.log.info('передана директория: {}'.format(str(os.path.join(*local_path, selected.name))))
+                        try:
+                            if not sftp.isdir(os.path.join(*remote_path, selected.name)):
+                                sftp.mkdir(remotepath=os.path.join(*remote_path, selected.name))
+                            sftp.put_r(
+                                os.path.join(*local_path, selected.name), remotepath=os.path.join(*remote_path, selected.name)
+                            )
+                            self.store_backup_file(os.path.join(*local_path, selected.name), 'upload')
+                            self.notify('stop')
+                            ftParameters.log.info('передана директория: {}'.format(str(os.path.join(*local_path, selected.name))))
+                        except PermissionError:
+                            npyscreen.notify_confirm(
+                                'PermissionError',
+                                title="Ошибка передачи файла", wide=True)
+                            ftParameters.log.warning('Ошибка передачи файла PermissionError: {}'.format(str(os.path.join(*local_path, selected.name))))
                     if stat.S_IFMT(selected.st_mode) == stat.S_IFREG:
                         self.notify('start')
-                        sftp.put(
-                            os.path.join(*local_path, selected.name), remotepath=os.path.join(*remote_path, selected.name)
-                        )
-                        self.store_backup_file(os.path.join(*local_path, selected.name), 'upload')
-                        self.notify('stop')
-                        ftParameters.log.info('передан файл: {}'.format(str(os.path.join(*local_path, selected.name))))
+                        try:
+                            sftp.put(
+                                os.path.join(*local_path, selected.name), remotepath=os.path.join(*remote_path, selected.name)
+                            )
+                            self.store_backup_file(os.path.join(*local_path, selected.name), 'upload')
+                            self.notify('stop')
+                            ftParameters.log.info('передан файл: {}'.format(str(os.path.join(*local_path, selected.name))))
+                        except PermissionError:
+                            npyscreen.notify_confirm(
+                                'PermissionError',
+                                title="Ошибка передачи файла", wide=True)
+                            ftParameters.log.warning('Ошибка передачи файла PermissionError: {}'.format(str(os.path.join(*local_path, selected.name))))
             
             if self.dest.editing:
                 for widget in self.dest._my_widgets:
@@ -428,20 +440,32 @@ class FT(npyscreen.FormBaseNew):
                     if stat.S_IFMT(selected.st_mode) == stat.S_IFDIR:
                         self.notify('start')
                         sftp.cwd(os.path.join(*remote_path))
-                        sftp.get_r(
-                            os.path.join(selected.name), localdir=os.path.join(*local_path)
-                        )
-                        self.store_backup_file(os.path.join(*local_path, selected.name), 'download')
-                        self.notify('stop')
-                        ftParameters.log.info('загружена директория: {}'.format(str(os.path.join(*local_path, selected.name))))
+                        try:
+                            sftp.get_r(
+                                os.path.join(selected.name), localdir=os.path.join(*local_path)
+                            )
+                            self.store_backup_file(os.path.join(*local_path, selected.name), 'download')
+                            self.notify('stop')
+                            ftParameters.log.info('загружена директория: {}'.format(str(os.path.join(*local_path, selected.name))))
+                        except PermissionError:
+                            npyscreen.notify_confirm(
+                                'PermissionError',
+                                title="Ошибка передачи файла", wide=True)
+                            ftParameters.log.warning('Ошибка передачи файла PermissionError: {}'.format(str(os.path.join(*remote_path, selected.name))))
                     if stat.S_IFMT(selected.st_mode) == stat.S_IFREG:
                         self.notify('start')
-                        sftp.get(
-                            os.path.join(*remote_path, selected.name), localpath=os.path.join(*local_path, selected.name)
-                        )
-                        self.store_backup_file(os.path.join(*local_path, selected.name), 'download')
-                        self.notify('stop')
-                        ftParameters.log.info('загружен файл: {}'.format(str(os.path.join(*local_path, selected.name))))
+                        try:
+                            sftp.get(
+                                os.path.join(*remote_path, selected.name), localpath=os.path.join(*local_path, selected.name)
+                            )
+                            self.store_backup_file(os.path.join(*local_path, selected.name), 'download')
+                            self.notify('stop')
+                            ftParameters.log.info('загружен файл: {}'.format(str(os.path.join(*local_path, selected.name))))
+                        except PermissionError:
+                            npyscreen.notify_confirm(
+                                'PermissionError',
+                                title="Ошибка передачи файла", wide=True)
+                            ftParameters.log.warning('Ошибка передачи файла PermissionError: {}'.format(str(os.path.join(*remote_path, selected.name))))
         except FileExistsError as e:
             npyscreen.notify_confirm(e.strerror, title="Передача данных", wide=True)
             ftParameters.log.warning('Ошибка передачи файлов ' + str(e))
