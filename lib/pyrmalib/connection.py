@@ -314,6 +314,12 @@ class IPMI:
 
         if not applib.tcp_forward_connection_is_active(self.PARAMETERS, self.TCP_FORWARD):
             self.firewall('open')
+
+        print()
+        print('=================== pyRMA ===================')
+        print('IP адрес для подключения: {}'.format(self.local_ip_ipmi))
+        print('=============================================')
+        print()
         
         user_input = ''
         while user_input.lower() != 'exit'.lower():
