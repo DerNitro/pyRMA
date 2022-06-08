@@ -1124,6 +1124,22 @@ def user_info(username, engine):
 
     return user
 
+def user_edit(param: parameters.WebParameters, uid, email, ip):
+    with schema.db_edit(param.engine) as db:
+        user = db.query(schema.User).filter(schema.User.uid == uid).one()
+        user.ip = ip
+        user.email = email
+        db.flush()
+
+        action = schema.Action(
+            user=param.user_info.uid,
+            action_type=59,
+            date=datetime.datetime.now(),
+            message="Редактирование пользователя: {user.full_name}({user})".format(user=user)
+        )
+        db.add(action)
+        db.flush()
+
 
 def user_disable(param: parameters.WebParameters, uid, disable=False, enable=False):
     """

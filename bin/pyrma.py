@@ -79,10 +79,10 @@ except AttributeError:
 
 appParameters.ssh_client_ip = ssh_client_ip
 
+app_group = applib.get_group_user(appParameters)
+groups = [grp.getgrgid(g).gr_name for g in os.getgroups()]
+
 if not applib.user_info(pw_name, engine):
-    groups = [g.gr_name for g in grp.getgrall() if pw_name in g.gr_mem]
-    groups.append(grp.getgrgid(pw_gid).gr_name)
-    app_group = applib.get_group_user(appParameters)
     if app_group and len(list(set(groups) & set([t.name for t in app_group]))) > 0:
     # TODO: Добавляются только пользователи у которых есть группа идентичная группе в ACS
         applib.user_registration(
@@ -97,13 +97,6 @@ if not applib.user_info(pw_name, engine):
             },
             appParameters
         )
-        for i in list(set(groups) & set([t.name for t in app_group])):
-            gid = None
-            for g in app_group:
-                if i == g.name:
-                    gid = g.id
-            if gid:
-                applib.add_user_group(appParameters, pw_uid, gid, action=False)
         
         mail.send_mail(
             appParameters,
@@ -113,6 +106,14 @@ if not applib.user_info(pw_name, engine):
             {'username': pw_gecos},
             admin_cc=False
         )
+
+for i in list(set(groups) & set([t.name for t in app_group])):
+    gid = None
+    for g in app_group:
+        if i == g.name:
+            gid = g.id
+    if gid:
+        applib.add_user_group(appParameters, pw_uid, gid, action=False)
 
 try:
     with schema.db_select(engine) as db:

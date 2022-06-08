@@ -15,18 +15,6 @@
 </div>
 <hr>
 {% endif %}
-<div class="changePrefix">
-    <details>
-        <summary>Сменить префикс</summary>
-        <form action="/administrate/user/{{ content['user'].uid }}" method="POST">
-            {{ prefix_form.csrf_token }}
-            <p>
-                {{prefix_form.prefix.label}}: {{ prefix_form.prefix() }} {{ prefix_form.sub() }}
-            </p>
-        </form>
-        <hr>
-    </details>
-</div>
 {% if content['user'].disable or content['user'].date_disable < cur_date %}
 <h3>Пользователь - {{content['user'].full_name}}(Отключен)</h3>
 {% elif content['user'].admin %}
@@ -34,6 +22,8 @@
 {% else %}
 <h3>Пользователь - {{content['user'].full_name}} </h3>
 {% endif %}
+<form action="/administrate/user/{{ content['user'].uid }}" method="POST">
+{{ user_form.csrf_token }}
 <table>
     <tbody>
     <tr>
@@ -42,22 +32,20 @@
     </tr>
     <tr>
         <td><b>email</b></td>
-        <td>{{content['user'].email}}</td>
+        <td>{{user_form.email()}}</td>
     </tr>
     <tr>
         <td><b>ip</b></td>
-        <td>{{content['user'].ip}}</td>
+        <td>{{user_form.ip()}}</td>
     </tr>
     <tr>
         <td><b>Группы</b></td>
         <td>{{content['group']}}</td>
     </tr>
-    <tr>
-        <td><b>Префикс</b></td>
-        <td>{{content['user'].prefix}}</td>
-    </tr>
     </tbody>
 </table>
+{{ user_form.save() }}
+</form>
 <hr>
 <h3>Последние действия</h3>
 {% for action in content['action'] %}
