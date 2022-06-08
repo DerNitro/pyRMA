@@ -599,6 +599,11 @@ def host(host_id):
                 'EditHostInformation',
                 h_object=object_host
             ) or webParameters.user_info.admin,
+            ConnectionService=access.check_access(
+                webParameters,
+                'ConnectionService',
+                h_object=object_host
+            ) or webParameters.user_info.admin,
             content=content_host,
             jump = applib.get_jump_host(webParameters, host_id),
             jump_form=jump_form,
