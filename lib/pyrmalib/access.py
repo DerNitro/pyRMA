@@ -265,7 +265,7 @@ def request_access(param: parameters.Parameters, request: schema.RequestAccess):
     note = request.note
     with schema.db_select(param.engine) as db:
         host = db.query(schema.Host).filter(schema.Host.id == request.host).one()
-        host_group = db.query(schema.GroupHost).filter(schema.GroupHost.host == request.host).all()
+        host_group = applib.get_host_group(param, host.id) + [0]
     with schema.db_edit(param.engine) as db:
         db.add(request)
         db.flush()
@@ -280,7 +280,9 @@ def request_access(param: parameters.Parameters, request: schema.RequestAccess):
         db.flush()
     user_list = []
     for group in host_group:
-        user_list += users_access_list(param, 'AccessRequest', group_host=group.group)
+        user_list += users_access_list(param, 'AccessRequest', group_host=group)
+    if len(user_list) == 0:
+        user_list += applib.get_admin_users(param)
     return mail.send_mail(
         param,
         "Запрос доступа до узла - {host.name} ({user})".format(host=host, user=param.user_info.full_name),

@@ -42,39 +42,16 @@ class Mail:
         msg['Cc'] = ",".join(self.mail_cc)
         part = MIMEText(template.format(**data))
         msg.attach(part)
+        self.log.debug('Mail(send) self.subject: {}'.format(self.subject))
+        self.log.debug('Mail(send) self.mail_from: {}'.format(self.mail_from))
+        self.log.debug('Mail(send) self.mail_to: {}'.format(self.mail_to))
+        self.log.debug('Mail(send) self.mail_cc: {}'.format(self.mail_cc))
         try:
             s = smtplib.SMTP(host=self.host, port=self.port)
             s.sendmail(self.mail_from, self.mail_to, msg.as_string())
             s.quit()
-        except smtplib.SMTPServerDisconnected as e:
-            self.log.warning(e)
-            return False
-        except smtplib.SMTPSenderRefused as e:
-            self.log.warning(e)
-            return False
-        except smtplib.SMTPDataError as e:
-            self.log.warning(e)
-            return False
-        except smtplib.SMTPConnectError as e:
-            self.log.warning(e)
-            return False
-        except smtplib.SMTPAuthenticationError as e:
-            self.log.warning(e)
-            return False
-        except smtplib.SMTPHeloError as e:
-            self.log.warning(e)
-            return False
-        except smtplib.SMTPResponseException as e:
-            self.log.warning(e)
-            return False
-        except smtplib.SMTPRecipientsRefused as e:
-            self.log.warning(e)
-            return False
-        except smtplib.SMTPNotSupportedError as e:
-            self.log.warning(e)
-            return False
-        except OSError as e:
-            self.log.warning(e)
+        except:
+            self.log.exception()
             return False
         return True
 
@@ -97,6 +74,9 @@ def send_mail(param: parameters.Parameters, subject, template, user: schema.User
         mail.mail_to.append(user.email)
         if isinstance(param.user_info, schema.User) and param.user_info != user:
             mail.mail_cc.append(param.user_info.email)
+
+    mail.mail_to = list(set(mail.mail_to))
+    mail.mail_cc = list(set(mail.mail_cc))
 
     if not mail.send(template, data):
         del mail
