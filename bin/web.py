@@ -1077,34 +1077,33 @@ def administrate_user(uid):
         return render_template(siteMap['access_denied'])
 
     search_field = forms.Search()
-    prefix_form = forms.ChangePrefix()
     connection_filter = forms.ConnectionFilter()
+    user_form = forms.User()
 
     cdate = None
     if request.method == 'POST' and connection_filter.validate_on_submit():
         cdate = connection_filter.date.data
+
+    if request.method == 'POST' and user_form.validate_on_submit():
+        applib.user_edit(webParameters, uid, user_form.email.data, user_form.ip.data)
+
+    content = applib.get_user(webParameters, uid, connection_date=cdate)
+    user_form.email.data = content['user'].email
+    user_form.ip.data = content['user'].ip
     
     if applib.get_group_user(webParameters):
         group_user_form = forms.AddUserGroup()
         group_user_form.name.choices = [(t.id, t.name) for t in applib.get_group_user(webParameters)]
     else:
         group_user_form = False
-    prefix_form.prefix.choices = [(t.id, t.name) for t in applib.get_prefix(webParameters)]
     if applib.get_group_user(webParameters):
         if request.method == 'POST' and group_user_form.validate_on_submit():
             applib.add_user_group(webParameters, uid, group_user_form.name.data)
-    if request.method == 'POST' and prefix_form.sub.data and prefix_form.validate_on_submit():
-        prefix = None
-        for t in applib.get_prefix(webParameters):
-            if t.id == prefix_form.prefix.data:
-                prefix = t.name
-                break
-        applib.set_user_prefix(webParameters, prefix, uid)
     return render_template(
         siteMap['administrate_user'],
-        content=applib.get_user(webParameters, uid, connection_date=cdate),
+        content=content,
         group_user_form=group_user_form,
-        prefix_form=prefix_form,
+        user_form=user_form,
         cur_date=datetime.datetime.now(),
         admin=webParameters.user_info.admin,
         search=search_field,

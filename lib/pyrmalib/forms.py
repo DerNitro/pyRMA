@@ -213,3 +213,8 @@ class Access(FlaskForm):
 class ConnectionFilter(FlaskForm):
     date = DateField(format='%Y-%m-%d', validators=[DataRequired()])
     sub = SubmitField('Ок')
+
+class User(FlaskForm):
+    email = StringField('email', validators=[DataRequired()])
+    ip = StringField('ip', validators=[DataRequired()])
+    save = SubmitField('Сохранить')
