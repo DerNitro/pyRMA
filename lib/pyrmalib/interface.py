@@ -441,7 +441,7 @@ class ConnectionForm(npyscreen.Popup):
 
     def file_transfer(self):
         global connection_host
-        if access.check_access(appParameters, "FileTransfer", h_object=self.host):
+        if not self.save_pass.hidden and access.check_access(appParameters, "FileTransfer", h_object=self.host):
             if len(self.save_pass.value) > 0:
                 applib.save_password(appParameters, self.host.id, self.login.value, self.password.value)
             conn_type = applib.get_file_transfer_type(appParameters)
