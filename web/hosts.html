@@ -1,0 +1,91 @@
+{% extends "main.html" %}
+{% from "menu.html" import show_menu %}
+{% from "search.html" import show_search %}
+
+{% block header %}
+{{ show_menu(username, Admin=admin, Active='host') }}
+{{ show_search(search) }}
+{{ super() }}
+{% endblock %}
+{% block content %}
+<hr>
+{% if Search %}
+<center>
+    <h2>Поиск</h2>
+    <h3>{{ Search }}</h3>
+</center>
+<hr>
+{% else %}
+{% if EditHostInformation or EditDirectory or admin%}
+<div class="host_add_button">
+    <ul class="host_add_button">
+        {% if EditHostInformation or admin%} <li class="host_add_button"> <a class="host_add_button" href="/hosts/{{ directory_id }}/add_host">Добавить хост</a> </li> {% endif %}
+        {% if EditDirectory or admin%} <li class="host_add_button"> <a class="host_add_button" href="/hosts/{{ directory_id }}/add_folder">Добавить директорию</a> </li> {% endif %}
+        {% if EditDirectory or admin%} <li class="host_add_button"> <a class="host_add_button" href="/hosts/{{ directory_id }}/edit_folder">Редактировать директорию</a> </li> {% endif %}
+    </ul>
+</div>
+<hr>
+{% endif %}
+{% if (admin or EditDirectory) and directory_id > 0 and jump_form %}
+<div class="addJump">
+    <details>
+        <summary>Jump хост</summary>
+        <form action="/hosts/{{ directory_id }}" method="POST">
+            {{ jump_form.csrf_token }}
+            <p>
+                {{jump_form.jump.label}}: {{ jump_form.jump() }} {{ jump_form.add_sub() }}
+            </p>
+        </form>
+        <form action="/hosts/{{ directory_id }}" method="POST">
+            {{ jump_form.csrf_token }}
+            <p>{% if jump %} Текущий Jump хост: {{ jump.name }} {{ jump_form.clear_sub() }} {% endif %}</p>
+        </form>
+    </details>
+</div>
+<hr>
+{% endif %}
+{% if admin and directory_id > 0 and group_form %}
+<div class="addGroup">
+    <details>
+        <summary>Добавить в группу</summary>
+        <form action="/administrate/host/{{ directory_id }}" method="POST">
+            {{ group_form.csrf_token }}
+            <p>
+                {{group_form.name.label}}: {{ group_form.name() }} {{ group_form.add_sub() }}
+            </p>
+        </form>
+        Установленные группы: {{ group }}
+    </details>
+</div>
+<hr>
+{% endif %}
+{% if note %}
+<div class="note_folder">
+    <details>
+        <summary>Note</summary>
+        {% for key, value in note.items()|sort() %}
+            <h5>{{ key }}</h5>
+            <p>{{ value }}</p>
+        {% endfor %}
+    </details>
+</div>
+<hr>
+{% endif %}
+{% endif %}
+<div class="hosts">
+    <table width="95%">
+    {% for host in host_list %}
+    <tr>
+        {% if host.type == 1 %}
+        <td width="25%"><a href="/host/{{ host.id }}">{{ host.name }}</a></td>
+        {% else %}
+        <td width="25%"><a href="/hosts/{{ host.id }}"><b>{{ host.name }}</b></a></td>
+        {% endif %}
+        <td>{{ host.describe }}</td>
+    {% else %}
+        Нет хостов для отображения
+    </tr>
+    {% endfor %}
+    </table>
+</div>
+{% endblock %}

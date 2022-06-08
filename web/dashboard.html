@@ -1,0 +1,75 @@
+{% from "_function.html" import access_table %}
+
+{% macro user_dashboard(content) %}
+    {% if content['access_request']|length != 0 %}
+    <div class="accessRequest">
+            {{ access_table(content['access_request']) }}
+        <hr>
+    </div>
+    {% endif %}
+{% endmacro %}
+
+{% macro admin_dashboard(content) %}
+<hr>
+<div class="statusPanel">
+        <ul class="statusPanel">
+            <li>{{ content['connection_count'] }}</li>
+            <li>{{ content['la'] }} la</li>
+            <li>Mem {{ content['free'] }}% Used</li>
+            <li>Disk {{ content['disk'] }}% Used</li>
+        </ul>
+    </div>
+    <hr>
+    {% if content['new_user']|length != 0 %}
+    <div class="newUser">
+        <h3>Новые пользователи</h3>
+        <table border="1" width="95%">
+            {% for user in content['new_user'] %}
+            <tr>
+                <td><a href="/administrate/user/{{ user.uid }}"> {{ user.login }} </a></td>
+                <td>{{ user.full_name }}</td>
+                <td>{{ user.email }}</td>
+                <td>{{ user.ip }}</td>
+                <td>{{ user.date_create }}</td>
+                <td><a href="/administrate/user/{{ user.uid }}/enable"><button>Подтвердить</button></a></td>
+            </tr>
+            {% endfor %}
+        </table>
+        <hr>
+    </div>
+    {% endif %}
+    {% if content['access_request']|length != 0 %}
+    <div class="accessRequest">
+        {{ access_table(content['access_request']) }}
+        <hr>
+    </div>
+    {% endif %}
+    <div class="currentConnection">
+        <h3><a href="connection">Текущие подключения</a></h3>
+        <table border="1" width="95%">
+            <th></th>
+            <th>Пользователь</th>
+            <th>Узел</th>
+            <th>Начало сессии</th>
+            <th>Подключение</th>
+            {% for i in content['connection'] %}
+            {% if i['connection'].termination == 2 %} <tr bgcolor="#ff807a"> {% else %} <tr> {% endif %}
+                <td align=center><a href="connection/{{ i['connection'].id }}">
+                    <img
+                            src="{{ url_for('static', filename='icon/eye.png') }}"
+                            alt="View"
+                            height="15px"
+                    >
+                </a></td>
+                <td><a href="/administrate/user/{{ i['user'].uid }}"> {{ i['user'].full_name }}</a></td>
+                <td><a href="/host/{{ i['host'].id }}"> {{ i['host'].name }}</a></td>
+                <td>{{ i['connection'].date_start }}</td>
+                {% if i['connection'].connection_type == 1 %}<td>Терминальное</td>{% endif %}
+                {% if i['connection'].connection_type == 2 %}<td>Передача данных</td>{% endif %}
+                {% if i['connection'].connection_type == 3 %}<td>Сервисы</td>{% endif %}
+                {% if i['connection'].connection_type == 4 %}<td>IPMI</td>{% endif %}
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+{% endmacro %}

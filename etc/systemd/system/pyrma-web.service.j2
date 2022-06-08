@@ -1,0 +1,14 @@
+[Unit]
+Description=pyRMA Web Intrface
+After=syslog.target network.target remote-fs.target nss-lookup.target
+
+[Service]
+Type=simple
+PIDFile=/run/pyrma-web.pid
+ExecStart=/usr/bin/python3 {{ app_folder }}/bin/web.py
+ExecStop=/bin/kill -s QUIT $MAINPID
+User={{ app_user }}
+Group={{ app_group }}
+
+[Install]
+WantedBy=multi-user.target

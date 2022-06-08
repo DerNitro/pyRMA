@@ -1,0 +1,8 @@
+.*
+*.log
+*.log.*
+*.pyc
+old/**
+*~
+*.csv
+venv

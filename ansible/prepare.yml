@@ -1,0 +1,50 @@
+---
+- name: Install requirement packages
+  become: true
+  apt:
+    name:
+      - sshpass
+      - asciinema
+      - python3-pip
+      - python3-psycopg2
+      - acl                           # https://github.com/georchestra/ansible/issues/55#issuecomment-651043423
+      - mc                            # TODO: deleted
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Disable MOTD display when opening SSH session
+  become: true
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/sshd
+    state: absent
+    regexp: '^session    optional     pam_motd.so'
+    backup: true
+
+- name: Set ip forwarding
+  become: true
+  ansible.posix.sysctl:
+    name: net.ipv4.ip_forward
+    value: '1'
+    sysctl_set: yes
+    state: present
+    reload: yes
+
+- name: Set route to localnet
+  become: true
+  ansible.posix.sysctl:
+    name: net.ipv4.conf.all.route_localnet
+    value: '1'
+    sysctl_set: yes
+    state: present
+    reload: yes
+
+- name: Disable sFTP over SSH
+  become: true
+  ansible.builtin.replace:
+    path: /etc/ssh/sshd_config
+    regexp: '^(Subsystem sftp.*)$'
+    replace: '# \1'
+  notify: Restart ssh.service
+
+- name: Flush handlers
+  meta: flush_handlers

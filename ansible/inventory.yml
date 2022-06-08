@@ -1,0 +1,17 @@
+pyrma:
+  hosts:
+    pyrma.vbox.local:  
+  vars:
+    install_postgresql: yes
+    app_ip_address: 192.168.56.100
+    tcp_forward_interface: enp0s8
+    email_smtp_host: 192.168.56.10
+    email_domain_name: 'vbox.local'
+    email_send_from: "acs@{{ email_domain_name }}"
+    pyrma_database:
+      name: 'acs'
+      username: 'acs'
+      password: 'acs'
+    ipmi_local_ip_addresses:
+      - 192.168.56.101
+      - 192.168.56.102

@@ -1,0 +1,117 @@
+{% extends "administrate.html" %}
+
+{% block admin %}
+{% if content['group'].type == 0 %}
+<h4>Группа пользователей - {{ content['group'].name }}</h4>
+<div class="changePermission">
+    <details>
+        <summary>Права доступа</summary>
+        <form action="/administrate/group/{{ content['group'].id }}" method="POST" name="change_permission">
+            {{ form.csrf_token }}
+            <table>
+                <tr>
+                    <td><b>Пользовательский досуп</b></td>
+                </tr>
+                <tr>
+                    <td>{{ form.ShowHostInformation.label }}</td>
+                    <td>{{ form.ShowHostInformation()}}</td>
+                </tr>
+                <tr>
+                    <td>{{ form.EditHostInformation.label }}</td>
+                    <td>{{ form.EditHostInformation()}}</td>
+                </tr>
+                <tr>
+                    <td>{{ form.EditDirectory.label }}</td>
+                    <td>{{ form.EditDirectory()}}</td>
+                </tr>
+                <tr>
+                    <td>{{ form.ShowLogin.label }}</td>
+                    <td>{{ form.ShowLogin()}}</td>
+                </tr>
+                <tr>
+                    <td>{{ form.ShowPassword.label }}</td>
+                    <td>{{ form.ShowPassword()}}</td>
+                </tr>
+                <tr>
+                    <td>{{ form.ShowAllSession.label }}</td>
+                    <td>{{ form.ShowAllSession()}}</td>
+                </tr>
+                <tr>
+                    <td>{{ form.AccessRequest.label }}</td>
+                    <td>{{ form.AccessRequest()}}</td>
+                </tr>
+                <tr>
+                    <td>{{ form.EditCredential.label }}</td>
+                    <td>{{ form.EditCredential()}}</td>
+                </tr>
+                <tr>
+                    <td><b>Подключение к узлам</b></td>
+                </tr>
+                <tr>
+                    <td>{{ form.Connection.label }}</td>
+                    <td>{{ form.Connection()}}</td>
+                    </tr>
+                <tr>
+                    <td>{{ form.FileTransfer.label }}</td>
+                    <td>{{ form.FileTransfer()}}</td>
+                </tr>
+                <tr>
+                    <td>{{ form.ConnectionService.label }}</td>
+                    <td>{{ form.ConnectionService()}}</td>
+                </tr>
+                <tr>
+                    <td>{{ form.ConnectionOnlyService.label }}</td>
+                    <td>{{ form.ConnectionOnlyService()}}</td>
+                </tr>
+                <tr>
+                    <td>{{ form.ConnectionIlo.label }}</td>
+                    <td>{{ form.ConnectionIlo()}}</td>
+                </tr>
+            </table>
+            {{ form.edit_sub() }}
+        </form>
+        <hr>
+    </details>
+</div>
+{% else %}
+<h4>Группа хостов - {{ content['group'].name }}</h4>
+{% endif %}
+
+{% if content['group'].type == 0 %}
+<table width="90%" border="0">
+{% for group, user in content['users'] %}
+    <tr>
+        <td width="80%">
+            <a href="/administrate/user/{{ user.uid }}">{{ user.full_name }}</a>
+        </td>
+        <td>
+            <a href="/administrate/user/{{ user.uid }}/group/{{ group.group }}/delete"><button>Удалить</button></a>
+        </td>
+    </tr>
+{% endfor %}
+</table>
+{% else %}
+<table width="90%" border="0">
+{% for group, host in content['hosts'] %}
+    <tr>
+        <td>
+
+            <a
+                {% if host.type == 1 %}
+                href="/host/{{ host.id }}"
+                {% else %}
+                href="/hosts/{{ host.id }}"
+                {% endif %}
+                >
+                {{ host.name }}
+            </a>
+        </td>
+        <td>
+            <a href="/administrate/host/{{ host.id }}/group/{{ group.group }}/delete"><button>Удалить</button></a>
+        </td>
+    </tr>
+{% endfor %}
+</table>
+{% endif %}
+
+{% endblock %}

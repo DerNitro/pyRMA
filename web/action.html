@@ -1,0 +1,20 @@
+{% extends "administrate.html" %}
+
+{% block admin %}
+<form action="/administrate/logs" method="POST" name="set_day">
+    {{ form.csrf_token }} {{ form.date(type='date') }} {{ form.user() }} {{ form.sub() }}
+</form>
+<hr>
+{% for action, action_type, user in action_list %}
+<table border="1" width="95%">
+    <tbody>
+    <tr>
+        <td width="15%">{{ action.date }}</td>
+        <td width="15%"><a href="/administrate/user/{{user.uid}}">{{ user.full_name }}</a></td>
+        <td width="30%">{{ action_type.name }}</td>
+        <td width="40%">{{ action.message }}</td>
+    </tr>
+    </tbody>
+</table>
+{% endfor %}
+{% endblock %}

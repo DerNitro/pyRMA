@@ -1,0 +1,315 @@
+/*
+       Copyright 2016 Sergey Utkin utkins01@gmail.com
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*/
+
+body {
+	background-color: #FFFAFA;
+	font-family: sans-serif;
+}
+
+a {
+    text-decoration: none;
+}
+a:link, a:visited {
+    color: rgb(47, 0, 255);
+}
+a:hover {
+    color: #4CAF50;
+}
+
+ul.menu {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #333;
+}
+
+li.menu {
+    float: left;
+    border-right:1px solid #bbb;
+}
+
+li.menu:last-child {
+    border-left:1px solid #bbb;
+}
+
+li.menu a {
+    display: block;
+    color: white;
+    text-align: center;
+    padding: 14px 16px;
+    text-decoration: none;
+}
+
+li.menu div {
+    display: block;
+    color: white;
+    text-align: center;
+    padding: 14px 16px;
+    text-decoration: none;
+}
+
+li.menu a:hover:not(.active) {
+    background-color: #111;
+}
+
+a.active {
+    background-color: #4CAF50;
+}
+
+div.statusPanel {
+    height: 56px;
+    vertical-align: middle;
+    text-align: center;
+
+}
+
+div.host {
+    padding: 14px 16px;
+}
+
+div.host_add_button {
+    vertical-align: middle;
+    text-align: left;
+}
+
+ul.host_add_button {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #333;
+}
+
+li.host_add_button {
+    float: left;
+    border-right:1px solid #bbb;
+}
+
+li.host_add_button a {
+    display: block;
+    color: white;
+    text-align: center;
+    padding: 14px 16px;
+    text-decoration: none;
+}
+
+
+li.host_add_button a:hover:not(.active) {
+    background-color: #111;
+}
+
+div.admin_add_button {
+    vertical-align: middle;
+    text-align: left;
+}
+
+ul.admin_add_button {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #333;
+}
+
+li.admin_add_button {
+    float: left;
+    border-right:1px solid #bbb;
+}
+
+li.admin_add_button a {
+    display: block;
+    color: white;
+    text-align: center;
+    padding: 14px 16px;
+    text-decoration: none;
+}
+
+
+li.admin_add_button a:hover:not(.active) {
+    background-color: #111;
+}
+
+div.settings_add_button {
+    vertical-align: middle;
+    text-align: left;
+}
+
+ul.settings_add_button {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #333;
+}
+
+li.settings_add_button {
+    float: left;
+    border-right:1px solid #bbb;
+}
+
+li.settings_add_button a {
+    display: block;
+    color: white;
+    text-align: center;
+    padding: 14px 16px;
+    text-decoration: none;
+}
+
+
+li.settings_add_button a:hover:not(.active) {
+    background-color: #111;
+}
+
+div.host_edit {
+    vertical-align: middle;
+    text-align: left;
+}
+
+ul.host_edit {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #333;
+}
+
+li.host_edit {
+    float: left;
+    border-right:1px solid #bbb;
+}
+
+li.host_edit a {
+    display: block;
+    color: white;
+    text-align: center;
+    padding: 14px 16px;
+    text-decoration: none;
+}
+
+
+li.host_edit a:hover:not(.active) {
+    background-color: #111;
+}
+
+ul.statusPanel {
+    list-style-type: none;
+    overflow: hidden;
+    margin: 0;
+    padding: 4px;
+    display: flex;
+    justify-content: space-around;
+    align-content: center;
+}
+
+ul.statusPanel li {
+    float: left;
+    font-size: 40px;
+    display: inline; /* Отображать как строчный элемент */
+}
+
+div.searchField {
+    height: 24px;
+    padding-top: 5px;
+    vertical-align: middle;
+    text-align: right;
+}
+
+input.search_text {
+    font-size: 12px;
+}
+
+input.search_text:focus {
+  background-color: lightblue;
+}
+
+div.login {
+    padding: 10px;
+    vertical-align: middle;
+    text-align: center;
+}
+
+div.registrationForm {
+    padding: 10px;
+    vertical-align: middle;
+    text-align: center;
+}
+
+div.registrationError {
+    padding: 10px;
+    vertical-align: middle;
+    text-align: center;
+}
+
+div.registrationStatus {
+    padding: 10px;
+    vertical-align: middle;
+    text-align: center;
+}
+
+div.addFolderForm {
+    padding: 10px;
+    vertical-align: middle;
+    text-align: center;
+}
+
+div.addFolderError {
+    padding: 10px;
+    vertical-align: middle;
+    text-align: center;
+}
+
+div.addFolderStatus {
+    padding: 10px;
+    vertical-align: middle;
+    text-align: center;
+}
+
+div.editFolderForm {
+    padding: 10px;
+    vertical-align: middle;
+    text-align: center;
+}
+
+div.editFolderError {
+    padding: 10px;
+    vertical-align: middle;
+    text-align: center;
+}
+
+div.editFolderStatus {
+    padding: 10px;
+    vertical-align: middle;
+    text-align: center;
+}
+
+div.addHostForm {
+    padding: 10px;
+    vertical-align: middle;
+    text-align: center;
+}
+
+div.addHostError {
+    padding: 10px;
+    vertical-align: middle;
+    text-align: center;
+}
+
+div.addHostStatus {
+    padding: 10px;
+    vertical-align: middle;
+    text-align: center;
+}

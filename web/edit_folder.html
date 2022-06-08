@@ -1,0 +1,49 @@
+{% extends "main.html" %}
+{% from "menu.html" import show_menu %}
+{% from "search.html" import show_search %}
+
+{% block header %}
+{{ show_menu(username, Admin=admin, Active='host') }}
+{{ show_search(search) }}
+{{ super() }}
+{% endblock %}
+
+{% block content %}
+<hr>
+{% if status %}
+<div class="editFolderStatus">
+    {{ status }}
+    <br>
+    <a href="/hosts/{{ directory_id }}">Назад</a>
+</div>
+{% else %}
+<div class="editFolderForm">
+    <h3>Добавить директорию</h3>
+    <form action="/hosts/{{ directory_id }}/edit_folder" method="POST" name="edit_folder">
+        {{ form.csrf_token }}
+        <p>
+            {{ form.name.label }}<br>
+            {{ form.name(size=32) }}
+        </p>
+        <p>
+            {{ form.describe.label }}<br>
+            {{ form.describe(size=32) }}
+        </p>
+        <p>
+            {{ form.note.label }}<br>
+            {{ form.note() }}
+        </p>
+        <p>
+            {{ form.edit_sub() }} {{ form.delete_sub() }}
+        </p>
+    </form>
+</div>
+{% endif %}
+{% if error %}
+<div class="editFolderError">
+    <h3>{{ error }}</h3>
+    <br>
+    <a href="/hosts/{{ directory_id }}">Назад</a>
+</div>
+{% endif %}
+{% endblock %}

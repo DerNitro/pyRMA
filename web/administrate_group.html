@@ -1,0 +1,44 @@
+{% extends "administrate.html" %}
+
+{% block admin %}
+<div class="admin_group">
+    <div class="addGroupe">
+        <details>
+            <summary>Добавить</summary>
+            <form action="/administrate/group" method="POST" name="add_group">
+                {{ form.csrf_token }}
+                <p>
+                    {{ form.name.label }} {{ form.name() }} {{ form.type() }} {{ form.add_sub() }}
+                </p>
+            </form>
+            <hr>
+        </details>
+    </div>
+{% if group_user %}
+<div class="group_user">
+    <h3>Группы пользоватлей</h3>
+<table border="0">
+    {% for group in group_user %}
+    <tr>
+        <td style="width: 450px;"><a href="/administrate/group/{{ group.id }}"> {{ group.name }} </a></td>
+        <td style="width: 150px;"><a href="/administrate/group/{{ group.id }}/delete"><button>Удалить</button></a></td>
+    </tr>
+    {% endfor %}
+</table>
+</div>
+{% endif %}
+{% if group_host %}
+<div class="group_host">
+    <h3>Группы узлов</h3>
+<table border="0">
+    {% for group in group_host %}
+    <tr>
+        <td style="width: 450px;"><a href="/administrate/group/{{ group.id }}"> {{ group.name }} </a></td>
+        <td style="width: 150px;"><a href="/administrate/group/{{ group.id }}/delete"><button>Удалить</button></a></td>
+    </tr>
+    {% endfor %}
+</table>
+</div>
+{% endif %}
+</div>
+{% endblock %}

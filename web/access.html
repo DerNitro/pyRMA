@@ -1,0 +1,34 @@
+{% extends "main.html" %}
+{% from "menu.html" import show_menu %}
+{% from "_formhelpers.html" import render_field %}
+
+{% block header %}
+{{ show_menu(username, Admin=admin) }}
+{{ super() }}
+{% endblock %}
+
+{% block content %}
+<h2> {{ title }} </h2>
+
+<form action="{{current_url}}" method="POST">
+    {{ form.csrf_token }}
+    <dl>
+        <dt><b>Пользователь</b></dt>
+        <dd>{{access['user'].full_name}}</dd>
+        <dt><b>Email</b></dt>
+        <dd>{{access['user'].email}}</dd>
+        <dt><b>Host</b></dt>
+        <dd>{{access['host'].name}}</dd>
+        <dt><b>Ticket</b></dt>
+        <dd>{{access['access'].ticket}}</dd>
+        {{render_field(form.data_access)}}
+        {{render_field(form.connection)}}
+        {{render_field(form.file_transfer)}}
+        {{render_field(form.ipmi)}}
+        <dt><b>Дополнительная информация</b></dt>
+        <dd>{{access['access'].note}}</dd>
+    </dl>
+    <p>{{ form.sub }}
+</form>
+
+{% endblock %}

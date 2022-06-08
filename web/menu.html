@@ -1,0 +1,45 @@
+{% macro show_menu(username, Admin=False, Active='home') %}
+
+<div class="menu">
+    <ul class="menu">
+        <li class="menu">
+            {% if Active == "home" %}
+            <a class="active" href="/">
+                <img
+                        src="{{ url_for('static', filename='icon/home_black.png') }}"
+                        alt="Home"
+                        height="15px"
+                >
+            </a>
+            {% else %}
+            <a href="/">
+                <img
+                        src="{{ url_for('static', filename='icon/home_white.png') }}"
+                        alt="Home"
+                        height="15px"
+                >
+            </a>
+            {% endif %}
+        </li>
+        {% if Active == "host" %}
+        <li class="menu"><a class="active" href="/hosts">Узлы</a></li>
+        {% else %}
+        <li class="menu"><a href="/hosts">Узлы</a></li>
+        {% endif %}
+        <li class="menu" style="float:right"><a href="/logout">Выход</a></li>
+        {% if Admin %}
+            {% if Active == "connection" %}
+            <li class="menu"><a class="active" href="/connection">Подключения</a></li>
+            {% else %}
+            <li class="menu"><a href="/connection">Подключения</a></li>
+            {% endif %}
+            {% if Active == "administrate" %}
+                <li class="menu" style="float:right"><a class="active" href="/administrate">Администрирование</a></li>
+            {% else %}
+                <li class="menu" style="float:right"><a href="/administrate">Администрирование</a></li>
+            {% endif %}
+        {% endif %}
+        <li class="menu" style="float:right"><div>{{ username }}</div></li>
+    </ul>
+</div>
+{% endmacro %}

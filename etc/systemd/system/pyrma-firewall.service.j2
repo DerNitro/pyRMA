@@ -1,0 +1,14 @@
+[Unit]
+Description=pyRMA Firewall
+After=syslog.target network.target remote-fs.target nss-lookup.target
+
+[Service]
+Type=simple
+PIDFile=/run/pyrma-firewall.pid
+ExecStart=/usr/bin/python3 {{ app_folder }}/bin/firewall.py
+ExecStop=/bin/kill -s QUIT $MAINPID
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target

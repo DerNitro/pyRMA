@@ -1,0 +1,27 @@
+{% extends "main.html" %}
+{% from "menu.html" import show_menu %}
+{% from "search.html" import show_search %}
+
+{% block header %}
+{{ show_menu(username, Admin=admin, Active='host') }}
+{{ show_search(search) }}
+{{ super() }}
+{% endblock %}
+
+{% block content %}
+<center>
+    <h3>Удалить IPMI: {{ ipmi.name }}?</h3>
+    <table>
+        <tr>
+            <td>
+                <form action="/settings/delete/ipmi/{{ipmi.id}}" method="POST" name="delete_ipmi">
+                    {{ del_button.csrf_token }} {{ del_button.sub() }}
+                </form>
+            </td>
+            <td>
+                <a href="/settings"><button>Назад</button></a>
+            </td>
+        </tr>
+    </table>
+</center>
+{% endblock %}

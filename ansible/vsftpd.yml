@@ -1,0 +1,25 @@
+- name: Install vsFTPd
+  become: true
+  apt:
+    name:
+      - vsftpd
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Configure vsFTPd
+  become: true
+  ansible.builtin.template:
+    src: "etc/vsftpd.conf.j2"
+    dest: /etc/vsftpd.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart vsftpd.service
+
+- name: Start vsFTPd
+  become: true
+  ansible.builtin.systemd:
+    name: vsftpd.service
+    state: started
+    enabled: yes
+    daemon_reload: yes

@@ -1,0 +1,104 @@
+{% extends "administrate.html" %}
+
+{% block admin %}
+{% if group_user_form %}
+<div class="addGroup">
+    <details>
+        <summary>Добавить в группу</summary>
+        <form action="/administrate/user/{{ content['user'].uid }}" method="POST">
+            {{ group_user_form.csrf_token }}
+            <p>
+                {{group_user_form.name.label}}: {{ group_user_form.name() }} {{ group_user_form.add_sub() }}
+            </p>
+        </form>
+    </details>
+</div>
+<hr>
+{% endif %}
+{% if content['user'].disable or content['user'].date_disable < cur_date %}
+<h3>Пользователь - {{content['user'].full_name}}(Отключен)</h3>
+{% elif content['user'].admin %}
+<h3>Пользователь - {{content['user'].full_name}}(Администратор)</h3>
+{% else %}
+<h3>Пользователь - {{content['user'].full_name}} </h3>
+{% endif %}
+<form action="/administrate/user/{{ content['user'].uid }}" method="POST">
+{{ user_form.csrf_token }}
+<table>
+    <tbody>
+    <tr>
+        <td><b>login</b></td>
+        <td>{{content['user'].login}}</td>
+    </tr>
+    <tr>
+        <td><b>email</b></td>
+        <td>{{user_form.email()}}</td>
+    </tr>
+    <tr>
+        <td><b>ip</b></td>
+        <td>{{user_form.ip()}}</td>
+    </tr>
+    <tr>
+        <td><b>Группы</b></td>
+        <td>{{content['group']}}</td>
+    </tr>
+    </tbody>
+</table>
+{{ user_form.save() }}
+</form>
+<hr>
+<h3>Последние действия</h3>
+{% for action in content['action'] %}
+<table border="1" width="95%">
+    <tbody>
+    <tr>
+        <td width="15%">{{ action.date }}</td>
+        <td width="70%">{{ action.message }}</td>
+    </tr>
+    </tbody>
+</table>
+{% endfor %}
+<hr>
+<h3>Подключения</h3>
+<form action="/administrate/user/{{ content['user'].uid }}" method="POST" name="change_date">
+    {{ connection_filter.csrf_token }}
+    <p>
+        {{ connection_filter.date() }} {{ connection_filter.sub() }}
+    </p>
+</form>
+<table border="1" width="95%">
+    <th></th>
+    <th>Хост</th>
+    <th>Подключение</th>
+    <th>Статус</th>
+    <th>Завершение</th>
+    <th>Дата Начала</th>
+    <th>Дата завершения</th>
+    <th>Ошибка</th>
+    {% for i in content['connection'] %}
+    {% if i['connection'].termination == 2 %} <tr bgcolor="#ff807a"> {% else %} <tr> {% endif %}
+        <td align=center><a href="/connection/{{ i['connection'].id }}">
+            <img
+                    src="{{ url_for('static', filename='icon/eye.png') }}"
+                    alt="View"
+                    height="15px"
+            >
+        </a></td>
+        <td><a href="/host/{{ i['host'].id }}"> {{ i['host'].name }}</a></td>
+        {% if i['connection'].connection_type == 1 %}<td>Терминальное</td>{% endif %}
+        {% if i['connection'].connection_type == 2 %}<td>Передача данных</td>{% endif %}
+        {% if i['connection'].connection_type == 3 %}<td>Сервисы</td>{% endif %}
+        {% if i['connection'].connection_type == 4 %}<td>IPMI</td>{% endif %}
+        {% if i['connection'].status == 1 %}<td>Подключен</td>{% endif %}
+        {% if i['connection'].status == 2 %}<td>Отключен</td>{% endif %}
+        {% if i['connection'].termination == 0 %}<td>Нормальное завершение</td>
+        {% elif i['connection'].termination == 1 %}<td>Принудительное завершение</td>
+        {% elif i['connection'].termination == 2 %}<td>Ошибка</td>
+        {% else %}<td></td>{% endif %}
+        <td>{{i['connection'].date_start}}</td>
+        <td>{{i['connection'].date_end}}</td>
+        <td>{{i['connection'].error}}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}

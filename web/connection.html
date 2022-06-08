@@ -1,0 +1,101 @@
+{% extends "main.html" %}
+{% from "menu.html" import show_menu %}
+{% from "search.html" import show_search %}
+
+{% block header %}
+{{ show_menu(username, Admin=admin, Active='connection') }}
+{{ show_search(search) }}
+{{ super() }}
+{% endblock %}
+{% block content %}
+<h2>Подключение к <a href="/host/{{ content['host']['id'] }}">{{ content['host']['name'] }}</a></h2>
+<h3>
+    {% if content['connection'].connection_type == 1 %}Терминальное подключени{% endif %}
+    {% if content['connection'].connection_type == 2 %}Передача данных{% endif %}
+    {% if content['connection'].connection_type == 3 %}Сервисы{% endif %}
+    {% if content['connection'].connection_type == 4 %}IPMI{% endif %}
+</h3>
+<table border="1"">
+    <tr>
+        <td>Пользователь</td>
+        <td><a href="/administrate/user/{{ content['user']['uid'] }}">{{ content['user']['full_name'] }}</a></td>
+    </tr>
+    <tr>
+        <td>IP пользователя</td>
+        <td>{{ content['user']['ip'] }}</td>
+    </tr>
+    <tr>
+        <td>Статус</td>
+        {% if content['connection']['status'] == 1 %}<td>Подключен</td>{% endif %}
+        {% if content['connection']['status'] == 2 %}<td>Отключен</td>{% endif %}
+    </tr>
+    <tr>
+        <td>Дата Начала</td>
+        <td>{{ content['connection']['date_start'] }}</td>
+    </tr>
+    <tr>
+        <td>Дата Начала</td>
+        <td>{{ content['connection']['date_end'] }}</td>
+    </tr>
+    <tr>
+        <td>Завершение</td>
+        {% if content['connection']['termination'] == 0 %}<td>Нормальное</td>{% endif %}
+        {% if content['connection']['termination'] == 1 %}<td>Принудительное</td>{% endif %}
+        {% if content['connection']['termination'] == 2 %}<td>Ошибка</td>{% endif %}
+    </tr>
+    {% if content['connection']['termination'] == 2 %}
+    <tr>
+        <td>Ошибка</td>
+        <td>{{ content['connection']['error'] }}</td>
+    </tr>
+    {% endif %}
+</table>
+{% if content['file']|length > 0 %}
+<hr>
+<h3>Переданные файлы:</h3>
+<table border="1" width="95%">
+    <th>Файл</th>
+    <th>Дата</th>
+    <th>Направление</th>
+{% for i in content['file'] %}
+    <tr>
+        <td><a href="/file/{{ i.file_name_tgz }}">{{ i.file_name }}</a></td>
+        <td>{{ i.date_transfer }}</td>
+        <td>{{ i.direction }}</td>
+    </tr>
+{% endfor %}
+</table>
+{% endif %}
+{% if content['capture_traffic']|length > 0 %}
+<hr>
+<h3>Подключенные сервисы:</h3>
+<table border="1" width="95%">
+{% for i in content['capture_traffic'] %}
+    {% if i.size > 24 %} <tr bgcolor="#00ff40"> {% else %} <tr bgcolor="#ff807a"> {% endif %}
+        <td>{{ i.name }}</td>
+        <td>{{ i.port }}</td>
+        <td>{{ i.ip }}</td>
+        <td><a href="/pcap/{{ i.file_name }}"><button>Загрузить</button></a></td>
+    </tr>
+{% endfor %}
+</table>
+{% endif %}
+{% if content['ipmi']|length > 0 %}
+<hr>
+<h3>Трафик IPMI:</h3>
+<table border="1" width="95%">
+{% for i in content['ipmi'] %}
+    {% if i.size > 24 %} <tr bgcolor="#00ff40"> {% else %} <tr bgcolor="#ff807a"> {% endif %}
+        <td width="10%">{{ i.port }}</td>
+        <td><a href="/pcap/{{ i.file_name }}"><button>Загрузить</button></a></td>
+    </tr>
+{% endfor %}
+</table>
+{% endif %}
+<hr>
+<center><div id="tty"></div></center>
+<script>
+    AsciinemaPlayer.create('/ttyrec/{{ content['session']['ttyrec'] }}', document.getElementById('tty'));
+</script>
+
+{% endblock %}

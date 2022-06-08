@@ -1,0 +1,24 @@
+{% extends "main.html" %}
+{% from "menu.html" import show_menu %}
+{% from "search.html" import show_search %}
+{% from "_formhelpers.html" import render_field %}
+
+{% block header %}
+{{ show_menu(username, Admin=admin, Active='administrate') }}
+{{ show_search(search) }}
+{{ super() }}
+{% endblock %}
+
+{% block content %}
+<h3>
+    Смена параметров IPMI - {{ ipmi.name }}
+</h3>
+<form action="/settings/change/ipmi/{{ipmi.id}}" method="POST" name="change_ipmi">
+    {{ form.csrf_token }}
+    {{ render_field(form.name, size=45) }}
+    {{ render_field(form.vendor, size=45) }}
+    {{ render_field(form.ports, size=45) }}
+    {{  form.sub }}
+</form>
+
+{% endblock %}

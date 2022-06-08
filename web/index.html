@@ -1,0 +1,21 @@
+{% extends "main.html" %}
+{% from "menu.html" import show_menu %}
+{% from "search.html" import show_search %}
+
+{% block header %}
+{{ show_menu(username, Admin=admin) }}
+{{ show_search(search) }}
+{{ super() }}
+{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    {% if admin %}
+        {% from "dashboard.html" import admin_dashboard %}
+	    {{ admin_dashboard(content) }}
+    {% else %}
+        {% from "dashboard.html" import user_dashboard %}
+	    {{ user_dashboard(content) }}
+    {% endif %}
+</div>
+{% endblock %}

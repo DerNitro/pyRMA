@@ -1,0 +1,179 @@
+{% extends "main.html" %}
+{% from "menu.html" import show_menu %}
+{% from "search.html" import show_search %}
+
+{% block header %}
+{{ show_menu(username, Admin=admin, Active='host') }}
+{{ show_search(search) }}
+{{ super() }}
+{% endblock %}
+
+{% block content %}
+<hr>
+{% if EditHostInformation or admin %}
+<div class="host_edit">
+    <ul class="host_edit">
+        <li class="host_edit"> <a class="host_edit" href="/host/{{ content['id'] }}/edit">Редактировать</a> </li>
+        {% if content['connection_type'].name == 'SSH' %}
+        <li class="host_edit"> <a class="host_edit" href="/host/{{ content['id'] }}/add_service">Добавить сервис</a></li>
+        {% endif %}
+    </ul>
+</div>
+<hr>
+{% endif %}
+{% if (admin or EditHostInformation) and jump_form %}
+<div class="addJump">
+    <details>
+        <summary>Jump хост</summary>
+        <form action="/host/{{ content['id'] }}" method="POST">
+            {{ jump_form.csrf_token }}
+            <p>
+                {{jump_form.jump.label}}: {{ jump_form.jump() }} {{ jump_form.add_sub() }}
+            </p>
+        </form>
+        <form action="/host/{{ content['id'] }}" method="POST">
+            {{ jump_form.csrf_token }}
+            <p>{% if jump %} Текущий Jump хост: {{ jump.name }} {{ jump_form.clear_sub() }} {% endif %}</p>
+        </form>
+    </details>
+</div>
+<hr>
+{% endif %}
+{% if admin and group_form %}
+<div class="addGroup">
+    <details>
+        <summary>Добавить в группу</summary>
+        <form action="/administrate/host/{{ content['id'] }}" method="POST">
+            {{ group_form.csrf_token }}
+            <p>
+                {{group_form.name.label}}: {{ group_form.name() }} {{ group_form.add_sub() }}
+            </p>
+        </form>
+    </details>
+</div>
+<hr>
+{% endif %}
+<div class="host">
+<h3>{{ content['name'] }} {% if content['parent'] %}({{ content['parent'] }}){% endif %}</h3>
+<table>
+<tbody>
+<tr>
+    <td style="width: 450px;">IP</td>
+    <td style="width: 550px;">{{ content['ip'] }}</td>
+</tr>
+<tr>
+    <td style="width: 450px;">Описание</td>
+    <td style="width: 550px;">{{ content['describe'] }}</td>
+</tr>
+<tr>
+    <td style="width: 450px;">Группы</td>
+    <td style="width: 550px;">{{ content['group'] }} ({{content['parent_group']}})</td>
+</tr>
+<tr>
+    <td style="width: 450px;">IPMI</td>
+    <td style="width: 550px;">{{ content['ilo_type'] }}: {{ content['ilo'] }}</td>
+</tr>
+<tr>
+    <td style="width: 450px;">Login</td>
+    <td style="width: 550px;">{{ content['default_login'] }}</td>
+</tr>
+<tr>
+    <td style="width: 450px;">Password</td>
+    <td style="width: 550px;">{{ content['default_password'] }}</td>
+</tr>
+<tr>
+    <td style="width: 450px;">Протокол подключения</td>
+    <td style="width: 550px;">{{ content['connection_type'].name }}</td>
+</tr>
+{% if content['file_transfer_type'] %}
+<tr>
+    <td style="width: 450px;">Протокол передачи данных</td>
+    <td style="width: 550px;">{{ content['file_transfer_type'].name }}</td>
+</tr>
+{% endif %}
+{% if content['proxy'] %}
+<tr>
+    <td style="width: 450px;">Proxy</td>
+    <td style="width: 550px;">Вкл</td>
+</tr>
+{% endif %}
+</tbody>
+</table>
+{% if content['services'] and ConnectionService %}
+<div class="services">
+    <h3>Подключеные сервисы</h3>
+<table>
+    {% for service in content['services'] %}
+    <tr>
+        <td style="width: 150px;">
+            {% for type in content['service_type'] %}
+            {% if type.id == service.type %}
+            {{ type.name }}
+            {% endif %}
+            {% endfor %}
+        </td>
+        <td style="width: 450px;">
+            {{ service.local_port }} -> {{ service.remote_ip }}:{{ service.remote_port }}
+        </td>
+        <td style="width: 450px;">{{ service.describe }}</td>
+        <td style="width: 150px;">{% if service.internal %}Внутренний{% endif %}</td>
+        {% if EditHostInformation or admin %}
+        <td style="width: 150px;"><a href="/delete_service/{{ service.id }}"><button>Удалить</button></a></td>
+        {% endif %}
+    </tr>
+    {% endfor %}
+</table>
+</div>
+{% endif %}
+<h3>Note</h3>
+    {% if content['note'] %}
+        {% for key, value in content['note'].items()|sort() %}
+            <h4>{{ key }}</h4>
+            <p>{{ value }}</p>
+        {% endfor %}
+    {% endif %}
+</div>
+<hr>
+<h3>Подключения</h3>
+<form action="/host/{{ content['id'] }}" method="POST" name="change_date">
+    {{ connection_filter.csrf_token }}
+    <p>
+        {{ connection_filter.date() }} {{ connection_filter.sub() }}
+    </p>
+</form>
+<table border="1" width="95%">
+    <th></th>
+    <th>Пользователь</th>
+    <th>Подключение</th>
+    <th>Статус</th>
+    <th>Завершение</th>
+    <th>Дата Начала</th>
+    <th>Дата завершения</th>
+    <th>Ошибка</th>
+    {% for i in content['connection'] %}
+    {% if i['connection'].termination == 2 %} <tr bgcolor="#ff807a"> {% else %} <tr> {% endif %}
+        <td align=center><a href="/connection/{{ i['connection'].id }}">
+            <img
+                    src="{{ url_for('static', filename='icon/eye.png') }}"
+                    alt="View"
+                    height="15px"
+            >
+        </a></td>
+        <td><a href="/administrate/user/{{ i['user'].uid }}"> {{ i['user'].full_name }}</a></td>
+        {% if i['connection'].connection_type == 1 %}<td>Терминальное</td>{% endif %}
+        {% if i['connection'].connection_type == 2 %}<td>Передача данных</td>{% endif %}
+        {% if i['connection'].connection_type == 3 %}<td>Сервисы</td>{% endif %}
+        {% if i['connection'].connection_type == 4 %}<td>IPMI</td>{% endif %}
+        {% if i['connection'].status == 1 %}<td>Подключен</td>{% endif %}
+        {% if i['connection'].status == 2 %}<td>Отключен</td>{% endif %}
+        {% if i['connection'].termination == 0 %}<td>Нормальное завершение</td>
+        {% elif i['connection'].termination == 1 %}<td>Принудительное завершение</td>
+        {% elif i['connection'].termination == 2 %}<td>Ошибка</td>
+        {% else %}<td></td>{% endif %}
+        <td>{{i['connection'].date_start}}</td>
+        <td>{{i['connection'].date_end}}</td>
+        <td>{{i['connection'].error}}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}

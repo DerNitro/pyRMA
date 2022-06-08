@@ -1,0 +1,50 @@
+- hosts: pyrma
+  tasks:
+    - name: Include tasks checking server for deploy pyRMA
+      include_tasks: ansible/check.yml
+
+    - name: Include tasks prepare server
+      include_tasks: ansible/prepare.yml
+
+    - name: Include tasks install postgresql
+      include_tasks: ansible/postgresql.yml
+    
+    - name: Include tasks install pyRMA
+      include_tasks: ansible/install.yml
+
+    - name: Include tasks install vsFTPd
+      include_tasks: ansible/vsftpd.yml
+
+    - name: Include tasks start pyRMA
+      include_tasks: ansible/start.yml
+  
+  handlers:
+    - name: Restart postgresql.service
+      become: true
+      ansible.builtin.systemd:
+        name: postgresql.service
+        state: restarted
+
+    - name: Restart pyrma-web.service
+      become: true
+      ansible.builtin.systemd:
+        name: pyrma-web.service
+        state: restarted
+
+    - name: Restart pyrma-firewall.service
+      become: true
+      ansible.builtin.systemd:
+        name: pyrma-firewall.service
+        state: restarted
+
+    - name: Restart ssh.service
+      become: true
+      ansible.builtin.systemd:
+        name: ssh.service
+        state: restarted
+
+    - name: Restart vsftpd.service
+      become: true
+      ansible.builtin.systemd:
+        name: vsftpd.service
+        state: restarted

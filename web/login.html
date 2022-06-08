@@ -1,0 +1,23 @@
+{% extends "main.html" %}
+{% from "_formhelpers.html" import render_field %}
+
+
+{% block content %}
+<div class="login">
+    <h1>Вход в систему</h1>
+    <form action="/login" method="POST" name="login">
+        {{ form.csrf_token }}
+        <dl>
+            {{ render_field(form.username, size=45) }}
+            {{ render_field(form.password, size=45) }}
+        </dl>
+        <p>{{ form.submit_login() }}
+    </form>
+    {% if error %}
+    <div class="loginError">
+        {{ error }}
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}
