@@ -263,6 +263,8 @@ class AccessRequest(npyscreen.ActionPopup):
         )
         if not access.request_access(appParameters, request):
             echo_form('Ошибка выполнения запроса доступа, просьба обратится к администратору системы!')
+        else:
+            echo_form('Запрос доступа отправлен!')
 
 
 class Filter(npyscreen.Popup):
