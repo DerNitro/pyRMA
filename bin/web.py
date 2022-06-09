@@ -45,7 +45,7 @@ app = Flask(
     static_folder=os.path.join(webParameters.template, 'static')
 )
 app.secret_key = os.urandom(64)
-app.debug = True    # TODO: Снять DEBUG
+app.debug = False
 csrf = CSRFProtect()
 csrf.init_app(app)
 

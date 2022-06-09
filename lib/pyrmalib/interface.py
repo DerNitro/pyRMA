@@ -605,9 +605,9 @@ class Interface(npyscreen.NPSAppManaged):
             appParameters.log.info('Запуск в обычном режиме')
             self.addForm("MAIN", HostListDisplay)
         else:
-            appParameters.log.error('Размер терминала не поддерживется!')
+            appParameters.log.error('Размер терминала не поддерживается!')
             self.addForm("MAIN", ErrorForm)
-            self.getForm("MAIN").error_text = 'Размер терминала не поддерживется!'
+            self.getForm("MAIN").error_text = 'Размер терминала не поддерживается!'
 
     def run(self, fork=None):
         super(Interface, self).run(fork=None)

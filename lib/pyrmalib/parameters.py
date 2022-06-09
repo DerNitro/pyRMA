@@ -27,9 +27,9 @@ pathConfigFile = '/etc/pyrma/pyrma.conf'
 
 def check_config(config):
     if not config.has_section('Main'):
-        raise CheckConfigError('Отсутсвует секция Main - {0}'.format(pathConfigFile))
+        raise CheckConfigError('Отсутствует секция Main - {0}'.format(pathConfigFile))
     if not config.has_section('DataBase'):
-        raise CheckConfigError('Отсутсвует секция DataBase - {0}'.format(pathConfigFile))
+        raise CheckConfigError('Отсутствует секция DataBase - {0}'.format(pathConfigFile))
     return True
 
 
@@ -50,7 +50,7 @@ class Parameters:
 
     def __init__(self):
         if not os.path.isfile(pathConfigFile):
-            raise FileNotFoundError('Отсутствует кофигурационный файл: {0}'.format(pathConfigFile))
+            raise FileNotFoundError('Отсутствует конфигурационный файл: {0}'.format(pathConfigFile))
 
         self.conf = configparser.ConfigParser()
         self.conf.read(pathConfigFile)
