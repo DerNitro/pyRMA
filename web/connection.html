@@ -10,7 +10,7 @@
 {% block content %}
 <h2>Подключение к <a href="/host/{{ content['host']['id'] }}">{{ content['host']['name'] }}</a></h2>
 <h3>
-    {% if content['connection'].connection_type == 1 %}Терминальное подключени{% endif %}
+    {% if content['connection'].connection_type == 1 %}Терминальное подключение{% endif %}
     {% if content['connection'].connection_type == 2 %}Передача данных{% endif %}
     {% if content['connection'].connection_type == 3 %}Сервисы{% endif %}
     {% if content['connection'].connection_type == 4 %}IPMI{% endif %}
@@ -26,22 +26,26 @@
     </tr>
     <tr>
         <td>Статус</td>
-        {% if content['connection']['status'] == 1 %}<td>Подключен</td>{% endif %}
-        {% if content['connection']['status'] == 2 %}<td>Отключен</td>{% endif %}
+        {% if content['connection']['status'] == 1 %}<td>Подключен</td>
+        {% elif content['connection']['status'] == 2 %}<td>Отключен</td>
+        {% else %}<td></td>
+        {% endif %}
     </tr>
     <tr>
         <td>Дата Начала</td>
         <td>{{ content['connection']['date_start'] }}</td>
     </tr>
     <tr>
-        <td>Дата Начала</td>
+        <td>Дата Завершения</td>
         <td>{{ content['connection']['date_end'] }}</td>
     </tr>
     <tr>
         <td>Завершение</td>
-        {% if content['connection']['termination'] == 0 %}<td>Нормальное</td>{% endif %}
-        {% if content['connection']['termination'] == 1 %}<td>Принудительное</td>{% endif %}
-        {% if content['connection']['termination'] == 2 %}<td>Ошибка</td>{% endif %}
+        {% if content['connection']['termination'] == 0 %}<td>Нормальное</td>
+        {% elif content['connection']['termination'] == 1 %}<td>Принудительное</td>
+        {% elif content['connection']['termination'] == 2 %}<td>Ошибка</td>
+        {% else %}<td></td>
+        {% endif %}
     </tr>
     {% if content['connection']['termination'] == 2 %}
     <tr>

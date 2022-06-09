@@ -2,11 +2,6 @@
 # -*- coding: utf-8 -*-
 
 """
-    Filename : error
-    Date: 21.12.2018 07:18
-    Project: pyRMA
-    AUTHOR : Sergey Utkin
-    
     Copyright 2018 Sergey Utkin utkins01@gmail.com
 
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -52,7 +47,7 @@ class ErrorGetListFiles(Exception):
     def __repr__(self):
         return self.desc
 
-class ErrorConectionIPMI(Exception):
+class ErrorConnectionIPMI(Exception):
     def __init__(self, desc):
         self.desc = desc
 

@@ -32,7 +32,7 @@ import datetime
 
 __author__ = 'Sergey Utkin'
 __email__ = 'utkins01@gmail.com'
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 __status__ = "Stable"
 __maintainer__ = "Sergey Utkin"
 __copyright__ = "Copyright 2016, Sergey Utkin"
@@ -84,7 +84,6 @@ groups = [grp.getgrgid(g).gr_name for g in os.getgroups()]
 
 if not applib.user_info(pw_name, engine):
     if app_group and len(list(set(groups) & set([t.name for t in app_group]))) > 0:
-    # TODO: Добавляются только пользователи у которых есть группа идентичная группе в ACS
         applib.user_registration(
             {
                 'uid': pw_uid,
@@ -125,12 +124,12 @@ except sqlalchemy.orm.exc.NoResultFound:
     appParameters.log.error("Пользователь не найден в ACS", pr=True)
     sys.exit(14)
 
-# Проверка соответсвия IP адреса с адресом подключения.
+# Проверка соответствия IP адреса с адресом подключения.
 if appParameters.check_source_ip == '0':
     appParameters.log.debug("Проверка IP отключена")
 else:
     if not check_ip(ssh_client_ip, user_info.ip):
-        appParameters.log.error("Подключение с неразрешеного IP адрес", pr=True)
+        appParameters.log.error("Подключение с неразрешенного IP адрес", pr=True)
         sys.exit(15)
     else:
         appParameters.log.info(
@@ -202,7 +201,7 @@ if connection_host:      # type: modules.ConnectionModules
         pass
     except ErrorConnectionJump:
         pass
-    except ErrorConectionIPMI as e:
+    except ErrorConnectionIPMI as e:
         print(e)
     finally:
         connection_host.close()

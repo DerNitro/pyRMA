@@ -53,4 +53,4 @@ class Log:
         self.log.critical(text)
 
     def exception(self):
-        self.log.exception("Tracert error")
+        self.log.exception("Tracers error")

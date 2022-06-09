@@ -128,7 +128,7 @@ class ChangePermission(FlaskForm):
 
 
 class AddUserGroup(FlaskForm):
-    name = SelectField('Группа пользоватлей', coerce=int)
+    name = SelectField('Группа пользователей', coerce=int)
     add_sub = SubmitField('Добавить')
 
 
@@ -175,12 +175,12 @@ class Parameters(FlaskForm):
     email_port = IntegerField('Порт EMAIL Сервера', validators=[NumberRange(min=1, max=65535)])
     email_from = StringField('Email отправителя', validators=[DataRequired()])
     email_cc = StringField('Получатели копии email сообщений')
-    auto_extension = BooleanField('Автопродление доступа')
-    extension_days = IntegerField('Колличество дней для автопродления', validators=[NumberRange(min=1, max=365)])
+    auto_extension = BooleanField('Автоопределение доступа')
+    extension_days = IntegerField('Количество дней для автоопределения', validators=[NumberRange(min=1, max=365)])
     enable_route_map = BooleanField('Включение маршрутизации')
     check_ip = BooleanField('Включение проверки пользовательских IP адресов')
     forward_tcp_port_disable = StringField('Запрещенные порты для проброса(Разделитель ;)')
-    forward_tcp_port_range = StringField('Диапазон портов для форвардинга(Разделитель ;)')
+    forward_tcp_port_range = StringField('Диапазон портов для проброса портов(Разделитель ;)')
     sub = SubmitField('Сохранить')
 
 

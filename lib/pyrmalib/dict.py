@@ -2,11 +2,6 @@
 # -*- coding: utf-8 -*-
 
 """
-    Filename : dict
-    Date: 19.06.2020 07:00
-    Project: pyRMA
-    AUTHOR : Sergey Utkin
-    
     Copyright 2020 Sergey Utkin utkins01@gmail.com
 
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,7 +23,7 @@ action_type = {
     3: "Создание префикса",
     4: "Удаление префикса",
     5: "Добавление IPMI",
-    6: "Изменениение IPMI",
+    6: "Изменение IPMI",
     7: "Удаление IPMI",
     8: "Добавление Сервиса",
     9: "Удаление Сервиса",
