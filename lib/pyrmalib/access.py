@@ -43,7 +43,7 @@ class Access:
 
     def __init__(self, n_access: int):
         """
-        Формируем мапинг правил доступа
+        Формируем маппинг правил доступа
         :param n_access: текущее значение доступа int
         """
         self.map = {}
@@ -69,7 +69,7 @@ class Access:
 
     def get_int(self):
         """
-        Воззвращает десятичное представление мапинга правил доступа
+        Возвращает десятичное представление маппинг правил доступа
         :return: int
         """
         bin_str = []
@@ -133,10 +133,10 @@ def get_user_access(param: parameters.Parameters, user, host):
 
 def check_access(app_param: parameters.Parameters, access, h_object=None, check_permission=None, user=None):
     """
-    Возвращает True|False по разрещенному доступу
+    Возвращает True|False по разрешенному доступу
     :param user: schema.User.uid
     :param check_permission: Строка или Список schema.Permission
-    :param app_param: Настроки приложения.
+    :param app_param: Настроики приложения.
     :param access: Правило доступа из access_map
     :param h_object: хост schema.Host
     :return: bool
@@ -200,7 +200,7 @@ def check_access(app_param: parameters.Parameters, access, h_object=None, check_
 def users_access_list(param: parameters.Parameters, access, group_host=None, group_user=None):
     """
     Получение списка пользователей с правом доступа
-    :param group_user: Группа пользоватлей
+    :param group_user: Группа пользователей
     :param group_host: Группа хостов
     :param param: Настройки приложения
     :param access: Правило доступа из access_map

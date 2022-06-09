@@ -414,7 +414,7 @@ def get_content_host(param: parameters.WebParameters, host_id, connection_date=N
             content['connection_type'] = db.query(schema.ConnectionType). \
                 filter(schema.ConnectionType.id == host.connection_type).one()
         except NoResultFound:
-            raise error.WTF('Не указан тип подклчюения')
+            raise error.WTF('Не указан тип подключения')
         try:
             content['file_transfer_type'] = db.query(schema.FileTransferType). \
                 filter(schema.FileTransferType.id == host.file_transfer_type).one()
@@ -1228,7 +1228,7 @@ def restore_deny_password(param: parameters.WebParameters, key):
                 user=param.user_info.uid if param.user_info else sql.null(),
                 action_type=50,
                 date=datetime.datetime.now(),
-                message='Восстановение пароля отменено (Client IP: {})'.format(request.remote_addr)
+                message='Восстановление пароля отменено (Client IP: {})'.format(request.remote_addr)
             )
         )
     return True
@@ -1343,7 +1343,7 @@ def add_service_type(param: parameters.WebParameters, name, default_port):
 
 def add_hosts_file(param: parameters.WebParameters, filepath: str, parent=0):
     if not os.path.isfile(filepath):
-        raise error.WTF("Отсутсвует файл на загрузку")
+        raise error.WTF("Отсутствует файл на загрузку")
     f = open(filepath, 'r')
     header = f.readline().strip().split(',')
     hosts = []
@@ -1720,7 +1720,7 @@ def check_worktime():
 def get_password(app_param: parameters.Parameters, host):
     """
     Возвращает schema.Password
-    :param app_param: Настроки приложения.
+    :param app_param: Настроики приложения.
     :param host: Идентификатор хоста
     :return: None or schema.Password
     """

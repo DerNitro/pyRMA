@@ -153,7 +153,7 @@ def password(passwd, magic, mask=True):
     :type magic: int
     :param mask: маскировки/демаскировки
     :type mask: bool
-    :return: Возвращает преобразованый пароль
+    :return: Возвращает преобразованный пароль
     """
     c_h = 'PQRabc=>?@[\]defghijkopqJKLrstuv&\'wxy234789!"#$%()*+z01,-./:;<}~ABCDlmnEFGHI56MNOST^_`{|UVWXYZ'
     result = ''

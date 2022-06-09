@@ -8,7 +8,6 @@
       - python3-pip
       - python3-psycopg2
       - acl                           # https://github.com/georchestra/ansible/issues/55#issuecomment-651043423
-      - mc                            # TODO: deleted
     update_cache: yes
     cache_valid_time: 3600
 
