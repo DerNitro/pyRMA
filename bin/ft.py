@@ -39,7 +39,7 @@ from sqlalchemy import create_engine
 
 __author__ = 'Sergey Utkin'
 __email__ = 'utkins01@gmail.com'
-__version__ = "1.0.1"
+__version__ = "1.0.2"
 __status__ = "Stable"
 __maintainer__ = "Sergey Utkin"
 __copyright__ = "Copyright 2016, Sergey Utkin"

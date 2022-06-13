@@ -32,7 +32,7 @@ import datetime
 
 __author__ = 'Sergey Utkin'
 __email__ = 'utkins01@gmail.com'
-__version__ = "1.0.1"
+__version__ = "1.0.2"
 __status__ = "Stable"
 __maintainer__ = "Sergey Utkin"
 __copyright__ = "Copyright 2016, Sergey Utkin"
@@ -106,13 +106,14 @@ if not applib.user_info(pw_name, engine):
             admin_cc=False
         )
 
-for i in list(set(groups) & set([t.name for t in app_group])):
-    gid = None
-    for g in app_group:
-        if i == g.name:
-            gid = g.id
-    if gid:
-        applib.add_user_group(appParameters, pw_uid, gid, action=False)
+if app_group:
+    for i in list(set(groups) & set([t.name for t in app_group])):
+        gid = None
+        for g in app_group:
+            if i == g.name:
+                gid = g.id
+        if gid:
+            applib.add_user_group(appParameters, pw_uid, gid, action=False)
 
 try:
     with schema.db_select(engine) as db:
