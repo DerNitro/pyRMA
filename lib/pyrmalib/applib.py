@@ -1122,11 +1122,12 @@ def user_info(username, engine):
 
     return user
 
-def user_edit(param: parameters.WebParameters, uid, email, ip):
+def user_edit(param: parameters.WebParameters, uid, name, email, ip):
     with schema.db_edit(param.engine) as db:
         user = db.query(schema.User).filter(schema.User.uid == uid).one()
         user.ip = ip
         user.email = email
+        user.full_name = name
         db.flush()
 
         action = schema.Action(

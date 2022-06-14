@@ -55,6 +55,9 @@ appParameters.log.info('Запуск приложения: {0} {1}'.format(__pro
 appParameters.log.debug(appParameters)
 pw_name, pw_passwd, pw_uid, pw_gid, pw_gecos, pw_dir, pw_shell = pwd.getpwuid(os.getuid())
 
+if len(pw_gecos) == 0:
+    pw_gecos = pw_name
+
 if appParameters.dbase in ['postgresql']:
     engine = create_engine(
         '{0}://{1}:{2}@{3}:{4}/{5}'.format(
