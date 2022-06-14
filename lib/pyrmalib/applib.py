@@ -593,7 +593,10 @@ def get_local_port(param: parameters.WebParameters):
 
 def get_jump_hosts(param: parameters.WebParameters):
     with schema.db_select(param.engine) as db:
-        jump_hosts = db.query(schema.Host).filter(schema.Host.proxy.is_(True)).all()
+        jump_hosts = db.query(schema.Host).filter(
+            schema.Host.proxy.is_(True),
+            schema.Host.remove.is_(False)
+        ).all()
 
     return [(t.id, t.name) for t in jump_hosts]
 
