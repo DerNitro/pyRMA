@@ -1330,7 +1330,7 @@ def add_service_type(param: parameters.WebParameters, name, default_port):
             db.flush()
         except sqlalchemy.exc.IntegrityError as e:
             if 'duplicate key value' in str(e):
-                raise error.InsertError('Дубль "Порт по умолчанию"')
+                raise error.InsertError('дублирующая запись!!!')
             else:
                 raise error.WTF(e)
         db.refresh(service_type)

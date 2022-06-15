@@ -206,7 +206,7 @@ class ServiceType(Base):
     Список доступных подключений к сервисов
     """
     __tablename__ = 'service_type'
-    name = sqlalchemy.Column(sqlalchemy.String(20))
+    name = sqlalchemy.Column(sqlalchemy.String(), unique=True)
     default_port = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, unique=True)
 
     def __repr__(self):
