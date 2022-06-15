@@ -222,9 +222,7 @@ class Find(npyscreen.Popup):
         self.owner.HostList = applib.search(appParameters, self.FindText.value)
 
 
-class AccessRequest(npyscreen.ActionPopup):
-    DEFAULT_LINES = 20
-    DEFAULT_COLUMNS = 80
+class AccessRequest(npyscreen.Form):
     OK_BUTTON_TEXT = "Отправить"
     CANCEL_BUTTON_TEXT = "Отмена"
     CANCEL_BUTTON_BR_OFFSET = (2, 18)
@@ -237,10 +235,17 @@ class AccessRequest(npyscreen.ActionPopup):
         self.date_disable = self.add(
             npyscreen.TitleDateCombo,
             name="Доступ до даты",
-            value=datetime.date.today() + datetime.timedelta(days=1)
+            value=datetime.date.today() + datetime.timedelta(days=1),
+            begin_entry_at=20
         )
-        self.ticket = self.add(npyscreen.TitleText, name='Номер Заявки')
-        self.access = self.add(npyscreen.TitleMultiSelect, name='Доступы', max_height=4, values=keywords['access_list'])
+        self.ticket = self.add(npyscreen.TitleText, name='Номер Заявки', begin_entry_at=20)
+        self.access = self.add(
+            npyscreen.TitleMultiSelect, 
+            name='Доступы', 
+            max_height=4, 
+            values=keywords['access_list'],
+            begin_entry_at=20
+        )
         self.note = self.add(npyscreen.MultiLineEditableBoxed, name='Дополнительное Описание', editable=True)
 
     def create(self):
@@ -297,10 +302,8 @@ class Filter(npyscreen.Popup):
         self.owner.Filter = self.FilterText.value
 
 
-class ConnectionForm(npyscreen.Popup):
+class ConnectionForm(npyscreen.Form):
     OK_BUTTON_TEXT = 'Закрыть'
-    DEFAULT_LINES = 20
-    DEFAULT_COLUMNS = 80
     ip_address = None
     description = None
     login = None
@@ -601,7 +604,7 @@ class Interface(npyscreen.NPSAppManaged):
         if not appParameters.user_info.check:
             self.addForm("MAIN", ErrorForm)
             self.getForm("MAIN").error_text = 'Пользователь проходит проверку администратором!'
-        elif x > 120 and y > 40:
+        elif x >= 79 and y >= 23:
             appParameters.log.info('Запуск в обычном режиме')
             self.addForm("MAIN", HostListDisplay)
         else:

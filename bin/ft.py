@@ -70,6 +70,8 @@ parser.add_argument('--id',   help='ID подключения', required=True)
 
 args = parser.parse_args()
 
+exit_flag = 0
+
 ftParameters.connection = applib.get_connection(ftParameters, args.id)
 
 cnopts = pysftp.CnOpts()
@@ -244,18 +246,35 @@ class FT(npyscreen.FormBaseNew):
         return max_y, max_x
 
     def app_exit(self, *args, **keywords):
+        global exit_flag
+        exit_flag = 1
         self.parentApp.switchForm(None)
 
     def create(self):
         self.cycle_widgets = True
+        lines, columns = self.xy()
+        self.bx_width = (columns // 2) - 2
+        
+        self.source = self.add(LocalBoxBasic, name = 'acs', max_width=self.bx_width)
+        self.dest = self.add(
+            RemoteBoxBasic, 
+            name = ftParameters.connection['host'].name, rely=2, max_width=self.bx_width, relx=self.bx_width + 2
+        )
+
 
     def update_files(self, *args, **keywords):
+        lines, columns = self.xy()
+        
+        if self.bx_width != (columns // 2) - 2:
+            self.parentApp.switchForm(None)
+
         try:
             self.source.values = self.get_local_files(os.path.join(*local_path))
         except error.ErrorGetListFiles as e:
             local_path.pop()
             ftParameters.log.warning(e)
         self.source.update()
+
         try:
             self.dest.values = self.get_remote_files()
         except error.ErrorGetListFiles as e:
@@ -319,15 +338,6 @@ class FT(npyscreen.FormBaseNew):
         )
         self.help = template.help_ft_form().format(program=__program__, version=__version__)
 
-        lines, columns = self.xy()
-        self.bx_width = (columns // 2) - 2
-        self.source = self.add(LocalBoxBasic, name = 'acs', max_width=self.bx_width)
-        self.dest = self.add(
-            RemoteBoxBasic, 
-            name = ftParameters.connection['host'].name, rely=2, max_width=self.bx_width, relx=self.bx_width + 2
-        )
-        self.source.bx_width = self.bx_width
-        self.dest.bx_width = self.bx_width
         try:
             self.source.values = self.get_local_files(os.path.join(*local_path))
         except PermissionError:
@@ -543,22 +553,26 @@ class ErrorForm(npyscreen.FormBaseNew):
 class UserApp(npyscreen.NPSAppManaged):
     keypress_timeout_default = 1
     def onStart(self):
-        global remote_path
-        try:
-            sftp = pysftp.Connection(**cinfo)
-            remote_path.append('/')
-            for f in sftp.pwd.split('/'):
-                if f != '':
-                    remote_path.append(f)
-            sftp.close()
+        if not connection_error:
             self.addForm("MAIN", FT)
-        except (ssh_exception.AuthenticationException, ssh_exception.SSHException) as e:
+        else:
             self.addForm("MAIN", ErrorForm)
             self.getForm("MAIN").error_text = str(e)
             ftParameters.log.error('Ошибка подключения к узлу: {}'.format(e), pr=True)
 
+connection_error = False
+try:
+    sftp = pysftp.Connection(**cinfo)
+    remote_path.append('/')
+    for f in sftp.pwd.split('/'):
+        if f != '':
+            remote_path.append(f)
+    sftp.close()
+except (ssh_exception.AuthenticationException, ssh_exception.SSHException) as e:
+    connection_error = True
 
-if __name__ == "__main__":
+while exit_flag == 0:
+    ftParameters.log.debug('exit_flag: {}'.format(exit_flag))
     App = UserApp()
     App.run()
 
