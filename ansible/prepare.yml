@@ -37,6 +37,16 @@
     state: present
     reload: yes
 
+- name: Configure SSHD - KexAlgorithms 
+  become: true
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    backup: true
+    regexp: '^KexAlgorithms '
+    line: "KexAlgorithms curve25519-sha256@libssh.org,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group14-sha1"
+    insertafter: "^# Ciphers and keying"
+  notify: Restart ssh.service
+
 - name: Disable sFTP over SSH
   become: true
   ansible.builtin.replace:
