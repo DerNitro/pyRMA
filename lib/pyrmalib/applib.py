@@ -1012,6 +1012,7 @@ def set_group_permission(param: parameters.WebParameters, group_id, form: forms.
     connection_access.change('ConnectionIlo', set_access=form.ConnectionIlo.data)
     with schema.db_edit(param.engine) as db:
         try:
+            group = db.query(schema.Group).filter(schema.Group.id == group_id).one()
             perm = db.query(schema.Permission).filter(
                 schema.Permission.t_subject == 1,
                 schema.Permission.subject == group_id
@@ -1035,7 +1036,7 @@ def set_group_permission(param: parameters.WebParameters, group_id, form: forms.
             action_type=61,
             date=datetime.datetime.now(),
             message="Смена прав доступа для группы {group_id}({user_access}, {connection_access})".format(
-                group_id=group_id,
+                group_id=group.name,
                 user_access=user_access.get_int(),
                 connection_access=connection_access.get_int()
             )
