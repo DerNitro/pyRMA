@@ -11,6 +11,11 @@
     update_cache: yes
     cache_valid_time: 3600
 
+- name: Ensure a locale exists
+  community.general.locale_gen:
+    name: ru_RU.UTF-8
+    state: present
+
 - name: Disable MOTD display when opening SSH session
   become: true
   ansible.builtin.lineinfile:
