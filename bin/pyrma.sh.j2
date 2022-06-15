@@ -1,7 +1,9 @@
 #!/bin/bash
 
-export LC_ALL=$(locale -a|grep -ix 'c.utf-\?8' || echo C)
-export SHELL=/bin/bash 
+export LC_ALL=$(locale -a|grep -ix 'ru_RU.utf-\?8' || echo C)
+export SHELL=/bin/bash
+
+echo "current locale: $LC_ALL"
 
 umask 0002
 
