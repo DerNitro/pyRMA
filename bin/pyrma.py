@@ -29,6 +29,7 @@ from sqlalchemy import create_engine
 from pyrmalib.utils import *
 from pyrmalib.error import *
 import datetime
+import signal
 
 __author__ = 'Sergey Utkin'
 __email__ = 'utkins01@gmail.com'
@@ -37,6 +38,15 @@ __status__ = "Stable"
 __maintainer__ = "Sergey Utkin"
 __copyright__ = "Copyright 2016, Sergey Utkin"
 __program__ = 'pyRMA'
+
+
+def handle_sig_term(signum, frame):
+    raise HandleSigTerm('Получен сигнал на завершение приложения!!!({},{})'.format(signum, frame))
+
+signal.signal(signal.SIGTERM, handle_sig_term)
+signal.signal(signal.SIGINT, handle_sig_term)
+signal.signal(signal.SIGCHLD, handle_sig_term)
+signal.signal(signal.SIGHUP, handle_sig_term)
 
 try:
     appParameters = parameters.AppParameters()
@@ -207,6 +217,8 @@ if connection_host:      # type: modules.ConnectionModules
         pass
     except ErrorConnectionIPMI as e:
         print(e)
+    except HandleSigTerm as e:
+        appParameters.log.debug(e)
     finally:
         connection_host.close()
 appParameters.log.info('Выход из приложения.')
