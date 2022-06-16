@@ -717,9 +717,10 @@ def get_user(param: parameters.Parameters, uid, connection_date=None):
             .order_by(schema.User.full_name) \
             .filter(schema.User.uid == uid) \
             .one()
-        content['action'] = db.query(schema.Action) \
-            .filter(schema.Action.user == uid) \
-            .order_by(schema.Action.date.desc()).limit(10)
+        content['action'] = db.query(schema.Action, schema.ActionType).filter(
+                schema.Action.user == uid,
+                schema.Action.action_type == schema.ActionType.id
+                ).order_by(schema.Action.date.desc()).limit(10)
     
     content['connection'] = get_connections(param, user=content['user'], date=connection_date)
     content['group'] = ", ".join([t.name for i, t in get_group_list(param, user=uid)])

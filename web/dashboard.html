@@ -24,6 +24,12 @@
     <div class="newUser">
         <h3>Новые пользователи</h3>
         <table border="1" width="95%">
+            <th>Логин</th>
+            <th>Имя пользователя</th>
+            <th>Email</th>
+            <th>IP адрес подключения</th>
+            <th>Дата регистрации</th>
+            <th></th>
             {% for user in content['new_user'] %}
             <tr>
                 <td><a href="/administrate/user/{{ user.uid }}"> {{ user.login }} </a></td>
