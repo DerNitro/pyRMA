@@ -56,10 +56,21 @@ def db_edit(engine):
 
 class User(Base):
     """
-    Таблица пользователей системой доступа.
-    check:
+    Таблица пользователей системой доступа
+
+    uid: ID пользователя
+    login: Логин пользователя
+    full_name: Имя пользователя
+    date_create: Дата регистрации
+    disable: Флаг отключения пользователя
+    date_disable: Дата отключения
+    ip: IP адрес/сеть пользователя, для проверки подключения
+    email: адрес электронной почты
+    prefix: Префикс пользователя(не реализованный функционал)
+    check: Флаг проверки пользователя
         0 - Новый пользователь, требуется проверка
         1 - Подтвержденный пользователь
+    admin: Флаг определения пользователю прав администратора
     """
     __tablename__ = 'user'
 
@@ -85,6 +96,12 @@ class User(Base):
 class Action(Base):
     """
     Логирование действий пользователей в системе
+
+    id: ID события
+    user: ID пользователя
+    action_type: ID события
+    date: Дата и время
+    message: Комментарий
     """
     __tablename__ = 'action'
 
@@ -101,6 +118,9 @@ class Action(Base):
 class ActionType(Base):
     """
     Типы событий
+
+    id: ID события
+    name: Название события
     """
     __tablename__ = 'action_type'
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, nullable=False)
@@ -113,10 +133,23 @@ class ActionType(Base):
 class RequestAccess(Base):
     """
     Таблица запросов доступа.
+
+    id: ID запроса доступа
+    user: ID пользователя
+    host: ID узла подключения
+    date_request: Дата запроса доступа
+    date_access: Дата действия запроса доступа
     status:
         0 - запрос доступа
         1 - Запрос согласован
         2 - запрос отменен
+    user_approve: ID пользователя согласовавшего доступ
+    date_approve: Дата согласования
+    ticket: Номер заявки
+    note: Дополнительное описание
+    connection: Флаг запроса на подключение
+    file_transfer: Флаг запроса на передачу файлов
+    ipmi: : Флаг запроса на подключение к интерфейсу управления
     """
     __tablename__ = 'request_access'
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
@@ -140,6 +173,26 @@ class RequestAccess(Base):
 class Host(Base):
     """
     Информация о узлах сети
+
+    id: ID узла
+    name: Название узла
+    ip: IP адрес
+    type: Тип записи
+        1 - Хост
+        2 - Директория
+    connection_type: ID протокола подключения
+    file_transfer_type: ID протокола передачи файлов
+    describe: Краткое описание узла
+    ilo: IP адрес интерфейса управления
+    ilo_type: ID типа интерфейса подключения
+    parent: ID родительского узла
+    remove: Флаг удаления узла
+    default_login: Логин подключения по умолчанию
+    default_password: Пароль подключения по умолчанию
+    tcp_port: TCP порт подключения
+    prefix: Префикс узла(Не реализованный функционал)
+    proxy: Флаг что узел является Jump
+    note: Описание узла
     """
     __tablename__ = 'host'
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
@@ -173,6 +226,11 @@ class IPMIType(Base):
     Например:
         HP ILO
         Microsystem IPMI
+
+    id: ID типа интерфейса подключения
+    name: Название
+    vendor: Вендор интерфейса управления
+    ports: Список портов
     """
     __tablename__ = 'ilo_type'
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
@@ -187,6 +245,14 @@ class IPMIType(Base):
 class Service(Base):
     """
     Дополнительные подключения к сервисам
+
+    id: ID
+    type: TCP порт сервиса
+    host: ID узла для которого подключен сервис
+    local_port: TCP порт на системе доступа
+    remote_port: TCP порт назначения
+    remote_ip: IP адрес назначения
+    describe: Дополнительное описание
     """
     __tablename__ = 'service'
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
@@ -204,6 +270,9 @@ class Service(Base):
 class ServiceType(Base):
     """
     Список доступных подключений к сервисов
+
+    name: Название сервиса
+    default_port: TCP порт сервиса
     """
     __tablename__ = 'service_type'
     name = sqlalchemy.Column(sqlalchemy.String(), unique=True)
@@ -215,7 +284,11 @@ class ServiceType(Base):
 
 class JumpHost(Base):
     """
-    Jump хосты
+    Назначенные Jump хосты
+
+    id: ID
+    host: ID узла
+    jump: ID Jump узла
     """
     __tablename__ = 'jump'
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
@@ -229,14 +302,27 @@ class JumpHost(Base):
 class Connection(Base):
     """
     Список подключений
-    status:
+
+    id: ID
+    status: Статус подключения
         1 - Подключен
         2 - Отключен
         3 - Требуется отключить
-    termination:
+    user: ID пользователя
+    host: ID узла
+    connection_type: Тип подключения
+        1 - Терминальное подключение
+        2 - Передача файлов
+        3 - Подключение к интерфейсу управления
+        4 - Подключение только сервисов
+    date_start: Дата начала подключения
+    date_end: Дата завершения подключения
+    error: Ошибка подключения
+    termination: Тип завершения подключения
         0 - Нормальное завершение
         1 - Принудительное завершение
         2 - Ошибка
+    session: ID пользовательской сессии
     """
     __tablename__ = 'connection'
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
@@ -257,6 +343,20 @@ class Connection(Base):
 class Session(Base):
     """
     Таблица подключений к pyRMA
+
+    id: ID пользовательской сессии
+    user: ID пользователя
+    date_start: Дата начала сессии
+    date_end: Дата завершения сессии
+    pid: PID сессии
+    ppid: PPID сессии
+    ip: IP пользователя
+    status: Статус сессии
+        0 - Подключен
+        1 - Отключен
+    termination: Причина завершения
+        0 - Нормальное завершение
+    ttyrec: Расположение файла записи сессии
     """
     __tablename__ = 'session'
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
@@ -277,6 +377,9 @@ class Session(Base):
 class ConnectionType(Base):
     """
     Информация о способах подключения
+
+    id: ID протокола подключения
+    name: Название протокола
     """
     __tablename__ = 'connection_type'
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
@@ -289,6 +392,9 @@ class ConnectionType(Base):
 class FileTransferType(Base):
     """
     Информация о способах подключения
+
+    id: ID протокола передачи данных
+    name: Название протокола
     """
     __tablename__ = 'file_transfer_type'
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
@@ -300,7 +406,11 @@ class FileTransferType(Base):
 
 class Prefix(Base):
     """
-    Список префиксов
+    Список префиксов(Не реализованный функционал)
+
+    id: ID
+    name: Название
+    note: Описание
     """
     __tablename__ = 'prefix'
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
@@ -313,11 +423,13 @@ class Prefix(Base):
 
 class Group(Base):
     """
-    Таблица определения групп для пользователей, хостов, сервисов.
-    type:
-        0 - Users
-        1 - Hosts
-        2 - Services
+    Таблица определения групп для пользователей, хостов.
+
+    id: ID группы
+    name: Название
+    type: Тип группы
+        0 - Пользователи
+        1 - Узлы
     """
     __tablename__ = 'group'
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
@@ -331,6 +443,10 @@ class Group(Base):
 class GroupHost(Base):
     """
     Таблица соотношения хостов с группами
+
+    id: ID
+    host: ID узла
+    group: ID группы
     """
     __tablename__ = 'group_host'
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
@@ -344,6 +460,10 @@ class GroupHost(Base):
 class GroupUser(Base):
     """
     Таблица соотношения пользователей с группами
+
+    id: ID
+    user: ID пользователя
+    group: ID группы
     """
     __tablename__ = 'group_user'
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
@@ -357,9 +477,13 @@ class GroupUser(Base):
 class Permission(Base):
     """
     Таблица разрешений для пользователей, групп, хостов...
-    t_*:
-        0 - User
-        1 - Group
+    id: ID
+    t_subject: Тип разрешения
+        0 - Пользователь
+        1 - Группа
+    subject: ID пользователя/группы
+    conn_access: Значение разрешений подключений
+    user_access: Значение пользовательских разрешений
     """
     __tablename__ = 'permission'
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
@@ -375,7 +499,21 @@ class Permission(Base):
 class AccessList(Base):
     """
     Таблица разрешенных доступов
-    status:
+
+    id: ID
+    t_subject: Тип субъекта запроса доступа
+        0 - Пользователь
+        1 - Группа пользователей
+    subject: ID пользователя/группы
+    t_object: Тип объекта доступа
+        0 - Узел
+        1 - Группа узлов
+    object: ID узла/группы
+    date_disable: Дата действия доступа
+    note: Описание
+    conn_access: Значение разрешений подключений 
+    user_access: Значение пользовательских разрешений
+    status: Статус подтверждения доступа
         0 - Не подтверждено
         1 - Подтверждено
     """
@@ -397,7 +535,13 @@ class AccessList(Base):
 
 class PasswordList(Base):
     """
-    Таблица замаскированных паролей.
+    Таблица замаскированных пользовательских паролей.
+
+    id: ID
+    user: ID пользователя
+    host: ID узла
+    login: Логин подключения
+    password: Пароль подключения
     """
     __tablename__ = 'password'
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
@@ -413,6 +557,14 @@ class PasswordList(Base):
 class ForwardTCP(Base):
     """
     Таблица активных пробросов портов
+
+    id: ID
+    connection_id: ID подключения
+    user_ip: IP адрес пользователя
+    acs_ip: IP адрес системы доступа
+    local_port: TCP порт системы доступа для организации проброса
+    forward_ip: IP адрес назначения
+    forward_port: TCP порт назначения
     state:
         0 - Ожидает 
         1 - Активно
@@ -436,6 +588,14 @@ class ForwardTCP(Base):
 class FileTransfer(Base):
     """
     Таблица регистрации переданных файлов
+
+    id: ID
+    connection_id: ID подключения
+    file_name: Название переданного файла
+    file_name_tgz: Путь хранения копии файла
+    date_transfer: Дата передачи файла
+    md5: MD5 сумма переданного файла
+    direction: Направление передачи
     """
     __tablename__ = 'file_transfer'
 
@@ -454,6 +614,11 @@ class FileTransfer(Base):
 class CaptureTraffic(Base):
     """
     Таблица хранения данных о tcp дампах
+
+    id: ID
+    connection_id: ID подключения
+    file_name: Расположения файла дампа
+    service_port: ID сервиса
     """
     __tablename__ = 'capture_traffic'
 
