@@ -1090,11 +1090,12 @@ def administrate_user(uid):
         cdate = connection_filter.date.data
 
     if request.method == 'POST' and user_form.validate_on_submit():
-        applib.user_edit(webParameters, uid, user_form.email.data, user_form.ip.data)
+        applib.user_edit(webParameters, uid, user_form.name.data, user_form.email.data, user_form.ip.data)
 
     content = applib.get_user(webParameters, uid, connection_date=cdate)
     user_form.email.data = content['user'].email
     user_form.ip.data = content['user'].ip
+    user_form.name.data = content['user'].full_name
     
     if applib.get_group_user(webParameters):
         group_user_form = forms.AddUserGroup()

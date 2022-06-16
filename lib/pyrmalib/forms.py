@@ -215,6 +215,7 @@ class ConnectionFilter(FlaskForm):
     sub = SubmitField('Ок')
 
 class User(FlaskForm):
+    name = StringField('имя', validators=[DataRequired()])
     email = StringField('email', validators=[DataRequired()])
     ip = StringField('ip', validators=[DataRequired()])
     save = SubmitField('Сохранить')

@@ -381,7 +381,14 @@ def get_content_host(param: parameters.WebParameters, host_id, connection_date=N
     content['describe'] = host.describe
     content['ilo'] = host.ilo
     content['group'] = ", ".join([t.name for i, t in get_group_list(param, host=host_id)])
-    content['parent_group'] = ", ".join([t.name for i, t in get_group_list(param, host=host.parent)])
+
+    parent_groups = []
+    for i in get_host_group(param, host.parent):
+        group = get_group(param, i)
+        parent_groups.append(group['group'].name)
+
+    content['parent_group'] = ", ".join(parent_groups)
+
     if access.check_access(param, 'ShowLogin', h_object=host) \
             or param.user_info.admin:
         content['default_login'] = host.default_login
@@ -593,7 +600,10 @@ def get_local_port(param: parameters.WebParameters):
 
 def get_jump_hosts(param: parameters.WebParameters):
     with schema.db_select(param.engine) as db:
-        jump_hosts = db.query(schema.Host).filter(schema.Host.proxy.is_(True)).all()
+        jump_hosts = db.query(schema.Host).filter(
+            schema.Host.proxy.is_(True),
+            schema.Host.remove.is_(False)
+        ).all()
 
     return [(t.id, t.name) for t in jump_hosts]
 
@@ -707,9 +717,10 @@ def get_user(param: parameters.Parameters, uid, connection_date=None):
             .order_by(schema.User.full_name) \
             .filter(schema.User.uid == uid) \
             .one()
-        content['action'] = db.query(schema.Action) \
-            .filter(schema.Action.user == uid) \
-            .order_by(schema.Action.date.desc()).limit(10)
+        content['action'] = db.query(schema.Action, schema.ActionType).filter(
+                schema.Action.user == uid,
+                schema.Action.action_type == schema.ActionType.id
+                ).order_by(schema.Action.date.desc()).limit(10)
     
     content['connection'] = get_connections(param, user=content['user'], date=connection_date)
     content['group'] = ", ".join([t.name for i, t in get_group_list(param, user=uid)])
@@ -1009,6 +1020,7 @@ def set_group_permission(param: parameters.WebParameters, group_id, form: forms.
     connection_access.change('ConnectionIlo', set_access=form.ConnectionIlo.data)
     with schema.db_edit(param.engine) as db:
         try:
+            group = db.query(schema.Group).filter(schema.Group.id == group_id).one()
             perm = db.query(schema.Permission).filter(
                 schema.Permission.t_subject == 1,
                 schema.Permission.subject == group_id
@@ -1032,7 +1044,7 @@ def set_group_permission(param: parameters.WebParameters, group_id, form: forms.
             action_type=61,
             date=datetime.datetime.now(),
             message="Смена прав доступа для группы {group_id}({user_access}, {connection_access})".format(
-                group_id=group_id,
+                group_id=group.name,
                 user_access=user_access.get_int(),
                 connection_access=connection_access.get_int()
             )
@@ -1122,11 +1134,12 @@ def user_info(username, engine):
 
     return user
 
-def user_edit(param: parameters.WebParameters, uid, email, ip):
+def user_edit(param: parameters.WebParameters, uid, name, email, ip):
     with schema.db_edit(param.engine) as db:
         user = db.query(schema.User).filter(schema.User.uid == uid).one()
         user.ip = ip
         user.email = email
+        user.full_name = name
         db.flush()
 
         action = schema.Action(
@@ -1326,7 +1339,7 @@ def add_service_type(param: parameters.WebParameters, name, default_port):
             db.flush()
         except sqlalchemy.exc.IntegrityError as e:
             if 'duplicate key value' in str(e):
-                raise error.InsertError('Дубль "Порт по умолчанию"')
+                raise error.InsertError('дублирующая запись!!!')
             else:
                 raise error.WTF(e)
         db.refresh(service_type)

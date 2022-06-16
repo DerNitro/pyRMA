@@ -16,6 +16,11 @@
 
 <table border="1" width="95%">
     <tbody>
+        <th>Группа пользователей</th>
+        <th>Группа узлов</th>
+        <th>Дата отключения</th>
+        <th>Комментарий</th>
+        <th></th>
 {% for id, date_disable, note, subject, subject_id, t_subject, object, object_id, t_object in access_list %}
     {% if date_disable < cur_date %} <tr bgcolor="#ff807a"> {% else %} <tr> {% endif %}
         {% if t_subject == 1 %}
