@@ -381,7 +381,14 @@ def get_content_host(param: parameters.WebParameters, host_id, connection_date=N
     content['describe'] = host.describe
     content['ilo'] = host.ilo
     content['group'] = ", ".join([t.name for i, t in get_group_list(param, host=host_id)])
-    content['parent_group'] = ", ".join([t.name for i, t in get_group_list(param, host=host.parent)])
+
+    parent_groups = []
+    for i in get_host_group(param, host.parent):
+        group = get_group(param, i)
+        parent_groups.append(group['group'].name)
+
+    content['parent_group'] = ", ".join(parent_groups)
+
     if access.check_access(param, 'ShowLogin', h_object=host) \
             or param.user_info.admin:
         content['default_login'] = host.default_login

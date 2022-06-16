@@ -67,7 +67,7 @@
 </tr>
 <tr>
     <td style="width: 450px;">Группы</td>
-    <td style="width: 550px;">{{ content['group'] }} ({{content['parent_group']}})</td>
+    <td style="width: 550px;">{{ content['group'] }} {% if content['parent_group']|length != 0 %} ({{content['parent_group']}}) {% endif %}</td>
 </tr>
 <tr>
     <td style="width: 450px;">IPMI</td>
