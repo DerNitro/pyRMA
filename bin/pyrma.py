@@ -221,17 +221,16 @@ if connection_host:      # type: modules.ConnectionModules
         appParameters.log.debug(e)
     finally:
         connection_host.close()
-appParameters.log.info('Выход из приложения.')
-
-with schema.db_edit(engine) as db:
-    db.query(schema.Session).filter(
-        schema.Session.id == appParameters.session
-    ).update(
-        {
-            schema.Session.status: 1,
-            schema.Session.date_end: datetime.datetime.now(),
-            schema.Session.termination: 0
-        }
-    )
+        with schema.db_edit(engine) as db:
+            db.query(schema.Session).filter(
+                schema.Session.id == appParameters.session
+            ).update(
+                {
+                    schema.Session.status: 1,
+                    schema.Session.date_end: datetime.datetime.now(),
+                    schema.Session.termination: 0
+                }
+            )
+        appParameters.log.info('Выход из приложения.')
 
 sys.exit(0)

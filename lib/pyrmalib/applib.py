@@ -383,9 +383,10 @@ def get_content_host(param: parameters.WebParameters, host_id, connection_date=N
     content['group'] = ", ".join([t.name for i, t in get_group_list(param, host=host_id)])
 
     parent_groups = []
-    for i in get_host_group(param, host.parent):
-        group = get_group(param, i)
-        parent_groups.append(group['group'].name)
+    if host.parent != 0:
+        for i in get_host_group(param, host.parent):
+            group = get_group(param, i)
+            parent_groups.append(group['group'].name)
 
     content['parent_group'] = ", ".join(parent_groups)
 
