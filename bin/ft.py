@@ -421,9 +421,14 @@ class FT(npyscreen.FormBaseNew):
                             ftParameters.log.info('передана директория: {}'.format(str(os.path.join(*local_path, selected.name))))
                         except PermissionError:
                             npyscreen.notify_confirm(
-                                'PermissionError',
+                                'Ошибка передачи файла PermissionError',
                                 title="Ошибка передачи файла", wide=True)
                             ftParameters.log.warning('Ошибка передачи файла PermissionError: {}'.format(str(os.path.join(*local_path, selected.name))))
+                        except UnicodeEncodeError:
+                            npyscreen.notify_confirm(
+                                'Имя файла не в UTF8!!!',
+                                title="Ошибка передачи файла", wide=True)
+                            ftParameters.log.warning('Имя файла не в UTF8: {}'.format(str(os.path.join(*local_path, selected.name))))
                     if stat.S_IFMT(selected.st_mode) == stat.S_IFREG:
                         self.notify('start')
                         try:
@@ -435,9 +440,14 @@ class FT(npyscreen.FormBaseNew):
                             ftParameters.log.info('передан файл: {}'.format(str(os.path.join(*local_path, selected.name))))
                         except PermissionError:
                             npyscreen.notify_confirm(
-                                'PermissionError',
+                                'Ошибка передачи файла PermissionError',
                                 title="Ошибка передачи файла", wide=True)
                             ftParameters.log.warning('Ошибка передачи файла PermissionError: {}'.format(str(os.path.join(*local_path, selected.name))))
+                        except UnicodeEncodeError:
+                            npyscreen.notify_confirm(
+                                'Имя файла не в UTF8!!!',
+                                title="Ошибка передачи файла", wide=True)
+                            ftParameters.log.warning('Имя файла не в UTF8: {}'.format(str(os.path.join(*local_path, selected.name))))
             
             if self.dest.editing:
                 for widget in self.dest._my_widgets:
@@ -458,9 +468,14 @@ class FT(npyscreen.FormBaseNew):
                             ftParameters.log.info('загружена директория: {}'.format(str(os.path.join(*local_path, selected.name))))
                         except PermissionError:
                             npyscreen.notify_confirm(
-                                'PermissionError',
+                                'Ошибка передачи файла PermissionError',
                                 title="Ошибка передачи файла", wide=True)
                             ftParameters.log.warning('Ошибка передачи файла PermissionError: {}'.format(str(os.path.join(*remote_path, selected.name))))
+                        except UnicodeEncodeError:
+                            npyscreen.notify_confirm(
+                                'Имя файла не в UTF8!!!',
+                                title="Ошибка передачи файла", wide=True)
+                            ftParameters.log.warning('Имя файла не в UTF8: {}'.format(str(os.path.join(*remote_path, selected.name))))
                     if stat.S_IFMT(selected.st_mode) == stat.S_IFREG:
                         self.notify('start')
                         try:
@@ -472,9 +487,14 @@ class FT(npyscreen.FormBaseNew):
                             ftParameters.log.info('загружен файл: {}'.format(str(os.path.join(*local_path, selected.name))))
                         except PermissionError:
                             npyscreen.notify_confirm(
-                                'PermissionError',
+                                'Ошибка передачи файла PermissionError',
                                 title="Ошибка передачи файла", wide=True)
                             ftParameters.log.warning('Ошибка передачи файла PermissionError: {}'.format(str(os.path.join(*remote_path, selected.name))))
+                        except UnicodeEncodeError:
+                            npyscreen.notify_confirm(
+                                'Имя файла не в UTF8!!!',
+                                title="Ошибка передачи файла", wide=True)
+                            ftParameters.log.warning('Имя файла не в UTF8: {}'.format(str(os.path.join(*remote_path, selected.name))))
         except FileExistsError as e:
             npyscreen.notify_confirm(e.strerror, title="Передача данных", wide=True)
             ftParameters.log.warning('Ошибка передачи файлов ' + str(e))
