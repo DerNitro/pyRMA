@@ -381,7 +381,14 @@ def get_content_host(param: parameters.WebParameters, host_id, connection_date=N
     content['describe'] = host.describe
     content['ilo'] = host.ilo
     content['group'] = ", ".join([t.name for i, t in get_group_list(param, host=host_id)])
-    content['parent_group'] = ", ".join([t.name for i, t in get_group_list(param, host=host.parent)])
+
+    parent_groups = []
+    for i in get_host_group(param, host.parent):
+        group = get_group(param, i)
+        parent_groups.append(group['group'].name)
+
+    content['parent_group'] = ", ".join(parent_groups)
+
     if access.check_access(param, 'ShowLogin', h_object=host) \
             or param.user_info.admin:
         content['default_login'] = host.default_login
@@ -710,9 +717,10 @@ def get_user(param: parameters.Parameters, uid, connection_date=None):
             .order_by(schema.User.full_name) \
             .filter(schema.User.uid == uid) \
             .one()
-        content['action'] = db.query(schema.Action) \
-            .filter(schema.Action.user == uid) \
-            .order_by(schema.Action.date.desc()).limit(10)
+        content['action'] = db.query(schema.Action, schema.ActionType).filter(
+                schema.Action.user == uid,
+                schema.Action.action_type == schema.ActionType.id
+                ).order_by(schema.Action.date.desc()).limit(10)
     
     content['connection'] = get_connections(param, user=content['user'], date=connection_date)
     content['group'] = ", ".join([t.name for i, t in get_group_list(param, user=uid)])
@@ -1012,6 +1020,7 @@ def set_group_permission(param: parameters.WebParameters, group_id, form: forms.
     connection_access.change('ConnectionIlo', set_access=form.ConnectionIlo.data)
     with schema.db_edit(param.engine) as db:
         try:
+            group = db.query(schema.Group).filter(schema.Group.id == group_id).one()
             perm = db.query(schema.Permission).filter(
                 schema.Permission.t_subject == 1,
                 schema.Permission.subject == group_id
@@ -1035,7 +1044,7 @@ def set_group_permission(param: parameters.WebParameters, group_id, form: forms.
             action_type=61,
             date=datetime.datetime.now(),
             message="Смена прав доступа для группы {group_id}({user_access}, {connection_access})".format(
-                group_id=group_id,
+                group_id=group.name,
                 user_access=user_access.get_int(),
                 connection_access=connection_access.get_int()
             )

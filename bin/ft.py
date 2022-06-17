@@ -36,10 +36,11 @@ import pysftp
 from paramiko import ssh_exception, SFTPAttributes
 from paramiko.py3compat import strftime
 from sqlalchemy import create_engine
+import signal
 
 __author__ = 'Sergey Utkin'
 __email__ = 'utkins01@gmail.com'
-__version__ = "1.0.2"
+__version__ = "1.1.1"
 __status__ = "Stable"
 __maintainer__ = "Sergey Utkin"
 __copyright__ = "Copyright 2016, Sergey Utkin"
@@ -87,6 +88,14 @@ ftParameters.log.info('параметры запуска: {}:{} user {}'.format(
 local_path = []
 remote_path = []
 local_path.append(os.path.join(ftParameters.data_dir, ftParameters.file_transfer_folder))
+
+def handle_sig_term(signum, frame):
+    raise HandleSigTerm('Получен сигнал на завершение приложения!!!({},{})'.format(signum, frame))
+
+signal.signal(signal.SIGTERM, handle_sig_term)
+signal.signal(signal.SIGINT, handle_sig_term)
+signal.signal(signal.SIGCHLD, handle_sig_term)
+signal.signal(signal.SIGHUP, handle_sig_term)
 
 
 class File(object):
@@ -559,8 +568,11 @@ class UserApp(npyscreen.NPSAppManaged):
 
 
 if __name__ == "__main__":
-    App = UserApp()
-    App.run()
+    try:
+        App = UserApp()
+        App.run()
+    except error.HandleSigTerm as e:
+        ftParameters.log.debug(e)
 
 ftParameters.log.info('завершение приложения')
 sys.exit(0)
