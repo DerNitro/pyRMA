@@ -99,7 +99,15 @@
 <hr>
 <center><div id="tty"></div></center>
 <script>
-    AsciinemaPlayer.create('/ttyrec/{{ content['session']['ttyrec'] }}', document.getElementById('tty'));
+    AsciinemaPlayer.create(
+        '/ttyrec/{{ content['session']['ttyrec'] }}', 
+        document.getElementById('tty'),
+        {
+            fit: "none",
+            rows: 60,
+            cols: 250
+        }
+    );
 </script>
 
 {% endblock %}

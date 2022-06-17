@@ -86,6 +86,18 @@ FTP Клиент
 
 .. image:: docs/images/filezilla_charset.png
 
+SSH Клиент
+----------
+
+Рекомендованный SSH клиент: `PuTTY <https://www.putty.org/>`_
+
+**Минимальный размер терминала: 80х24!!!**
+
+Для корректного отображения данных требуется выполнить следующие в настройках клиента выставить флаг 
+Window/Translation/Enable VT100 line drawing even in UTF-8 mode
+
+.. image:: docs/images/putty_vt100_line.png
+
 
 Формат CSV для загрузки списка хостов
 =====================================
