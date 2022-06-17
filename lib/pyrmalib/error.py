@@ -67,3 +67,10 @@ class HandleSigTerm(Exception):
 
     def __repr__(self):
         return self.desc
+
+class TerminalResize(Exception):
+    def __init__(self, desc):
+        self.desc = desc
+
+    def __repr__(self):
+        return self.desc

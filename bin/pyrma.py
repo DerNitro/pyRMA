@@ -33,7 +33,7 @@ import signal
 
 __author__ = 'Sergey Utkin'
 __email__ = 'utkins01@gmail.com'
-__version__ = "1.1.1"
+__version__ = "1.1.2"
 __status__ = "Stable"
 __maintainer__ = "Sergey Utkin"
 __copyright__ = "Copyright 2016, Sergey Utkin"
@@ -221,17 +221,16 @@ if connection_host:      # type: modules.ConnectionModules
         appParameters.log.debug(e)
     finally:
         connection_host.close()
-appParameters.log.info('Выход из приложения.')
-
-with schema.db_edit(engine) as db:
-    db.query(schema.Session).filter(
-        schema.Session.id == appParameters.session
-    ).update(
-        {
-            schema.Session.status: 1,
-            schema.Session.date_end: datetime.datetime.now(),
-            schema.Session.termination: 0
-        }
-    )
+        with schema.db_edit(engine) as db:
+            db.query(schema.Session).filter(
+                schema.Session.id == appParameters.session
+            ).update(
+                {
+                    schema.Session.status: 1,
+                    schema.Session.date_end: datetime.datetime.now(),
+                    schema.Session.termination: 0
+                }
+            )
+        appParameters.log.info('Выход из приложения.')
 
 sys.exit(0)

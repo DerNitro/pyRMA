@@ -40,7 +40,7 @@ import signal
 
 __author__ = 'Sergey Utkin'
 __email__ = 'utkins01@gmail.com'
-__version__ = "1.1.1"
+__version__ = "1.1.2"
 __status__ = "Stable"
 __maintainer__ = "Sergey Utkin"
 __copyright__ = "Copyright 2016, Sergey Utkin"
@@ -71,6 +71,8 @@ parser.add_argument('--id',   help='ID подключения', required=True)
 
 args = parser.parse_args()
 
+exit_flag = 0
+
 ftParameters.connection = applib.get_connection(ftParameters, args.id)
 
 cnopts = pysftp.CnOpts()
@@ -90,12 +92,16 @@ remote_path = []
 local_path.append(os.path.join(ftParameters.data_dir, ftParameters.file_transfer_folder))
 
 def handle_sig_term(signum, frame):
-    raise HandleSigTerm('Получен сигнал на завершение приложения!!!({},{})'.format(signum, frame))
+    raise error.HandleSigTerm('Получен сигнал на завершение приложения!!!({},{})'.format(signum, frame))
+
+def resize_sig_term(signum, frame):
+    raise error.TerminalResize('Получен сигнал изменения размера терминала!!!({},{})'.format(signum, frame))
 
 signal.signal(signal.SIGTERM, handle_sig_term)
 signal.signal(signal.SIGINT, handle_sig_term)
 signal.signal(signal.SIGCHLD, handle_sig_term)
 signal.signal(signal.SIGHUP, handle_sig_term)
+signal.signal(signal.SIGWINCH, resize_sig_term)
 
 
 class File(object):
@@ -236,6 +242,7 @@ class RemoteMultiLineAction (npyscreen.MultiLineAction):
         ftParameters.log.debug('remote_path: {}'.format(remote_path))
         self.parent.update_files()
 
+
 class LocalBoxBasic(npyscreen.BoxTitle):
     bx_width = 0
     _contained_widget = LocalMultiLineAction
@@ -253,18 +260,35 @@ class FT(npyscreen.FormBaseNew):
         return max_y, max_x
 
     def app_exit(self, *args, **keywords):
+        global exit_flag
+        exit_flag = 1
         self.parentApp.switchForm(None)
 
     def create(self):
         self.cycle_widgets = True
+        lines, columns = self.xy()
+        self.bx_width = (columns // 2) - 2
+        
+        self.source = self.add(LocalBoxBasic, name = 'acs', max_width=self.bx_width)
+        self.dest = self.add(
+            RemoteBoxBasic, 
+            name = ftParameters.connection['host'].name, rely=2, max_width=self.bx_width, relx=self.bx_width + 2
+        )
+
 
     def update_files(self, *args, **keywords):
+        lines, columns = self.xy()
+        
+        if self.bx_width != (columns // 2) - 2:
+            raise error.TerminalResize('Resize terminal line: {}, columns: {}'.format(lines, columns))
+
         try:
             self.source.values = self.get_local_files(os.path.join(*local_path))
         except error.ErrorGetListFiles as e:
             local_path.pop()
             ftParameters.log.warning(e)
         self.source.update()
+
         try:
             self.dest.values = self.get_remote_files()
         except error.ErrorGetListFiles as e:
@@ -328,15 +352,6 @@ class FT(npyscreen.FormBaseNew):
         )
         self.help = template.help_ft_form().format(program=__program__, version=__version__)
 
-        lines, columns = self.xy()
-        self.bx_width = (columns // 2) - 2
-        self.source = self.add(LocalBoxBasic, name = 'acs', max_width=self.bx_width)
-        self.dest = self.add(
-            RemoteBoxBasic, 
-            name = ftParameters.connection['host'].name, rely=2, max_width=self.bx_width, relx=self.bx_width + 2
-        )
-        self.source.bx_width = self.bx_width
-        self.dest.bx_width = self.bx_width
         try:
             self.source.values = self.get_local_files(os.path.join(*local_path))
         except PermissionError:
@@ -421,9 +436,14 @@ class FT(npyscreen.FormBaseNew):
                             ftParameters.log.info('передана директория: {}'.format(str(os.path.join(*local_path, selected.name))))
                         except PermissionError:
                             npyscreen.notify_confirm(
-                                'PermissionError',
+                                'Ошибка передачи файла PermissionError',
                                 title="Ошибка передачи файла", wide=True)
                             ftParameters.log.warning('Ошибка передачи файла PermissionError: {}'.format(str(os.path.join(*local_path, selected.name))))
+                        except UnicodeEncodeError:
+                            npyscreen.notify_confirm(
+                                'Имя файла не в UTF8!!!',
+                                title="Ошибка передачи файла", wide=True)
+                            ftParameters.log.warning('Имя файла не в UTF8: {}'.format(str(os.path.join(*local_path, selected.name))))
                     if stat.S_IFMT(selected.st_mode) == stat.S_IFREG:
                         self.notify('start')
                         try:
@@ -435,9 +455,14 @@ class FT(npyscreen.FormBaseNew):
                             ftParameters.log.info('передан файл: {}'.format(str(os.path.join(*local_path, selected.name))))
                         except PermissionError:
                             npyscreen.notify_confirm(
-                                'PermissionError',
+                                'Ошибка передачи файла PermissionError',
                                 title="Ошибка передачи файла", wide=True)
                             ftParameters.log.warning('Ошибка передачи файла PermissionError: {}'.format(str(os.path.join(*local_path, selected.name))))
+                        except UnicodeEncodeError:
+                            npyscreen.notify_confirm(
+                                'Имя файла не в UTF8!!!',
+                                title="Ошибка передачи файла", wide=True)
+                            ftParameters.log.warning('Имя файла не в UTF8: {}'.format(str(os.path.join(*local_path, selected.name))))
             
             if self.dest.editing:
                 for widget in self.dest._my_widgets:
@@ -458,9 +483,14 @@ class FT(npyscreen.FormBaseNew):
                             ftParameters.log.info('загружена директория: {}'.format(str(os.path.join(*local_path, selected.name))))
                         except PermissionError:
                             npyscreen.notify_confirm(
-                                'PermissionError',
+                                'Ошибка передачи файла PermissionError',
                                 title="Ошибка передачи файла", wide=True)
                             ftParameters.log.warning('Ошибка передачи файла PermissionError: {}'.format(str(os.path.join(*remote_path, selected.name))))
+                        except UnicodeEncodeError:
+                            npyscreen.notify_confirm(
+                                'Имя файла не в UTF8!!!',
+                                title="Ошибка передачи файла", wide=True)
+                            ftParameters.log.warning('Имя файла не в UTF8: {}'.format(str(os.path.join(*remote_path, selected.name))))
                     if stat.S_IFMT(selected.st_mode) == stat.S_IFREG:
                         self.notify('start')
                         try:
@@ -472,9 +502,14 @@ class FT(npyscreen.FormBaseNew):
                             ftParameters.log.info('загружен файл: {}'.format(str(os.path.join(*local_path, selected.name))))
                         except PermissionError:
                             npyscreen.notify_confirm(
-                                'PermissionError',
+                                'Ошибка передачи файла PermissionError',
                                 title="Ошибка передачи файла", wide=True)
                             ftParameters.log.warning('Ошибка передачи файла PermissionError: {}'.format(str(os.path.join(*remote_path, selected.name))))
+                        except UnicodeEncodeError:
+                            npyscreen.notify_confirm(
+                                'Имя файла не в UTF8!!!',
+                                title="Ошибка передачи файла", wide=True)
+                            ftParameters.log.warning('Имя файла не в UTF8: {}'.format(str(os.path.join(*remote_path, selected.name))))
         except FileExistsError as e:
             npyscreen.notify_confirm(e.strerror, title="Передача данных", wide=True)
             ftParameters.log.warning('Ошибка передачи файлов ' + str(e))
@@ -552,27 +587,35 @@ class ErrorForm(npyscreen.FormBaseNew):
 class UserApp(npyscreen.NPSAppManaged):
     keypress_timeout_default = 1
     def onStart(self):
-        global remote_path
-        try:
-            sftp = pysftp.Connection(**cinfo)
-            remote_path.append('/')
-            for f in sftp.pwd.split('/'):
-                if f != '':
-                    remote_path.append(f)
-            sftp.close()
+        if not connection_error:
             self.addForm("MAIN", FT)
-        except (ssh_exception.AuthenticationException, ssh_exception.SSHException) as e:
+        else:
             self.addForm("MAIN", ErrorForm)
             self.getForm("MAIN").error_text = str(e)
             ftParameters.log.error('Ошибка подключения к узлу: {}'.format(e), pr=True)
 
+connection_error = False
+try:
+    sftp = pysftp.Connection(**cinfo)
+    remote_path.append('/')
+    for f in sftp.pwd.split('/'):
+        if f != '':
+            remote_path.append(f)
+    sftp.close()
+except (ssh_exception.AuthenticationException, ssh_exception.SSHException) as e:
+    connection_error = True
 
 if __name__ == "__main__":
-    try:
-        App = UserApp()
-        App.run()
-    except error.HandleSigTerm as e:
-        ftParameters.log.debug(e)
+    while not exit_flag:
+        try:
+            App = UserApp()
+            App.run()
+            exit_flag = True
+        except error.HandleSigTerm as e:
+            ftParameters.log.debug(e)
+            exit_flag = True
+        except error.TerminalResize as e:
+            ftParameters.log.debug(e)
 
 ftParameters.log.info('завершение приложения')
 sys.exit(0)
