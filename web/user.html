@@ -52,16 +52,20 @@
 </form>
 <hr>
 <h3>Последние действия</h3>
-{% for action in content['action'] %}
 <table border="1" width="95%">
     <tbody>
-    <tr>
-        <td width="15%">{{ action.date }}</td>
-        <td width="70%">{{ action.message }}</td>
-    </tr>
+        <th>Дата</th>
+        <th>Действие</th>
+        <th>Комментарий</th>
+        {% for action, action_type in content['action'] %}
+        <tr>
+            <td>{{ action.date }}</td>
+            <td>{{ action_type.name }}</td>
+            <td>{{ action.message }}</td>
+        </tr>
+        {% endfor %}
     </tbody>
 </table>
-{% endfor %}
 <hr>
 <h3>Подключения</h3>
 <form action="/administrate/user/{{ content['user'].uid }}" method="POST" name="change_date">
