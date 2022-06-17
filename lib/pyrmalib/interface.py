@@ -38,7 +38,7 @@ class MultiLineEditableBoxed(npyscreen.BoxTitle):
 
 class ButtonLine(npyscreen.FixedText):
     def display(self, *args, **keywords):
-        self.value = 'Используйте F1 для просмотра списка команд.'
+        self.value = 'Используйте F1 или CTRL + o для просмотра списка команд.'
 
 
 class RecordList(npyscreen.MultiLineAction):
@@ -604,7 +604,7 @@ class Interface(npyscreen.NPSAppManaged):
         if not appParameters.user_info.check:
             self.addForm("MAIN", ErrorForm)
             self.getForm("MAIN").error_text = 'Пользователь проходит проверку администратором!'
-        elif x >= 79 and y >= 23:
+        elif x >= 80 and y >= 24:
             appParameters.log.info('Запуск в обычном режиме')
             self.addForm("MAIN", HostListDisplay)
         else:
@@ -619,6 +619,4 @@ class Interface(npyscreen.NPSAppManaged):
     @staticmethod
     def xy():
         max_y, max_x = curses.newwin(0, 0).getmaxyx()
-        max_y -= 1
-        max_x -= 1
         return max_y, max_x

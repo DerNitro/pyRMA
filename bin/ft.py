@@ -92,12 +92,16 @@ remote_path = []
 local_path.append(os.path.join(ftParameters.data_dir, ftParameters.file_transfer_folder))
 
 def handle_sig_term(signum, frame):
-    raise HandleSigTerm('Получен сигнал на завершение приложения!!!({},{})'.format(signum, frame))
+    raise error.HandleSigTerm('Получен сигнал на завершение приложения!!!({},{})'.format(signum, frame))
+
+def resize_sig_term(signum, frame):
+    raise error.TerminalResize('Получен сигнал изменения размера терминала!!!({},{})'.format(signum, frame))
 
 signal.signal(signal.SIGTERM, handle_sig_term)
 signal.signal(signal.SIGINT, handle_sig_term)
 signal.signal(signal.SIGCHLD, handle_sig_term)
 signal.signal(signal.SIGHUP, handle_sig_term)
+signal.signal(signal.SIGWINCH, resize_sig_term)
 
 
 class File(object):
@@ -238,6 +242,7 @@ class RemoteMultiLineAction (npyscreen.MultiLineAction):
         ftParameters.log.debug('remote_path: {}'.format(remote_path))
         self.parent.update_files()
 
+
 class LocalBoxBasic(npyscreen.BoxTitle):
     bx_width = 0
     _contained_widget = LocalMultiLineAction
@@ -275,7 +280,7 @@ class FT(npyscreen.FormBaseNew):
         lines, columns = self.xy()
         
         if self.bx_width != (columns // 2) - 2:
-            self.parentApp.switchForm(None)
+            raise error.TerminalResize('Resize terminal line: {}, columns: {}'.format(lines, columns))
 
         try:
             self.source.values = self.get_local_files(os.path.join(*local_path))
@@ -601,11 +606,16 @@ except (ssh_exception.AuthenticationException, ssh_exception.SSHException) as e:
     connection_error = True
 
 if __name__ == "__main__":
-    try:
-        App = UserApp()
-        App.run()
-    except error.HandleSigTerm as e:
-        ftParameters.log.debug(e)
+    while not exit_flag:
+        try:
+            App = UserApp()
+            App.run()
+            exit_flag = True
+        except error.HandleSigTerm as e:
+            ftParameters.log.debug(e)
+            exit_flag = True
+        except error.TerminalResize as e:
+            ftParameters.log.debug(e)
 
 ftParameters.log.info('завершение приложения')
 sys.exit(0)
