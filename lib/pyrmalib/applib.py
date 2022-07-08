@@ -644,7 +644,10 @@ def get_group(param: parameters.WebParameters, group_id):
         with schema.db_select(param.engine) as db:
             hosts = db.query(schema.GroupHost, schema.Host) \
                 .join(schema.Host, schema.GroupHost.host == schema.Host.id) \
-                .filter(schema.GroupHost.group == group_id).all()
+                .filter(
+                    schema.GroupHost.group == group_id,
+                    schema.Host.remove == False
+                ).all()
             content['hosts'] = hosts
 
     with schema.db_select(param.engine) as db:
