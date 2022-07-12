@@ -102,6 +102,8 @@ Window/Translation/Enable VT100 line drawing even in UTF-8 mode
 Формат CSV для загрузки списка хостов
 =====================================
 
+Разделитель полей "запятая"(comma)
+
 * **Name**: имя узла
 * **IP**: IP адрес узла, формат: ip address[:port]
 * **Login**: имя пользователя
@@ -110,3 +112,14 @@ Window/Translation/Enable VT100 line drawing even in UTF-8 mode
 * **Protocol**: протокол подключения, доступные значения SSH|TELNET
 * **Vendor**: вендор IPMI, ВНИМАНИЕ!!! должен быть создан в системе
 * **Note:<Topic>**: Дополнительная информация о узле
+
+**Пример:**
+
+.. code-block::
+
+    Name,IP,Note:Serial number,Note:Модель,Note:ОС,IPMI,Login,Password,Vendor
+    ldap.vbox.local,192.168.56.10:22,111111,VirtualBox,CentOS 7,,user,password,
+    jump.vbox.local,192.168.56.11:22,222222,VirtualBox,Ubuntu 20.04,,user,password,
+    mysql.vbox.local,192.168.56.12:22,333333,VirtualBox,Ubuntu 20.04,,user,password,
+    psql.vbox.local,192.168.56.13:22,333333,VirtualBox,Ubuntu 20.04,,user,password,
+
