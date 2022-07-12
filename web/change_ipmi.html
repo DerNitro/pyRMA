@@ -13,7 +13,7 @@
 <h3>
     Смена параметров IPMI - {{ ipmi.name }}
 </h3>
-<form action="/settings/change/ipmi/{{ipmi.id}}" method="POST" name="change_ipmi">
+<form action="/administrate/change/ipmi/{{ipmi.id}}" method="POST" name="change_ipmi">
     {{ form.csrf_token }}
     {{ render_field(form.name, size=45) }}
     {{ render_field(form.vendor, size=45) }}
