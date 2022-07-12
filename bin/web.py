@@ -846,7 +846,6 @@ def administrate_ipmi_change(ipmi_id):
             'vendor': form.vendor.data,
             'ports': form.ports.data
         }
-        print(data)
         applib.change_ipmi(webParameters, ipmi_id, data)
         return redirect('/administrate/ipmi')
     form.name.data = ipmi.name
