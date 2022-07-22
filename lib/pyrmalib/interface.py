@@ -222,7 +222,7 @@ class Find(npyscreen.Popup):
         self.owner.HostList = applib.search(appParameters, self.FindText.value)
 
 
-class AccessRequest(npyscreen.Form):
+class AccessRequest(npyscreen.ActionForm):
     OK_BUTTON_TEXT = "Отправить"
     CANCEL_BUTTON_TEXT = "Отмена"
     CANCEL_BUTTON_BR_OFFSET = (2, 18)
