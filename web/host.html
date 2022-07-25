@@ -54,7 +54,7 @@
 <hr>
 {% endif %}
 <div class="host">
-<h3>{{ content['name'] }} {% if content['parent'] %}({{ content['parent'] }}){% endif %}</h3>
+<h3>{% if content['deleted'] %}Хост удален! {% endif %}{{ content['name'] }} {% if content['parent'] %}({{ content['parent'] }}){% endif %}</h3>
 <table>
 <tbody>
 <tr>
