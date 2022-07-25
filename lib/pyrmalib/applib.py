@@ -375,6 +375,7 @@ def get_content_host(param: parameters.WebParameters, host_id, connection_date=N
     host = get_host(param, host_id)
     content['connection'] = get_connections(param, host=host, date=connection_date)
     content['id'] = host_id
+    content['deleted'] = host.remove
     content['proxy'] = host.proxy
     content['name'] = host.name
     content['ip'] = host.ip
@@ -487,7 +488,7 @@ def get_host(param: parameters.WebParameters, host_id=None, name=None, parent=0)
     if host_id or host_id == int(0):
         with schema.db_select(param.engine) as db:
             try:
-                host = db.query(schema.Host).filter(schema.Host.id == host_id, schema.Host.remove.is_(False)).one()
+                host = db.query(schema.Host).filter(schema.Host.id == host_id).one()
             except NoResultFound:
                 return None
             except MultipleResultsFound:
@@ -498,9 +499,7 @@ def get_host(param: parameters.WebParameters, host_id=None, name=None, parent=0)
     if name:
         with schema.db_select(param.engine) as db:
             try:
-                host = db.query(schema.Host).filter(schema.Host.name == name,
-                                                    schema.Host.parent == parent,
-                                                    schema.Host.remove.is_(False)).one()
+                host = db.query(schema.Host).filter(schema.Host.name == name, schema.Host.parent == parent).one()
             except NoResultFound:
                 return None
             except MultipleResultsFound:

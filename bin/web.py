@@ -45,7 +45,10 @@ app = Flask(
     static_folder=os.path.join(webParameters.template, 'static')
 )
 app.secret_key = os.urandom(64)
-app.debug = False
+if webParameters.log_param['level'] == 'DEBUG':
+    app.debug = True
+else:
+    app.debug = False
 csrf = CSRFProtect()
 csrf.init_app(app)
 
@@ -66,7 +69,6 @@ if not applib.user_info(pw_name, webParameters.engine):
     )
 
 webParameters.log.info('start app')
-print(webParameters.log.handler)
 
 siteMap = {
     'index': 'index.html',
