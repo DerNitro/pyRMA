@@ -105,7 +105,7 @@
         </p>
         <p>
             {{ form.note.label }}<br>
-            {{ form.note() }}<br>
+            {{ form.note(cols="80", rows="10") | safe }}<br>
             {% for error in form.note.errors %}
             <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
