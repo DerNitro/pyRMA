@@ -1367,7 +1367,7 @@ def add_hosts_file(param: parameters.WebParameters, filepath: str, parent=0):
     for h in hosts:
         password = None
         n_host = schema.Host()
-        n_host.note = {}
+        n_host.note = []
         n_host.type = 1
         n_host.remove = False
         for i in h:
@@ -1400,8 +1400,13 @@ def add_hosts_file(param: parameters.WebParameters, filepath: str, parent=0):
                     except sqlalchemy.orm.exc.NoResultFound:
                         n_host.ilo_type = None
             elif str(i).split(':')[0].upper() == 'Note'.upper():
-                n_host.note[str(i).split(':')[1]] = h[i]
-        n_host.note = json.dumps(n_host.note, ensure_ascii=False)
+                if len(n_host.note) > 0:
+                    n_host.note.append("")
+                n_host.note.append(str(i).split(':')[1])
+                n_host.note.append("=" * len(str(i).split(':')[1]))
+                n_host.note.append("")
+                n_host.note.append(h[i])
+        n_host.note = "\n".join(n_host.note)
         if not n_host.connection_type:
             with schema.db_select(param.engine) as db:
                 n_host.connection_type = db.query(schema.ConnectionType). \
