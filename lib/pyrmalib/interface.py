@@ -560,7 +560,7 @@ class InformationForm(npyscreen.Form):
                     )
                 )
             self.service.values = service_string_list
-        self.note.values = template.information_host(self.host.note).split('\n')
+        self.note.values = self.host.note.split('\n')
         self.DISPLAY()
         pass
 

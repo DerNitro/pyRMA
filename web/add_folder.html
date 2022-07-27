@@ -31,7 +31,7 @@
         </p>
         <p>
             {{ form.note.label }}<br>
-            {{ form.note() }}
+            {{ form.note(cols="80", rows="10") | safe }}
         </p>
         <p>
             {{ form.add_sub() }}

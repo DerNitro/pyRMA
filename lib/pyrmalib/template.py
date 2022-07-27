@@ -83,32 +83,6 @@ def help_ft_form():
 
     return msg + footer
 
-
-def information_host(note):
-    msg = ''
-    if not isinstance(note, dict) and note:
-        note = json.loads(note)
-    else:
-        note = note
-    for key in sorted(note):
-        msg += "{key}\n".format(key=key)
-        msg += "{header}\n".format(header="=" * len(key))
-        value = note[key]
-        if len(value) > 100:
-            line = ''
-            for word in value.split():
-                line += "{} ".format(word)
-                if len(line) > 100:
-                    msg += "{}\n".format(line)
-                    line = ''
-            msg += "{}\n\n".format(line)
-        else:
-            msg += "{value}\n\n".format(value=value)
-        pass
-
-    return msg
-
-
 def registration_user():
     msg = "Регистрация нового пользователя {username}.\n"
 

@@ -20,6 +20,7 @@ import json
 import psutil
 import os
 import pam
+import markdown
 
 from sqlalchemy.orm import aliased
 
@@ -409,10 +410,7 @@ def get_content_host(param: parameters.WebParameters, host_id, connection_date=N
     else:
         content['default_password'] = '*' * len(host.default_password)
     content['tcp_port'] = host.tcp_port
-    if not isinstance(host.note, dict) and host.note:
-        content['note'] = json.loads(host.note)
-    else:
-        content['note'] = host.note
+    content['note'] = markdown.markdown(host.note)
 
     with schema.db_select(param.engine) as db:
         content['services'] = db.query(schema.Service).filter(schema.Service.host == host_id).all()

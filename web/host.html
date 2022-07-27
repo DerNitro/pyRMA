@@ -127,10 +127,7 @@
 {% endif %}
 <h3>Note</h3>
     {% if content['note'] %}
-        {% for key, value in content['note'].items()|sort() %}
-            <h4>{{ key }}</h4>
-            <p>{{ value }}</p>
-        {% endfor %}
+        {{ content['note'] | safe }}
     {% endif %}
 </div>
 <hr>
