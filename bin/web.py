@@ -650,9 +650,12 @@ def add_service(host_id):
     error = None
 
     if edit_host_information or admin:
-        form = forms.AddServiceHost()
+        if webParameters.user_info.admin:
+            form = forms.AddServiceHostAdmin()
+        else:
+            form = forms.AddServiceHost()
+
         form.type.choices = applib.get_service_type(webParameters)
-        form.remote_ip.choices = [host.ip, '127.0.0.1']
 
         if request.method == 'POST' and form.add_sub.data:
             service_type = applib.get_service_type(webParameters, service_type_id=form.type.data)
@@ -668,6 +671,11 @@ def add_service(host_id):
 
             if applib.add_service(webParameters, s):
                 return redirect(url_for('host', host_id=host_id))
+
+        if webParameters.user_info.admin:
+            form.remote_ip.data = host.ip
+        else:
+            form.remote_ip.choices = [host.ip, '127.0.0.1']
 
         return render_template(
             siteMap['add_service'],

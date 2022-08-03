@@ -93,6 +93,14 @@ class AddServiceHost(FlaskForm):
     add_sub = SubmitField('Добавить')
 
 
+class AddServiceHostAdmin(FlaskForm):
+    type = SelectField('Тип подключения')
+    remote_ip = StringField('Адрес назначения', validators=[IPAddress(), DataRequired()])
+    describe = StringField('Описание')
+
+    add_sub = SubmitField('Добавить')
+
+
 class JumpHost(FlaskForm):
     jump = SelectField('Jump хост')
     add_sub = SubmitField('Добавить')
