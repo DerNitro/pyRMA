@@ -12,3 +12,4 @@ python-iptables==1.0.0
 pysftp==0.2.9
 checksumdir==1.2.0
 markdown==3.4.1
+alembic==1.8.1
