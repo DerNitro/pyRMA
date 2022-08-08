@@ -31,6 +31,7 @@
       - pysftp==0.2.9
       - checksumdir==1.2.0
       - markdown==3.4.1
+      - alembic==1.8.1
 
 - name: Create local group {{ app_group }}
   become: true
@@ -93,6 +94,7 @@
   with_items: 
     - web
     - lib
+    - schema
   notify: 
    - Restart pyrma-web.service
    - Restart pyrma-firewall.service
@@ -113,27 +115,47 @@
     group: "{{ app_group }}"
     mode: '0755'
 
-- name: Create pyRMA SCHEME
+- name: Copy alembic.ini
+  become: true
+  ansible.builtin.template:
+    src: etc/alembic.ini.j2
+    dest: "{{ app_folder }}/alembic.ini"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0755'
+
+- name: alembic upgrade head
   become: true
   become_user: "{{ app_user }}"
   ansible.builtin.command:
+    chdir: "{{ app_folder }}"
     argv:
-      - /usr/bin/python3
-      - "{{ app_folder }}/lib/pyrmalib/schema.py"
-      - "--user"
-      - "{{ pyrma_database.username }}"
-      - "--password"
-      - "{{ pyrma_database.password }}"
-      - "--db"
-      - "{{ pyrma_database.name }}"
-      - "--host"
-      - "{{ pyrma_database.host }}"
-      - "--port"
-      - "{{ pyrma_database.port }}"
-      - install
-  register: _create_scheme
-  failed_when: _create_scheme.rc != 0 and _create_scheme.rc != 99
-  changed_when: _create_scheme.rc == 0
+      - alembic
+      - upgrade
+      - head
+  register: _alembic_upgrade_head
+
+# - name: Create pyRMA SCHEME
+#   become: true
+#   become_user: "{{ app_user }}"
+#   ansible.builtin.command:
+#     argv:
+#       - /usr/bin/python3
+#       - "{{ app_folder }}/lib/pyrmalib/schema.py"
+#       - "--user"
+#       - "{{ pyrma_database.username }}"
+#       - "--password"
+#       - "{{ pyrma_database.password }}"
+#       - "--db"
+#       - "{{ pyrma_database.name }}"
+#       - "--host"
+#       - "{{ pyrma_database.host }}"
+#       - "--port"
+#       - "{{ pyrma_database.port }}"
+#       - install
+#   register: _create_scheme
+#   failed_when: _create_scheme.rc != 0 and _create_scheme.rc != 99
+#   changed_when: _create_scheme.rc == 0
 
 - name: Add pyrma.sh to /etc/shells
   become: true

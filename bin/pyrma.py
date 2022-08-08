@@ -33,8 +33,8 @@ import signal
 
 __author__ = 'Sergey Utkin'
 __email__ = 'utkins01@gmail.com'
-__version__ = "1.1.2"
-__status__ = "Stable"
+__version__ = "1.1.3"
+__status__ = "Development"
 __maintainer__ = "Sergey Utkin"
 __copyright__ = "Copyright 2016, Sergey Utkin"
 __program__ = 'pyRMA'
