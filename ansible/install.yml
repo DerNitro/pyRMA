@@ -174,7 +174,28 @@
   with_items: 
     - "{{ app_data_dir }}"
 
-- name: Change owner and group pyRMA folders
+- name: Add rights for home folder
+  become: true
+  ansible.builtin.file:
+    path: '/home'
+    mode: '0777'
+
+- name: Change group pyRMA files
+  become: true
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    group: "{{ app_group }}"
+    recurse: true
+  with_items:
+    - "{{ app_data_dir }}/backup"
+    - "{{ app_data_dir }}/transfer"
+    - "{{ app_data_dir }}/filerecords"
+    - "{{ app_data_dir }}/capture"
+    - /var/log/pyRMA/
+    - /etc/pyrma
+
+- name: Change owner pyRMA folders
   become: true
   ansible.builtin.file:
     path: "{{ item }}"
