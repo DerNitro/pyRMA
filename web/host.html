@@ -113,7 +113,7 @@
             {% endfor %}
         </td>
         <td style="width: 450px;">
-            {{ service.local_port }} -> {{ service.remote_ip }}:{{ service.remote_port }}
+            {{ acs_ip }}:{{ service.local_port }} -> {{ service.remote_ip }}:{{ service.remote_port }}
         </td>
         <td style="width: 450px;">{{ service.describe }}</td>
         <td style="width: 150px;">{% if service.internal %}Внутренний{% endif %}</td>
