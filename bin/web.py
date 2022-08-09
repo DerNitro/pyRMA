@@ -612,7 +612,8 @@ def host(host_id):
             group_form=group_form,
             search=search_field,
             connection_filter=connection_filter,
-            username=webParameters.user_info.login
+            username=webParameters.user_info.login,
+            acs_ip=webParameters.app_ip_address
         )
     else:
         return render_template(siteMap['access_denied'])

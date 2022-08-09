@@ -93,11 +93,16 @@ class ConnectionModules(Modules):
 
         # Строка информации о подключении
         print('=================== pyRMA ===================')
-        print('Подключение {name} к хосту {host.name}({host.ip}:{host.tcp_port})'.format(name=self.NAME, host=self.HOST))
+        print('Подключение {name} к хосту {host.name}({host.ip}:{host.tcp_port})'.format(
+            name=self.NAME, host=self.HOST)
+        )
         if self.SERVICE:
             print('Подключенные сервисы:')
             for i in self.SERVICE:
-                print('\t[{name:15}] - {local_port} -> {remote_ip}:{remote_port}({describe})'.format(**i))
+                print('\t[{name:15}] - {acs_ip}:{local_port} -> {remote_ip}:{remote_port}({describe})'.format(
+                    **i, acs_ip=self.PARAMETERS.app_ip_address
+                    )
+                )
         print('=============================================')
 
         self.jump = None
