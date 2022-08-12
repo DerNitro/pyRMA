@@ -122,6 +122,7 @@ class WebParameters(Parameters):
         super().__init__()
         self.ip = self.conf.get('Web', 'ip')
         self.port = self.conf.get('Web', 'port')
+        self.web_live_time = self.conf.getint('Web', 'live_time', fallback=60)
         self.log_param = {
             'level': self.conf.get('Web', 'log_level', fallback='INFO'),
             'filename': 'pyrma_web.log'

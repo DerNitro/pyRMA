@@ -217,6 +217,7 @@ def login():
                                request.remote_addr,
                                webParameters):
             session['username'] = request.form['username']
+            session['web_live_time'] = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(minutes=webParameters.web_live_time)
             return redirect(url_for('root'))
         else:
             error = 'Не правильный логин|пароль или учетная запись заблокирована!!!'
