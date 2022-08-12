@@ -39,8 +39,12 @@ def authorization(web_session: session, req: request, param: parameters.WebParam
     def decorator(function):
         @wraps(function)
         def wrapper(*args, **kwargs):
-            if 'username' in web_session:
+            param.log.debug("web_session: {}".format(web_session))
+            if 'username' in web_session and 'web_live_time' in web_session:
+                if web_session['web_live_time'] < datetime.datetime.now(tz=datetime.timezone.utc):
+                    return redirect('/login')    
                 param.user_info = user_info(web_session['username'], param.engine)
+                web_session['web_live_time'] = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(minutes=param.web_live_time)
                 return function(*args, **kwargs)
             else:
                 return redirect('/login')
