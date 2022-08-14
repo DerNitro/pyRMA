@@ -106,7 +106,7 @@ Window/Translation/Enable VT100 line drawing even in UTF-8 mode
 Для записи терминальных сессий используется утилита `asciinema <https://asciinema.org/>`_
 
 Для просмотра на внешних устройствах требуется дополнительная установка приложения asciinema, инструкция по установке,
- запуске и воспроизведения доступна по `ссылке <https://asciinema.org/docs/how-it-works>`_
+запуске и воспроизведения доступна по `ссылке <https://asciinema.org/docs/how-it-works>`_
 
 
 Формат CSV для загрузки списка хостов
