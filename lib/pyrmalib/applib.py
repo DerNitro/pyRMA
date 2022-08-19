@@ -299,6 +299,12 @@ def get_file_transfer(param: parameters.FileTransfer, md5=None, cid=None) -> Lis
     
     return records
 
+def get_session(param: parameters.WebParameters, id: int) -> schema.Session:
+    with schema.db_select(param.engine) as db:
+        session = db.query(schema.Session).filter(schema.Session.id == id).one()
+
+    return session
+
 def get_connections(param: parameters.WebParameters, active=False, date=None, user=None, host=None):
     """
     Возвращает список подключений к хостам
@@ -1731,6 +1737,27 @@ def clear_jump(param: parameters.WebParameters, host_id):
 
     return True
 
+def close_dead_session(param: parameters.Parameters, session_id: int):
+    with schema.db_edit(param.engine) as db:
+        connection = db.query(schema.Connection).filter(schema.Connection.session == session_id).one()
+        session = db.query(schema.Session).filter(schema.Session.id == session_id).one()
+
+        tcp_port_forwards = db.query(schema.ForwardTCP).filter(schema.ForwardTCP.connection_id == connection.id).all()
+        for tcp_port_forward in tcp_port_forwards:
+            tcp_port_forward.state = 0
+        
+        connection.status = 2
+        connection.date_end = datetime.datetime.now()
+        connection.termination = 0
+        connection.error = "Dead session"
+
+        session.status = 1
+        session.date_end = datetime.datetime.now()
+        session.termination = 0
+
+        db.flush
+
+    pass
 
 def check_worktime():
     work_hour = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
