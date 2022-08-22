@@ -222,7 +222,7 @@ class Find(npyscreen.Popup):
         self.owner.HostList = applib.search(appParameters, self.FindText.value)
 
 
-class AccessRequest(npyscreen.Form):
+class AccessRequest(npyscreen.ActionForm):
     OK_BUTTON_TEXT = "Отправить"
     CANCEL_BUTTON_TEXT = "Отмена"
     CANCEL_BUTTON_BR_OFFSET = (2, 18)
@@ -387,8 +387,9 @@ class ConnectionForm(npyscreen.Form):
                         service_type = st.name
                         break
                 service_string_list.append(
-                    '{service_type}: {s.local_port} -> {s.remote_ip}:{s.remote_port} {s.describe}'.format(
+                    '{service_type}: {acs_ip}:{s.local_port} -> {s.remote_ip}:{s.remote_port} {s.describe}'.format(
                         s=s,
+                        acs_ip=appParameters.app_ip_address,
                         service_type=service_type
                     )
                 )
@@ -550,17 +551,18 @@ class InformationForm(npyscreen.Form):
             for s in services:
                 service_type = None
                 for st in service_types:
-                    if s.type == st.id:
+                    if s.type == st.default_port:
                         service_type = st.name
                         break
                 service_string_list.append(
-                    '{service_type}: {s.local_port} -> {s.remote_ip}:{s.remote_port} {s.describe}'.format(
+                    '{service_type}: {acs_ip}:{s.local_port} -> {s.remote_ip}:{s.remote_port} {s.describe}'.format(
                         s=s,
-                        service_type=service_type
+                        service_type=service_type,
+                        acs_ip=appParameters.app_ip_address
                     )
                 )
             self.service.values = service_string_list
-        self.note.values = template.information_host(self.host.note).split('\n')
+        self.note.values = self.host.note.split('\n')
         self.DISPLAY()
         pass
 

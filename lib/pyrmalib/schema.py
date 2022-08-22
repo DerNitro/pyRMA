@@ -566,9 +566,8 @@ class ForwardTCP(Base):
     forward_ip: IP адрес назначения
     forward_port: TCP порт назначения
     state:
-        0 - Ожидает 
+        0 - Завешено 
         1 - Активно
-        2 - Завешено
     """
     __tablename__ = 'tcp_port_forward'
 
@@ -632,97 +631,4 @@ class CaptureTraffic(Base):
 
 
 if __name__ == '__main__':
-    arg = argparse.ArgumentParser(
-        epilog='schema.py (C) "Sergey Utkin" mailto:utkins01@gmail.com',
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        description=textwrap.dedent('''\
-        Управление БД.
-        ''')
-    )
-    arg.add_argument('--user', help='Пользователь', default='acs', type=str)
-    arg.add_argument('--password', help='Пароль', default='acs', type=str)
-    arg.add_argument('--db', help='База Данных', default='acs', type=str)
-    arg.add_argument('--host', help='Адрес узла', default='localhost', type=str)
-    arg.add_argument('--port', help='Порт подключения', default='5432', type=str)
-
-    sub_parser = arg.add_subparsers(help=u'Команды', dest='command')
-    sub_install = sub_parser.add_parser('install')
-    sub_update = sub_parser.add_parser('update')
-
-    pars = arg.parse_args()
-
-    engine = create_engine('{0}://{1}:{2}@{3}:{4}/{5}'.format(
-        'postgresql', pars.user, pars.password, pars.host, pars.port, pars.db
-    ))
-
-    if pars.command == 'install':
-        try:
-            AccessList.__table__.create(bind=engine)
-            Action.__table__.create(bind=engine)
-            ActionType.__table__.create(bind=engine)
-            Connection.__table__.create(bind=engine)
-            ConnectionType.__table__.create(bind=engine)
-            FileTransferType.__table__.create(bind=engine)
-            Group.__table__.create(bind=engine)
-            GroupHost.__table__.create(bind=engine)
-            GroupUser.__table__.create(bind=engine)
-            Host.__table__.create(bind=engine)
-            IPMIType.__table__.create(bind=engine)
-            PasswordList.__table__.create(bind=engine)
-            Permission.__table__.create(bind=engine)
-            Prefix.__table__.create(bind=engine)
-            RequestAccess.__table__.create(bind=engine)
-            JumpHost.__table__.create(bind=engine)
-            Service.__table__.create(bind=engine)
-            ServiceType.__table__.create(bind=engine)
-            Session.__table__.create(bind=engine)
-            User.__table__.create(bind=engine)
-            ForwardTCP.__table__.create(bind=engine)
-            FileTransfer.__table__.create(bind=engine)
-            CaptureTraffic.__table__.create(bind=engine)
-        except sqlalchemy.exc.ProgrammingError as e:
-            if 'psycopg2.errors.DuplicateTable' in str(e):
-                print("The tables are already created!")
-                sys.exit(99)
-            else:
-                print(e)
-                sys.exit(1)
-
-        for key, value in dict.action_type.items():
-            with db_edit(engine) as db:
-                db.add(ActionType(id=key, name=value))
-
-        with db_edit(engine) as db:
-            db.add(
-                Prefix(
-                    name='DEFAULT',
-                    note='Префикс по умолчанию'
-                )
-            )
-            db.add(
-                Group(
-                    id=0,
-                    name='ALL'
-                )
-            )
-            db.flush()
-
-        with db_edit(engine) as db:
-            db.add(
-                ConnectionType(
-                    name='SSH'
-                )
-            )
-            db.add(
-                ConnectionType(
-                    name='TELNET'
-                )
-            )
-            db.add(
-                FileTransferType(
-                    name='SFTP'
-                )
-            )
-            db.flush()
-    elif pars.command == 'update':
-        pass
+    pass

@@ -53,6 +53,10 @@
         <td>{{ content['connection']['error'] }}</td>
     </tr>
     {% endif %}
+    <tr>
+        <td>Запись</td>
+        <td><a href="/ttyrec/{{ content['session']['ttyrec'] }}"><button>Загрузить</button></a></td>
+    </tr>
 </table>
 {% if content['file']|length > 0 %}
 <hr>
@@ -97,7 +101,9 @@
 </table>
 {% endif %}
 <hr>
-<center><div id="tty"></div></center>
+<center>
+    <div id="tty"></div>
+</center>
 <script>
     AsciinemaPlayer.create(
         '/ttyrec/{{ content['session']['ttyrec'] }}', 

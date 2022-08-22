@@ -45,7 +45,10 @@ app = Flask(
     static_folder=os.path.join(webParameters.template, 'static')
 )
 app.secret_key = os.urandom(64)
-app.debug = False
+if webParameters.log_param['level'] == 'DEBUG':
+    app.debug = True
+else:
+    app.debug = False
 csrf = CSRFProtect()
 csrf.init_app(app)
 
@@ -66,7 +69,6 @@ if not applib.user_info(pw_name, webParameters.engine):
     )
 
 webParameters.log.info('start app')
-print(webParameters.log.handler)
 
 siteMap = {
     'index': 'index.html',
@@ -215,6 +217,7 @@ def login():
                                request.remote_addr,
                                webParameters):
             session['username'] = request.form['username']
+            session['web_live_time'] = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(minutes=webParameters.web_live_time)
             return redirect(url_for('root'))
         else:
             error = 'Не правильный логин|пароль или учетная запись заблокирована!!!'
@@ -610,7 +613,8 @@ def host(host_id):
             group_form=group_form,
             search=search_field,
             connection_filter=connection_filter,
-            username=webParameters.user_info.login
+            username=webParameters.user_info.login,
+            acs_ip=webParameters.app_ip_address
         )
     else:
         return render_template(siteMap['access_denied'])
@@ -648,9 +652,12 @@ def add_service(host_id):
     error = None
 
     if edit_host_information or admin:
-        form = forms.AddServiceHost()
+        if webParameters.user_info.admin:
+            form = forms.AddServiceHostAdmin()
+        else:
+            form = forms.AddServiceHost()
+
         form.type.choices = applib.get_service_type(webParameters)
-        form.remote_ip.choices = [host.ip, '127.0.0.1']
 
         if request.method == 'POST' and form.add_sub.data:
             service_type = applib.get_service_type(webParameters, service_type_id=form.type.data)
@@ -666,6 +673,11 @@ def add_service(host_id):
 
             if applib.add_service(webParameters, s):
                 return redirect(url_for('host', host_id=host_id))
+
+        if webParameters.user_info.admin:
+            form.remote_ip.data = host.ip
+        else:
+            form.remote_ip.choices = [host.ip, '127.0.0.1']
 
         return render_template(
             siteMap['add_service'],
@@ -846,7 +858,6 @@ def administrate_ipmi_change(ipmi_id):
             'vendor': form.vendor.data,
             'ports': form.ports.data
         }
-        print(data)
         applib.change_ipmi(webParameters, ipmi_id, data)
         return redirect('/administrate/ipmi')
     form.name.data = ipmi.name

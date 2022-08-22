@@ -20,6 +20,7 @@ import json
 import psutil
 import os
 import pam
+import markdown
 
 from sqlalchemy.orm import aliased
 
@@ -38,8 +39,12 @@ def authorization(web_session: session, req: request, param: parameters.WebParam
     def decorator(function):
         @wraps(function)
         def wrapper(*args, **kwargs):
-            if 'username' in web_session:
+            param.log.debug("web_session: {}".format(web_session))
+            if 'username' in web_session and 'web_live_time' in web_session:
+                if web_session['web_live_time'] < datetime.datetime.now(tz=datetime.timezone.utc):
+                    return redirect('/login')    
                 param.user_info = user_info(web_session['username'], param.engine)
+                web_session['web_live_time'] = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(minutes=param.web_live_time)
                 return function(*args, **kwargs)
             else:
                 return redirect('/login')
@@ -294,6 +299,12 @@ def get_file_transfer(param: parameters.FileTransfer, md5=None, cid=None) -> Lis
     
     return records
 
+def get_session(param: parameters.WebParameters, id: int) -> schema.Session:
+    with schema.db_select(param.engine) as db:
+        session = db.query(schema.Session).filter(schema.Session.id == id).one()
+
+    return session
+
 def get_connections(param: parameters.WebParameters, active=False, date=None, user=None, host=None):
     """
     Возвращает список подключений к хостам
@@ -375,6 +386,7 @@ def get_content_host(param: parameters.WebParameters, host_id, connection_date=N
     host = get_host(param, host_id)
     content['connection'] = get_connections(param, host=host, date=connection_date)
     content['id'] = host_id
+    content['deleted'] = host.remove
     content['proxy'] = host.proxy
     content['name'] = host.name
     content['ip'] = host.ip
@@ -408,10 +420,7 @@ def get_content_host(param: parameters.WebParameters, host_id, connection_date=N
     else:
         content['default_password'] = '*' * len(host.default_password)
     content['tcp_port'] = host.tcp_port
-    if not isinstance(host.note, dict) and host.note:
-        content['note'] = json.loads(host.note)
-    else:
-        content['note'] = host.note
+    content['note'] = markdown.markdown(host.note)
 
     with schema.db_select(param.engine) as db:
         content['services'] = db.query(schema.Service).filter(schema.Service.host == host_id).all()
@@ -487,7 +496,7 @@ def get_host(param: parameters.WebParameters, host_id=None, name=None, parent=0)
     if host_id or host_id == int(0):
         with schema.db_select(param.engine) as db:
             try:
-                host = db.query(schema.Host).filter(schema.Host.id == host_id, schema.Host.remove.is_(False)).one()
+                host = db.query(schema.Host).filter(schema.Host.id == host_id).one()
             except NoResultFound:
                 return None
             except MultipleResultsFound:
@@ -498,9 +507,7 @@ def get_host(param: parameters.WebParameters, host_id=None, name=None, parent=0)
     if name:
         with schema.db_select(param.engine) as db:
             try:
-                host = db.query(schema.Host).filter(schema.Host.name == name,
-                                                    schema.Host.parent == parent,
-                                                    schema.Host.remove.is_(False)).one()
+                host = db.query(schema.Host).filter(schema.Host.name == name, schema.Host.parent == parent).one()
             except NoResultFound:
                 return None
             except MultipleResultsFound:
@@ -644,7 +651,10 @@ def get_group(param: parameters.WebParameters, group_id):
         with schema.db_select(param.engine) as db:
             hosts = db.query(schema.GroupHost, schema.Host) \
                 .join(schema.Host, schema.GroupHost.host == schema.Host.id) \
-                .filter(schema.GroupHost.group == group_id).all()
+                .filter(
+                    schema.GroupHost.group == group_id,
+                    schema.Host.remove == False
+                ).all()
             content['hosts'] = hosts
 
     with schema.db_select(param.engine) as db:
@@ -1367,7 +1377,7 @@ def add_hosts_file(param: parameters.WebParameters, filepath: str, parent=0):
     for h in hosts:
         password = None
         n_host = schema.Host()
-        n_host.note = {}
+        n_host.note = []
         n_host.type = 1
         n_host.remove = False
         for i in h:
@@ -1400,8 +1410,13 @@ def add_hosts_file(param: parameters.WebParameters, filepath: str, parent=0):
                     except sqlalchemy.orm.exc.NoResultFound:
                         n_host.ilo_type = None
             elif str(i).split(':')[0].upper() == 'Note'.upper():
-                n_host.note[str(i).split(':')[1]] = h[i]
-        n_host.note = json.dumps(n_host.note, ensure_ascii=False)
+                if len(n_host.note) > 0:
+                    n_host.note.append("")
+                n_host.note.append(str(i).split(':')[1])
+                n_host.note.append("=" * len(str(i).split(':')[1]))
+                n_host.note.append("")
+                n_host.note.append(h[i])
+        n_host.note = "\n".join(n_host.note)
         if not n_host.connection_type:
             with schema.db_select(param.engine) as db:
                 n_host.connection_type = db.query(schema.ConnectionType). \
@@ -1722,6 +1737,27 @@ def clear_jump(param: parameters.WebParameters, host_id):
 
     return True
 
+def close_dead_session(param: parameters.Parameters, session_id: int):
+    with schema.db_edit(param.engine) as db:
+        connection = db.query(schema.Connection).filter(schema.Connection.session == session_id).one()
+        session = db.query(schema.Session).filter(schema.Session.id == session_id).one()
+
+        tcp_port_forwards = db.query(schema.ForwardTCP).filter(schema.ForwardTCP.connection_id == connection.id).all()
+        for tcp_port_forward in tcp_port_forwards:
+            tcp_port_forward.state = 0
+        
+        connection.status = 2
+        connection.date_end = datetime.datetime.now()
+        connection.termination = 0
+        connection.error = "Dead session"
+
+        session.status = 1
+        session.date_end = datetime.datetime.now()
+        session.termination = 0
+
+        db.flush
+
+    pass
 
 def check_worktime():
     work_hour = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]

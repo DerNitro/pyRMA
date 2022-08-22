@@ -54,7 +54,7 @@
 <hr>
 {% endif %}
 <div class="host">
-<h3>{{ content['name'] }} {% if content['parent'] %}({{ content['parent'] }}){% endif %}</h3>
+<h3>{% if content['deleted'] %}Хост удален! {% endif %}{{ content['name'] }} {% if content['parent'] %}({{ content['parent'] }}){% endif %}</h3>
 <table>
 <tbody>
 <tr>
@@ -113,7 +113,7 @@
             {% endfor %}
         </td>
         <td style="width: 450px;">
-            {{ service.local_port }} -> {{ service.remote_ip }}:{{ service.remote_port }}
+            {{ acs_ip }}:{{ service.local_port }} -> {{ service.remote_ip }}:{{ service.remote_port }}
         </td>
         <td style="width: 450px;">{{ service.describe }}</td>
         <td style="width: 150px;">{% if service.internal %}Внутренний{% endif %}</td>
@@ -127,10 +127,7 @@
 {% endif %}
 <h3>Note</h3>
     {% if content['note'] %}
-        {% for key, value in content['note'].items()|sort() %}
-            <h4>{{ key }}</h4>
-            <p>{{ value }}</p>
-        {% endfor %}
+        {{ content['note'] | safe }}
     {% endif %}
 </div>
 <hr>

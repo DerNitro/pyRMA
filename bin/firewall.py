@@ -31,10 +31,11 @@ from sqlalchemy import create_engine, table
 import iptc
 import shlex
 import subprocess
+import psutil
 
 __author__ = 'Sergey Utkin'
 __email__ = 'utkins01@gmail.com'
-__version__ = "1.1.2"
+__version__ = "1.1.3"
 __status__ = "stable"
 __maintainer__ = "Sergey Utkin"
 __copyright__ = "Copyright 2016, Sergey Utkin"
@@ -107,10 +108,10 @@ def connection(param: parameters.FirewallParameters):
 
 
 def capture_traffic(param: parameters.FirewallParameters, user_ip, acs_ip, service_port, connection_id, command):
-    filename = os.path.join(appParameters.tcp_capture_folder, str(connection_id), "{}.pcap".format(service_port))
-    if not os.path.isdir(os.path.join(appParameters.data_dir, appParameters.tcp_capture_folder, str(connection_id))):
-        os.mkdir(os.path.join(appParameters.data_dir, appParameters.tcp_capture_folder, str(connection_id)))
-    path = os.path.join(appParameters.data_dir, *os.path.split(filename))
+    filename = os.path.join(param.tcp_capture_folder, str(connection_id), "{}.pcap".format(service_port))
+    if not os.path.isdir(os.path.join(param.data_dir, param.tcp_capture_folder, str(connection_id))):
+        os.mkdir(os.path.join(param.data_dir, param.tcp_capture_folder, str(connection_id)))
+    path = os.path.join(param.data_dir, *os.path.split(filename))
 
     capture = Capture(user_ip, acs_ip, service_port, path, connection_id)
     
@@ -140,31 +141,43 @@ def tcp_forward(param: parameters.FirewallParameters):
         rule.target = target
         
         if tcp_forward.state == 0:
-            if rule not in iptc.Chain(iptc.Table(iptc.Table.NAT), appParameters.firewall_forward_table).rules:
+            if rule not in iptc.Chain(iptc.Table(iptc.Table.NAT), param.firewall_forward_table).rules:
                 applib.del_tcp_forward_connection(param, tcp_forward)
-                appParameters.log.info(
+                param.log.info(
                     'deleted record {tcp_forward.connection_id}: {tcp_forward.user_ip}:{tcp_forward.local_port}'.format(
                         tcp_forward=tcp_forward
                     )
                 )
             else:
                 capture_traffic(param, tcp_forward.user_ip, tcp_forward.acs_ip, tcp_forward.local_port, tcp_forward.connection_id, 'close')
-                iptc.Chain(iptc.Table(iptc.Table.NAT), appParameters.firewall_forward_table).delete_rule(rule)
-                appParameters.log.info(
+                iptc.Chain(iptc.Table(iptc.Table.NAT), param.firewall_forward_table).delete_rule(rule)
+                param.log.info(
                     'deleted forward {tcp_forward.connection_id}: {tcp_forward.user_ip}:{tcp_forward.local_port}'.format(
                         tcp_forward=tcp_forward
                     )
                 )
         elif tcp_forward.state == 1:
             capture_traffic(param, tcp_forward.user_ip, tcp_forward.acs_ip, tcp_forward.local_port, tcp_forward.connection_id, 'create')
-            if rule not in iptc.Chain(iptc.Table(iptc.Table.NAT), appParameters.firewall_forward_table).rules:
-                iptc.Chain(iptc.Table(iptc.Table.NAT), appParameters.firewall_forward_table).append_rule(rule)
-                appParameters.log.info(
+            if rule not in iptc.Chain(iptc.Table(iptc.Table.NAT), param.firewall_forward_table).rules:
+                iptc.Chain(iptc.Table(iptc.Table.NAT), param.firewall_forward_table).append_rule(rule)
+                param.log.info(
                     'append rule {tcp_forward.connection_id}: {tcp_forward.user_ip}:{tcp_forward.local_port}'.format(
                         tcp_forward=tcp_forward
                     )
                 )
 
+def check_session_live(param: parameters.FirewallParameters):
+    connections = applib.get_connections(param, active=True)
+    sessions = []
+    for connection in connections:
+        sessions.append(applib.get_session(param, connection['connection'].session))
+
+    for session in sessions:
+        if not psutil.pid_exists(session.pid) and not psutil.pid_exists(session.ppid):
+            param.log.info(f"Close Dead Session: {session.id}")
+            param.log.debug(f"{session}")
+            applib.close_dead_session(param, session.id)
+    pass
 
 try:
     appParameters = parameters.FirewallParameters()
@@ -239,6 +252,7 @@ for chain in iptc.Table(iptc.Table.NAT).chains:
 
 while True:
     try:
+        check_session_live(appParameters)
         tcp_forward(appParameters)
         connection(appParameters)
     except:
