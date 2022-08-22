@@ -566,9 +566,8 @@ class ForwardTCP(Base):
     forward_ip: IP адрес назначения
     forward_port: TCP порт назначения
     state:
-        0 - Ожидает 
+        0 - Завешено 
         1 - Активно
-        2 - Завешено
     """
     __tablename__ = 'tcp_port_forward'
 

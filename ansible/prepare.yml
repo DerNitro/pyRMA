@@ -53,6 +53,24 @@
     insertafter: "^# Ciphers and keying"
   notify: Restart ssh.service
 
+- name: Configure SSHD - ClientAliveInterval
+  become: true
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^ClientAliveInterval '
+    line: "ClientAliveInterval 60"
+    insertafter: "#ClientAliveInterval"
+  notify: Restart ssh.service
+
+- name: Configure SSHD - ClientAliveCountMax
+  become: true
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^ClientAliveCountMax '
+    line: "ClientAliveCountMax {{ inactive_session_timeout | default(1)}}"
+    insertafter: "#ClientAliveCountMax"
+  notify: Restart ssh.service
+
 - name: Disable sFTP over SSH
   become: true
   ansible.builtin.replace:
