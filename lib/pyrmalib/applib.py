@@ -32,7 +32,7 @@ import datetime
 from flask import request, redirect, session
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy import create_engine, func, or_, and_, sql
-from typing import List
+from typing import Dict, List
 
 
 def authorization(web_session: session, req: request, param: parameters.WebParameters, ):
@@ -1913,6 +1913,20 @@ def add_capture_traffic(app_param: parameters.FirewallParameters, connection_id,
             )
         )
         db.flush()
+
+def get_folder_path(param: parameters.Parameters, folder_id: id) -> Dict[int, schema.Host]:
+    """
+    Возвращает справочник директорий
+    """
+    index = 0
+    path = {}
+    while folder_id != 0:
+        host = get_host(param, folder_id)
+        path[index] = host
+        index += 1
+        folder_id = host.parent
+    
+    return dict(sorted(path.items(), reverse=True))
 
 
 if __name__ == '__main__':
