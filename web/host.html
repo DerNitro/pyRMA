@@ -53,6 +53,8 @@
 </div>
 <hr>
 {% endif %}
+<a href="/hosts">/</a>{% for k, v in path.items() %}<a href="/hosts/{{ v.id }}">{{v.name}}</a>/{% endfor %}
+<hr>
 <div class="host">
 <h3>{% if content['deleted'] %}Хост удален! {% endif %}{{ content['name'] }} {% if content['parent'] %}({{ content['parent'] }}){% endif %}</h3>
 <table>

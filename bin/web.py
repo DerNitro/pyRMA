@@ -18,7 +18,7 @@
    limitations under the License.
 """
 import datetime
-import json
+import markdown
 
 from flask import Flask, render_template, request, redirect, session, url_for, send_from_directory
 from flask_wtf.csrf import CSRFProtect
@@ -311,7 +311,7 @@ def hosts(directory_id=None):
         group = None
     host_list = applib.get_host_list(webParameters, directory_id)
     if folder and folder.note:
-        note = json.loads(folder.note)
+        note = markdown.markdown(folder.note)
     else:
         note = None
     return render_template(
@@ -323,6 +323,7 @@ def hosts(directory_id=None):
         jump_form=jump_form,
         search=search_field,
         group=group,
+        path=applib.get_folder_path(webParameters, directory_id),
         group_form=group_form,
         directory_id=directory_id,
         EditHostInformation=edit_host_information,
@@ -612,6 +613,7 @@ def host(host_id):
             jump_form=jump_form,
             group_form=group_form,
             search=search_field,
+            path=applib.get_folder_path(webParameters, object_host.parent),
             connection_filter=connection_filter,
             username=webParameters.user_info.login,
             acs_ip=webParameters.app_ip_address
