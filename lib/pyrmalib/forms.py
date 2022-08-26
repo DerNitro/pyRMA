@@ -219,7 +219,8 @@ class Access(FlaskForm):
     sub = SubmitField('OK')
 
 class ConnectionFilter(FlaskForm):
-    date = DateField(format='%Y-%m-%d', validators=[DataRequired()])
+    date_start = DateField(format='%Y-%m-%d', validators=[DataRequired()])
+    date_end = DateField(format='%Y-%m-%d', validators=[DataRequired()])
     sub = SubmitField('Ок')
 
 class User(FlaskForm):
