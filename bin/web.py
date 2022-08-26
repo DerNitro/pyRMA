@@ -136,8 +136,12 @@ def connections():
         return render_template(siteMap['access_denied'])
 
     if request.method == 'POST' and filter_field.validate_on_submit():
-        message = "Подключения за {}".format(filter_field.date.data)
-        connection = applib.get_connections(webParameters,date=filter_field.date.data)
+        message = f"Подключения за период с {filter_field.date_start.data} по {filter_field.date_end.data}"
+        connection = applib.get_connections(
+            webParameters,
+            date_start=filter_field.date_start.data,
+            date_end=filter_field.date_end.data
+        )
     else:
         message = 'Подключения за последние сутки'
         connection = applib.get_connections(webParameters)
@@ -581,9 +585,11 @@ def host(host_id):
     group_form = forms.AddHostGroup()
     connection_filter = forms.ConnectionFilter()
 
-    cdate = None
+    c_start_date = None
+    c_end_date = None
     if request.method == 'POST' and connection_filter.validate_on_submit():
-        cdate = connection_filter.date.data
+        c_start_date = connection_filter.date_start.data
+        c_end_date = connection_filter.date_end.data
     
     if applib.get_group_host(webParameters):
         group_form.name.choices = [(t.id, t.name) for t in applib.get_group_host(webParameters)]
@@ -591,7 +597,12 @@ def host(host_id):
         group_form = False
     
     object_host = applib.get_host(webParameters, host_id=host_id)
-    content_host = applib.get_content_host(webParameters, host_id, connection_date=cdate)
+    content_host = applib.get_content_host(
+        webParameters,
+        host_id,
+        connection_date_start=c_start_date,
+        connection_date_end=c_end_date
+    )
     show_host_info = access.check_access(webParameters, 'ShowHostInformation', h_object=object_host)
     admin = webParameters.user_info.admin
     if show_host_info or admin:
@@ -1098,14 +1109,16 @@ def administrate_user(uid):
     connection_filter = forms.ConnectionFilter()
     user_form = forms.User()
 
-    cdate = None
+    c_start_date = None
+    c_end_date = None
     if request.method == 'POST' and connection_filter.validate_on_submit():
-        cdate = connection_filter.date.data
+        c_start_date = connection_filter.date_start.data
+        c_end_date = connection_filter.date_end.data
 
     if request.method == 'POST' and user_form.validate_on_submit():
         applib.user_edit(webParameters, uid, user_form.name.data, user_form.email.data, user_form.ip.data)
 
-    content = applib.get_user(webParameters, uid, connection_date=cdate)
+    content = applib.get_user(webParameters, uid, connection_date_start=c_start_date, connection_date_end=c_end_date)
     user_form.email.data = content['user'].email
     user_form.ip.data = content['user'].ip
     user_form.name.data = content['user'].full_name

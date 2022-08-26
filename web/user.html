@@ -71,7 +71,7 @@
 <form action="/administrate/user/{{ content['user'].uid }}" method="POST" name="change_date">
     {{ connection_filter.csrf_token }}
     <p>
-        {{ connection_filter.date() }} {{ connection_filter.sub() }}
+        Период с {{ connection_filter.date_start() }} по {{ connection_filter.date_end() }} {{ connection_filter.sub() }}
     </p>
 </form>
 <table border="1" width="95%">

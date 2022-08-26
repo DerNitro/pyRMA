@@ -305,7 +305,7 @@ def get_session(param: parameters.WebParameters, id: int) -> schema.Session:
 
     return session
 
-def get_connections(param: parameters.WebParameters, active=False, date=None, user=None, host=None):
+def get_connections(param: parameters.WebParameters, active=False, date_start=None, date_end=None, user=None, host=None):
     """
     Возвращает список подключений к хостам
     """
@@ -318,29 +318,29 @@ def get_connections(param: parameters.WebParameters, active=False, date=None, us
                 schema.Host.id == schema.Connection.host,
                 schema.Connection.status == 1
             ).all()
-        elif date:
+        elif date_start and date_end:
             if host:
                 tables = db.query(schema.User, schema.Host, schema.Connection).filter(
                     schema.User.uid == schema.Connection.user,
                     schema.Host.id == schema.Connection.host,
                     schema.Connection.host == host.id,
-                    schema.Connection.date_start > utils.date_to_datetime(date),
-                    schema.Connection.date_start < utils.date_to_datetime(date) + datetime.timedelta(days=1)
+                    schema.Connection.date_start > utils.date_to_datetime(date_start),
+                    schema.Connection.date_start < utils.date_to_datetime(date_end) + datetime.timedelta(days=1)
                 ).order_by(schema.Connection.date_start.desc()).all()
             elif user:
                 tables = db.query(schema.User, schema.Host, schema.Connection).filter(
                     schema.User.uid == schema.Connection.user,
                     schema.Host.id == schema.Connection.host,
                     schema.Connection.user == user.uid,
-                    schema.Connection.date_start > utils.date_to_datetime(date),
-                    schema.Connection.date_start < utils.date_to_datetime(date) + datetime.timedelta(days=1)
+                    schema.Connection.date_start > utils.date_to_datetime(date_start),
+                    schema.Connection.date_start < utils.date_to_datetime(date_end) + datetime.timedelta(days=1)
                 ).order_by(schema.Connection.date_start.desc()).all()
             else:
                 tables = db.query(schema.User, schema.Host, schema.Connection).filter(
                     schema.User.uid == schema.Connection.user,
                     schema.Host.id == schema.Connection.host,
-                    schema.Connection.date_start > utils.date_to_datetime(date),
-                    schema.Connection.date_start < utils.date_to_datetime(date) + datetime.timedelta(days=1)
+                    schema.Connection.date_start > utils.date_to_datetime(date_start),
+                    schema.Connection.date_start < utils.date_to_datetime(date_end) + datetime.timedelta(days=1)
                 ).order_by(schema.Connection.date_start.desc()).all()
         elif host:
             tables = db.query(schema.User, schema.Host, schema.Connection).filter(
@@ -375,7 +375,7 @@ def get_connections(param: parameters.WebParameters, active=False, date=None, us
     return connections
 
 
-def get_content_host(param: parameters.WebParameters, host_id, connection_date=None):
+def get_content_host(param: parameters.WebParameters, host_id, connection_date_start=None, connection_date_end=None):
     """
     Возвращает форматированную информацию о хосте.
     :param param: param: WebParameters
@@ -384,7 +384,12 @@ def get_content_host(param: parameters.WebParameters, host_id, connection_date=N
     """
     content = {}
     host = get_host(param, host_id)
-    content['connection'] = get_connections(param, host=host, date=connection_date)
+    content['connection'] = get_connections(
+        param,
+        host=host,
+        date_start=connection_date_start,
+        date_end=connection_date_end
+    )
     content['id'] = host_id
     content['deleted'] = host.remove
     content['proxy'] = host.proxy
@@ -721,7 +726,7 @@ def get_parameters(param: parameters.WebParameters):
     return p
 
 
-def get_user(param: parameters.Parameters, uid, connection_date=None):
+def get_user(param: parameters.Parameters, uid, connection_date_start=None, connection_date_end=None):
     content = {}
     with schema.db_select(param.engine) as db:
         content['user'] = db.query(schema.User) \
@@ -733,7 +738,12 @@ def get_user(param: parameters.Parameters, uid, connection_date=None):
                 schema.Action.action_type == schema.ActionType.id
                 ).order_by(schema.Action.date.desc()).limit(10)
     
-    content['connection'] = get_connections(param, user=content['user'], date=connection_date)
+    content['connection'] = get_connections(
+        param,
+        user=content['user'],
+        date_start=connection_date_start,
+        date_end=connection_date_end
+    )
     content['group'] = ", ".join([t.name for i, t in get_group_list(param, user=uid)])
     return content
 
