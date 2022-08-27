@@ -252,6 +252,9 @@ class RemoteBoxBasic(npyscreen.BoxTitle):
     _contained_widget = RemoteMultiLineAction
 
 class FT(npyscreen.FormBaseNew):
+    SELECTED_SOURCE_LIST_FILE = []
+    SELECTED_DEST_LIST_FILE = []
+
     @staticmethod
     def xy():
         max_y, max_x = curses.newwin(0, 0).getmaxyx()
@@ -347,7 +350,10 @@ class FT(npyscreen.FormBaseNew):
                 "KEY_F(5)": self.transfer,
                 curses.KEY_F5: self.transfer,
                 "KEY_F(7)": self.mkdir,
-                curses.KEY_F7: self.mkdir
+                curses.KEY_F7: self.mkdir,
+                curses.KEY_IL: self.mark_file,
+                curses.KEY_IC: self.mark_file,
+                curses.KEY_EIC: self.mark_file,
             }
         )
         self.help = template.help_ft_form().format(program=__program__, version=__version__)
@@ -419,100 +425,115 @@ class FT(npyscreen.FormBaseNew):
             if self.source.editing:
                 for widget in self.source._my_widgets:
                     if isinstance(widget, LocalMultiLineAction):
-                        selected = self.source.values[widget.cursor_line]
+                        if len(widget.get_filtered_values()) > 0:
+                            ftParameters.log.debug("widget.get_filtered_values(): {}".format(widget.get_filtered_values()))
+                            self.SELECTED_SOURCE_LIST_FILE = widget.get_filtered_values()
+                        elif len(self.SELECTED_SOURCE_LIST_FILE) > 0:
+                            pass
+                        else:
+                            self.SELECTED_SOURCE_LIST_FILE.append(self.source.values[widget.cursor_line])
                         break
-                ftParameters.log.debug('FT(transfer): upload - {}'.format(str(os.path.join(*local_path, selected.name))))
                 with pysftp.Connection(**cinfo) as sftp:
-                    if stat.S_IFMT(selected.st_mode) == stat.S_IFDIR:
-                        self.notify('start')
-                        try:
-                            if not sftp.isdir(os.path.join(*remote_path, selected.name)):
-                                sftp.mkdir(remotepath=os.path.join(*remote_path, selected.name))
-                            sftp.put_r(
-                                os.path.join(*local_path, selected.name), remotepath=os.path.join(*remote_path, selected.name)
-                            )
-                            self.store_backup_file(os.path.join(*local_path, selected.name), 'upload')
-                            self.notify('stop')
-                            ftParameters.log.info('передана директория: {}'.format(str(os.path.join(*local_path, selected.name))))
-                        except PermissionError:
-                            npyscreen.notify_confirm(
-                                'Ошибка передачи файла PermissionError',
-                                title="Ошибка передачи файла", wide=True)
-                            ftParameters.log.warning('Ошибка передачи файла PermissionError: {}'.format(str(os.path.join(*local_path, selected.name))))
-                        except UnicodeEncodeError:
-                            npyscreen.notify_confirm(
-                                'Имя файла не в UTF8!!!',
-                                title="Ошибка передачи файла", wide=True)
-                            ftParameters.log.warning('Имя файла не в UTF8: {}'.format(str(os.path.join(*local_path, selected.name))))
-                    if stat.S_IFMT(selected.st_mode) == stat.S_IFREG:
-                        self.notify('start')
-                        try:
-                            sftp.put(
-                                os.path.join(*local_path, selected.name), remotepath=os.path.join(*remote_path, selected.name)
-                            )
-                            self.store_backup_file(os.path.join(*local_path, selected.name), 'upload')
-                            self.notify('stop')
-                            ftParameters.log.info('передан файл: {}'.format(str(os.path.join(*local_path, selected.name))))
-                        except PermissionError:
-                            npyscreen.notify_confirm(
-                                'Ошибка передачи файла PermissionError',
-                                title="Ошибка передачи файла", wide=True)
-                            ftParameters.log.warning('Ошибка передачи файла PermissionError: {}'.format(str(os.path.join(*local_path, selected.name))))
-                        except UnicodeEncodeError:
-                            npyscreen.notify_confirm(
-                                'Имя файла не в UTF8!!!',
-                                title="Ошибка передачи файла", wide=True)
-                            ftParameters.log.warning('Имя файла не в UTF8: {}'.format(str(os.path.join(*local_path, selected.name))))
+                    for selected in self.SELECTED_SOURCE_LIST_FILE:
+                        if stat.S_IFMT(selected.st_mode) == stat.S_IFDIR:
+                            self.notify('start', name=selected.name)
+                            try:
+                                if not sftp.isdir(os.path.join(*remote_path, selected.name)):
+                                    sftp.mkdir(remotepath=os.path.join(*remote_path, selected.name))
+                                sftp.put_r(
+                                    os.path.join(*local_path, selected.name), remotepath=os.path.join(*remote_path, selected.name)
+                                )
+                                self.store_backup_file(os.path.join(*local_path, selected.name), 'upload')
+                                self.notify('stop')
+                                ftParameters.log.info('передана директория: {}'.format(str(os.path.join(*local_path, selected.name))))
+                            except PermissionError:
+                                npyscreen.notify_confirm(
+                                    'Ошибка передачи файла PermissionError',
+                                    title="Ошибка передачи файла", wide=True)
+                                ftParameters.log.warning('Ошибка передачи файла PermissionError: {}'.format(str(os.path.join(*local_path, selected.name))))
+                            except UnicodeEncodeError:
+                                npyscreen.notify_confirm(
+                                    'Имя файла не в UTF8!!!',
+                                    title="Ошибка передачи файла", wide=True)
+                                ftParameters.log.warning('Имя файла не в UTF8: {}'.format(str(os.path.join(*local_path, selected.name))))
+                        if stat.S_IFMT(selected.st_mode) == stat.S_IFREG:
+                            self.notify('start', name=selected.name)
+                            try:
+                                sftp.put(
+                                    os.path.join(*local_path, selected.name), remotepath=os.path.join(*remote_path, selected.name)
+                                )
+                                self.store_backup_file(os.path.join(*local_path, selected.name), 'upload')
+                                self.notify('stop')
+                                ftParameters.log.info('передан файл: {}'.format(str(os.path.join(*local_path, selected.name))))
+                            except PermissionError:
+                                npyscreen.notify_confirm(
+                                    'Ошибка передачи файла PermissionError',
+                                    title="Ошибка передачи файла", wide=True)
+                                ftParameters.log.warning('Ошибка передачи файла PermissionError: {}'.format(str(os.path.join(*local_path, selected.name))))
+                            except UnicodeEncodeError:
+                                npyscreen.notify_confirm(
+                                    'Имя файла не в UTF8!!!',
+                                    title="Ошибка передачи файла", wide=True)
+                                ftParameters.log.warning('Имя файла не в UTF8: {}'.format(str(os.path.join(*local_path, selected.name))))
             
             if self.dest.editing:
                 for widget in self.dest._my_widgets:
                     if isinstance(widget, RemoteMultiLineAction):
-                        selected = self.dest.values[widget.cursor_line]
+                        if len(widget.get_filtered_values()) > 0:
+                            ftParameters.log.debug("widget.get_filtered_values(): {}".format(widget.get_filtered_values()))
+                            self.SELECTED_DEST_LIST_FILE = widget.get_filtered_values()
+                        elif len(self.SELECTED_DEST_LIST_FILE) > 0:
+                            pass
+                        else:
+                            self.SELECTED_DEST_LIST_FILE.append(self.dest.values[widget.cursor_line])
                         break
-                ftParameters.log.debug('FT(transfer): download - {}'.format(str(os.path.join(*remote_path, selected.name))))
                 with pysftp.Connection(**cinfo) as sftp:
-                    if stat.S_IFMT(selected.st_mode) == stat.S_IFDIR:
-                        self.notify('start')
-                        sftp.cwd(os.path.join(*remote_path))
-                        try:
-                            sftp.get_r(
-                                os.path.join(selected.name), localdir=os.path.join(*local_path)
-                            )
-                            self.store_backup_file(os.path.join(*local_path, selected.name), 'download')
-                            self.notify('stop')
-                            ftParameters.log.info('загружена директория: {}'.format(str(os.path.join(*local_path, selected.name))))
-                        except PermissionError:
-                            npyscreen.notify_confirm(
-                                'Ошибка передачи файла PermissionError',
-                                title="Ошибка передачи файла", wide=True)
-                            ftParameters.log.warning('Ошибка передачи файла PermissionError: {}'.format(str(os.path.join(*remote_path, selected.name))))
-                        except UnicodeEncodeError:
-                            npyscreen.notify_confirm(
-                                'Имя файла не в UTF8!!!',
-                                title="Ошибка передачи файла", wide=True)
-                            ftParameters.log.warning('Имя файла не в UTF8: {}'.format(str(os.path.join(*remote_path, selected.name))))
-                    if stat.S_IFMT(selected.st_mode) == stat.S_IFREG:
-                        self.notify('start')
-                        try:
-                            sftp.get(
-                                os.path.join(*remote_path, selected.name), localpath=os.path.join(*local_path, selected.name)
-                            )
-                            self.store_backup_file(os.path.join(*local_path, selected.name), 'download')
-                            self.notify('stop')
-                            ftParameters.log.info('загружен файл: {}'.format(str(os.path.join(*local_path, selected.name))))
-                        except PermissionError:
-                            npyscreen.notify_confirm(
-                                'Ошибка передачи файла PermissionError',
-                                title="Ошибка передачи файла", wide=True)
-                            ftParameters.log.warning('Ошибка передачи файла PermissionError: {}'.format(str(os.path.join(*remote_path, selected.name))))
-                        except UnicodeEncodeError:
-                            npyscreen.notify_confirm(
-                                'Имя файла не в UTF8!!!',
-                                title="Ошибка передачи файла", wide=True)
-                            ftParameters.log.warning('Имя файла не в UTF8: {}'.format(str(os.path.join(*remote_path, selected.name))))
+                    for selected in self.SELECTED_DEST_LIST_FILE:
+                        if stat.S_IFMT(selected.st_mode) == stat.S_IFDIR:
+                            self.notify('start', name=selected.name)
+                            sftp.cwd(os.path.join(*remote_path))
+                            try:
+                                sftp.get_r(
+                                    os.path.join(selected.name), localdir=os.path.join(*local_path)
+                                )
+                                self.store_backup_file(os.path.join(*local_path, selected.name), 'download')
+                                self.notify('stop')
+                                ftParameters.log.info('загружена директория: {}'.format(str(os.path.join(*local_path, selected.name))))
+                            except PermissionError:
+                                npyscreen.notify_confirm(
+                                    'Ошибка передачи файла PermissionError',
+                                    title="Ошибка передачи файла", wide=True)
+                                ftParameters.log.warning('Ошибка передачи файла PermissionError: {}'.format(str(os.path.join(*remote_path, selected.name))))
+                            except UnicodeEncodeError:
+                                npyscreen.notify_confirm(
+                                    'Имя файла не в UTF8!!!',
+                                    title="Ошибка передачи файла", wide=True)
+                                ftParameters.log.warning('Имя файла не в UTF8: {}'.format(str(os.path.join(*remote_path, selected.name))))
+                        if stat.S_IFMT(selected.st_mode) == stat.S_IFREG:
+                            self.notify('start', name=selected.name)
+                            try:
+                                sftp.get(
+                                    os.path.join(*remote_path, selected.name), localpath=os.path.join(*local_path, selected.name)
+                                )
+                                self.store_backup_file(os.path.join(*local_path, selected.name), 'download')
+                                self.notify('stop')
+                                ftParameters.log.info('загружен файл: {}'.format(str(os.path.join(*local_path, selected.name))))
+                            except PermissionError:
+                                npyscreen.notify_confirm(
+                                    'Ошибка передачи файла PermissionError',
+                                    title="Ошибка передачи файла", wide=True)
+                                ftParameters.log.warning('Ошибка передачи файла PermissionError: {}'.format(str(os.path.join(*remote_path, selected.name))))
+                            except UnicodeEncodeError:
+                                npyscreen.notify_confirm(
+                                    'Имя файла не в UTF8!!!',
+                                    title="Ошибка передачи файла", wide=True)
+                                ftParameters.log.warning('Имя файла не в UTF8: {}'.format(str(os.path.join(*remote_path, selected.name))))
         except FileExistsError as e:
             npyscreen.notify_confirm(e.strerror, title="Передача данных", wide=True)
             ftParameters.log.warning('Ошибка передачи файлов ' + str(e))
+        
+        self.SELECTED_SOURCE_LIST_FILE.clear()
+        self.SELECTED_DEST_LIST_FILE.clear()
         self.update_files()
 
     def store_backup_file(self, path, direction):
@@ -558,11 +579,38 @@ class FT(npyscreen.FormBaseNew):
         )
         pass
 
-    def notify(self, action):
+    def notify(self, action, name=None):
         if action == 'start':
-            npyscreen.notify_wait("Началась передача данных", title="Передача данных",)
+            npyscreen.notify_wait(f"Началась передача данных: {name}", title="Передача данных",)
         elif action == 'stop':
             npyscreen.notify_wait("Закончилась передача данных", title="Передача данных",)
+
+    def mark_file(self, *args, **keywords):
+        if self.source.editing:
+            for widget in self.source._my_widgets:
+                if isinstance(widget, LocalMultiLineAction):
+                    if self.source.values[widget.cursor_line] in self.SELECTED_SOURCE_LIST_FILE:
+                        widget._filtered_values_cache.remove(widget.cursor_line)
+                        self.SELECTED_SOURCE_LIST_FILE.remove(self.source.values[widget.cursor_line])
+                    else:
+                        widget._filtered_values_cache.append(widget.cursor_line)
+                        self.SELECTED_SOURCE_LIST_FILE.append(self.source.values[widget.cursor_line])
+                    ftParameters.log.debug('self.SELECTED_SOURCE_LIST_FILE: {}'.format(self.SELECTED_SOURCE_LIST_FILE))
+                    widget.update()
+                    break
+        if self.dest.editing:
+            for widget in self.dest._my_widgets:
+                if isinstance(widget, RemoteMultiLineAction):
+                    if self.dest.values[widget.cursor_line] in self.SELECTED_DEST_LIST_FILE:
+                        widget._filtered_values_cache.remove(widget.cursor_line)
+                        self.SELECTED_DEST_LIST_FILE.remove(self.dest.values[widget.cursor_line])
+                    else:
+                        widget._filtered_values_cache.append(widget.cursor_line)
+                        self.SELECTED_DEST_LIST_FILE.append(self.dest.values[widget.cursor_line])
+                    ftParameters.log.debug('self.SELECTED_DEST_LIST_FILE: {}'.format(self.SELECTED_DEST_LIST_FILE))
+                    widget.update()
+                    break
+        
 
 
 class ErrorForm(npyscreen.FormBaseNew):
