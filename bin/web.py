@@ -466,6 +466,7 @@ def add_host(directory_id):
             os.mkdir('/tmp/pyRMA')
         f.save(os.path.join('/tmp/pyRMA', filename))
         try:
+            webParameters.log.debug("web.py: add_host(POST FILE)")
             applib.add_hosts_file(webParameters, os.path.join('/tmp/pyRMA', filename), parent=directory_id)
             status = "Узлы добавлены"
             return redirect(url_for('hosts', directory_id=directory_id))

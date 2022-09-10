@@ -31,7 +31,7 @@ Base = declarative_base()
 
 @contextmanager
 def db_select(engine):
-    cl_session = sessionmaker(bind=engine)
+    cl_session = sessionmaker(bind=engine, expire_on_commit=False)
     session = cl_session()
     try:
         yield session
@@ -43,7 +43,7 @@ def db_select(engine):
 
 @contextmanager
 def db_edit(engine):
-    cl_session = sessionmaker(bind=engine)
+    cl_session = sessionmaker(bind=engine, expire_on_commit=False)
     session = cl_session()
     try:
         yield session
