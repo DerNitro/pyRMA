@@ -115,6 +115,7 @@ Window/Translation/Enable VT100 line drawing even in UTF-8 mode
 Разделитель полей "запятая"(comma)
 
 * **Name**: имя узла
+* **Folder**: директория расположения узла
 * **IP**: IP адрес узла, формат: ip address[:port]
 * **Login**: имя пользователя
 * **Password**: пароль пользователя

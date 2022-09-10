@@ -16,11 +16,11 @@
    limitations under the License.
 """
 
-import json
 import psutil
 import os
 import pam
 import markdown
+import csv
 
 from sqlalchemy.orm import aliased
 
@@ -40,6 +40,7 @@ def authorization(web_session: session, req: request, param: parameters.WebParam
         @wraps(function)
         def wrapper(*args, **kwargs):
             param.log.debug("web_session: {}".format(web_session))
+            param.log.debug("web_session: {}".format(req))
             if 'username' in web_session and 'web_live_time' in web_session:
                 if web_session['web_live_time'] < datetime.datetime.now(tz=datetime.timezone.utc):
                     return redirect('/login')    
@@ -489,7 +490,7 @@ def get_user_content_dashboard(param: parameters.WebParameters):
     return content
 
 
-def get_host(param: parameters.WebParameters, host_id=None, name=None, parent=0) -> schema.Host:
+def get_host(param: parameters.WebParameters, host_id=None, name=None, ip=None, parent=0) -> schema.Host:
     """
     Возвращает объект Host, поиск по schema.Host.id или schema.Host.name и schema.Host.parent
     :param host_id: schema.Host.id
@@ -509,10 +510,29 @@ def get_host(param: parameters.WebParameters, host_id=None, name=None, parent=0)
         if host.default_password and len(host.default_password) > 0:
             host.default_password = utils.password(host.default_password, host.id, False)
         return host
+    if name and ip:
+        with schema.db_select(param.engine) as db:
+            try:
+                host = db.query(schema.Host).filter(
+                    schema.Host.name == name,
+                    schema.Host.ip == ip,
+                    schema.Host.remove.is_(False)
+                ).one()
+            except NoResultFound:
+                return None
+            except MultipleResultsFound:
+                raise error.WTF("Дубли Host.name|ip в таблице Host!!!")
+        if host.default_password and len(host.default_password) > 0:
+            host.default_password = utils.password(host.default_password, host.id, False)
+        return host
     if name:
         with schema.db_select(param.engine) as db:
             try:
-                host = db.query(schema.Host).filter(schema.Host.name == name, schema.Host.parent == parent).one()
+                host = db.query(schema.Host).filter(
+                    schema.Host.name == name,
+                    schema.Host.parent == parent,
+                    schema.Host.remove.is_(False)
+                ).one()
             except NoResultFound:
                 return None
             except MultipleResultsFound:
@@ -520,8 +540,6 @@ def get_host(param: parameters.WebParameters, host_id=None, name=None, parent=0)
         if host.default_password and len(host.default_password) > 0:
             host.default_password = utils.password(host.default_password, host.id, False)
         return host
-    else:
-        raise error.WTF("Ошибка работы weblib.get_host!!!")
 
 
 def get_host_list(param: parameters.WebParameters, level=None):
@@ -1288,9 +1306,9 @@ def user_registration(reg_data, param: parameters.Parameters):
     return True
 
 
-def add_folder(param: parameters.WebParameters, folder):
+def add_folder(param: parameters.WebParameters, folder, action=True) -> schema.Host:
     with schema.db_edit(param.engine) as db:
-        folder = schema.Host(
+        _folder = schema.Host(
             name=folder['name'],
             describe=folder['describe'],
             parent=folder['parent'],
@@ -1298,22 +1316,24 @@ def add_folder(param: parameters.WebParameters, folder):
             prefix=folder['prefix'],
             note=folder['note']
         )
-        db.add(folder)
+        db.add(_folder)
         db.flush()
-        db.refresh(folder)
-        action = schema.Action(
-            user=param.user_info.uid,
-            action_type=10,
-            date=datetime.datetime.now(),
-            message="Создание директории: {folder.name} - id={folder.id}({folder})".format(folder=folder)
-        )
-        db.add(action)
-        db.flush()
+        db.refresh(_folder)
+        if action:
+            action = schema.Action(
+                user=param.user_info.uid,
+                action_type=10,
+                date=datetime.datetime.now(),
+                message=f"Создание директории: {_folder.name} - id={_folder.id}({_folder})"
+            )
+            db.add(action)
+            db.flush()
+    
+    param.log.debug(f"add_folder: folder - {_folder}")
+    return _folder
 
-    return True
 
-
-def add_host(param: parameters.WebParameters, host: schema.Host, parent=0, password=None):
+def add_host(param: parameters.WebParameters, host: schema.Host, parent=0, password=None, action=True) -> schema.Host:
     with schema.db_edit(param.engine) as db:
         host.prefix = param.user_info.prefix
         host.parent = parent
@@ -1322,15 +1342,47 @@ def add_host(param: parameters.WebParameters, host: schema.Host, parent=0, passw
         db.refresh(host)
         if password:
             host.default_password = utils.password(password, host.id, True)
-        action = schema.Action(
-            user=param.user_info.uid,
-            action_type=20,
-            date=datetime.datetime.now(),
-            message="Создание хоста: {host.name} - id={host.id}({host})".format(host=host)
-        )
-        db.add(action)
+
+        if action:
+            action = schema.Action(
+                user=param.user_info.uid,
+                action_type=20,
+                date=datetime.datetime.now(),
+                message="Создание хоста: {host.name} - id={host.id}({host})".format(host=host)
+            )
+            db.add(action)
+            db.flush()
+    
+    return host
+
+def update_host(param: parameters.WebParameters, host: schema.Host, parent=0, password=None, action=True):
+    with schema.db_edit(param.engine) as db:
+        upd_host = db.query(schema.Host).filter(
+                    schema.Host.name == host.name,
+                    schema.Host.ip == host.ip,
+                    schema.Host.remove.is_(False)
+                ).one()
+        upd_host.default_login = host.default_login
+        upd_host.ilo = host.ilo
+        upd_host.ilo_type = host.ilo_type
+        upd_host.parent = parent
+        if password:
+            upd_host.default_password = utils.password(password, host.id, True)
+        upd_host.note = host.note
         db.flush()
-        return True
+        db.refresh(upd_host)
+        
+        if action:
+            action = schema.Action(
+                user=param.user_info.uid,
+                action_type=21,
+                date=datetime.datetime.now(),
+                message="Редактирование хоста: {host.name} - id={host.id}({host})".format(host=upd_host)
+            )
+            db.add(action)
+            db.flush()
+    
+    return upd_host
 
 
 def add_service(param: parameters.WebParameters, service: schema.Service):
@@ -1378,65 +1430,76 @@ def add_service_type(param: parameters.WebParameters, name, default_port):
 def add_hosts_file(param: parameters.WebParameters, filepath: str, parent=0):
     if not os.path.isfile(filepath):
         raise error.WTF("Отсутствует файл на загрузку")
-    f = open(filepath, 'r')
-    header = f.readline().strip().split(',')
-    hosts = []
-    for line in f:
-        hosts.append(dict(zip(header, line.strip().split(','))))
-    f.close()
-    for h in hosts:
-        password = None
-        n_host = schema.Host()
-        n_host.note = []
-        n_host.type = 1
-        n_host.remove = False
-        for i in h:
-            if str(i).upper() == 'Name'.upper():
-                n_host.name = h[i]
-            elif str(i).upper() == 'IP'.upper():
-                n_host.ip, n_host.tcp_port = str(h[i]).split(':')
-                if not n_host.tcp_port:
-                    n_host.tcp_port = 22
-                else:
-                    n_host.tcp_port = int(n_host.tcp_port)
-            elif str(i).upper() == 'Password'.upper():
-                password = h[i]
-            elif str(i).upper() == 'Login'.upper():
-                n_host.default_login = h[i]
-            elif str(i).upper() == 'IPMI'.upper():
-                n_host.ilo = h[i]
-            elif str(i).upper() == 'Protocol'.upper():
-                with schema.db_select(param.engine) as db:
-                    try:
-                        n_host.connection_type = db.query(schema.ConnectionType). \
-                            filter(func.upper(schema.ConnectionType.name) == func.upper(h[i])).one().id
-                    except sqlalchemy.orm.exc.NoResultFound:
-                        n_host.connection_type = None
-            elif str(i).upper() == 'Vendor'.upper():
-                with schema.db_select(param.engine) as db:
-                    try:
-                        n_host.ilo_type = db.query(schema.IPMIType). \
-                            filter(func.upper(schema.IPMIType.vendor) == func.upper(h[i])).one().id
-                    except sqlalchemy.orm.exc.NoResultFound:
-                        n_host.ilo_type = None
-            elif str(i).split(':')[0].upper() == 'Note'.upper():
-                if len(n_host.note) > 0:
+    created_host = 0
+    updated_host = 0
+    with open(filepath, newline='') as f:
+        reader = csv.DictReader(f, delimiter=',')
+        for row in reader:
+            password = None
+            n_host = schema.Host()
+            n_host.type = 1
+            n_host.remove = False
+            n_host.note = []
+            for indx, val in row.items():
+                if str(indx).upper() == 'Name'.upper():
+                    n_host.name = val
+                if str(indx).upper() == 'IP'.upper():
+                    n_host.ip, n_host.tcp_port = str(val).split(':') if ':' in str(val) else [str(val), 22]
+                if str(indx).upper() == 'Password'.upper():
+                    password = val
+                if str(indx).upper() == 'Folder'.upper():
+                    folder = get_folder_id(param, val, parent=parent, create=True)
+                if str(indx).upper() == 'Login'.upper():
+                    n_host.default_login = val
+                if str(indx).upper() == 'IPMI'.upper():
+                    n_host.ilo = val
+                if str(indx).upper() == 'Protocol'.upper():
+                    with schema.db_select(param.engine) as db:
+                        try:
+                            n_host.connection_type = db.query(schema.ConnectionType). \
+                                filter(func.upper(schema.ConnectionType.name) == func.upper(val)).one().id
+                        except sqlalchemy.orm.exc.NoResultFound:
+                            n_host.connection_type = None
+                if str(indx).upper() == 'Vendor'.upper():
+                    with schema.db_select(param.engine) as db:
+                        try:
+                            n_host.ilo_type = db.query(schema.IPMIType). \
+                                filter(func.upper(schema.IPMIType.vendor) == func.upper(val)).one().id
+                        except sqlalchemy.orm.exc.NoResultFound:
+                            n_host.ilo_type = None
+                if str(indx).split(':')[0].upper() == 'Note'.upper():
+                    if len(n_host.note) > 0:
+                        n_host.note.append("")
+                    n_host.note.append(str(indx).split(':')[1])
+                    n_host.note.append("=" * len(str(indx).split(':')[1]))
                     n_host.note.append("")
-                n_host.note.append(str(i).split(':')[1])
-                n_host.note.append("=" * len(str(i).split(':')[1]))
-                n_host.note.append("")
-                n_host.note.append(h[i])
-        n_host.note = "\n".join(n_host.note)
-        if not n_host.connection_type:
-            with schema.db_select(param.engine) as db:
-                n_host.connection_type = db.query(schema.ConnectionType). \
-                    order_by(schema.ConnectionType.id).first().id
-        if not n_host.file_transfer_type:
-            with schema.db_select(param.engine) as db:
-                n_host.file_transfer_type = db.query(schema.FileTransferType). \
-                    order_by(schema.FileTransferType.id).first().id
-        add_host(param, n_host, password=password, parent=parent)
-        del n_host
+                    n_host.note.append(val)
+            n_host.note = "\n".join(n_host.note)
+            if not n_host.connection_type:
+                with schema.db_select(param.engine) as db:
+                    n_host.connection_type = db.query(schema.ConnectionType). \
+                        order_by(schema.ConnectionType.id).first().id
+            if not n_host.file_transfer_type:
+                with schema.db_select(param.engine) as db:
+                    n_host.file_transfer_type = db.query(schema.FileTransferType). \
+                        order_by(schema.FileTransferType.id).first().id
+            param.log.debug("add_hosts_file: host: {}, parent: {}".format(n_host, folder.parent))
+            if get_host(param, name=n_host.name, ip=n_host.ip):
+                update_host(param, n_host, password=password, parent=folder.id, action=False)
+                updated_host += 1
+            else:
+                add_host(param, n_host, password=password, parent=folder.id, action=False)
+                created_host += 1
+            del n_host
+    with schema.db_edit(param.engine) as db:
+        action = schema.Action(
+            user=param.user_info.uid,
+            action_type=27,
+            date=datetime.datetime.now(),
+            message=f"Загрузка файла: {os.path.basename(filepath)}. Добавлено хостов: {created_host}, Обновлено хостов: {updated_host}"
+        )
+        db.add(action)
+        db.flush()
     return True
 
 
@@ -1937,6 +2000,43 @@ def get_folder_path(param: parameters.Parameters, folder_id: id) -> Dict[int, sc
         folder_id = host.parent
     
     return dict(sorted(path.items(), reverse=True))
+
+def get_folder_id(param: parameters.WebParameters, folder: str, parent=0, create=False) -> schema.Host:
+    """
+    Возвращает ID директории, при create=True и отсутствии директории создаст директорию.
+    """
+    result = None
+    path = folder.split('/')
+    param.log.debug(f"get_folder_id: path: {path}")
+    if path[0] == '':
+        _parent = 0
+        path.pop(0)
+    else:
+        _parent = parent
+
+    while len(path) != 0:
+        param.log.debug(f"get_folder_id: path: {path}")
+        folder_name = path.pop(0)
+        result = get_host(param, name=folder_name, parent=_parent)
+        param.log.debug(f"get_folder_id: get_host: {result}")
+        if not result and create:
+            result = add_folder(
+                param, 
+                {
+                    'name': folder_name,
+                    'describe': '',
+                    'parent': _parent,
+                    'prefix': None,
+                    'note': ''
+                },
+                action=False
+            )
+        if not result and not create:
+            return None
+        param.log.debug(f"get_folder_id: result: {result}")
+        _parent = result.id
+    
+    return result
 
 
 if __name__ == '__main__':

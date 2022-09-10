@@ -135,28 +135,6 @@
       - head
   register: _alembic_upgrade_head
 
-# - name: Create pyRMA SCHEME
-#   become: true
-#   become_user: "{{ app_user }}"
-#   ansible.builtin.command:
-#     argv:
-#       - /usr/bin/python3
-#       - "{{ app_folder }}/lib/pyrmalib/schema.py"
-#       - "--user"
-#       - "{{ pyrma_database.username }}"
-#       - "--password"
-#       - "{{ pyrma_database.password }}"
-#       - "--db"
-#       - "{{ pyrma_database.name }}"
-#       - "--host"
-#       - "{{ pyrma_database.host }}"
-#       - "--port"
-#       - "{{ pyrma_database.port }}"
-#       - install
-#   register: _create_scheme
-#   failed_when: _create_scheme.rc != 0 and _create_scheme.rc != 99
-#   changed_when: _create_scheme.rc == 0
-
 - name: Add pyrma.sh to /etc/shells
   become: true
   ansible.builtin.lineinfile:
