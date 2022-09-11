@@ -27,10 +27,4 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.alter_column(
-        'ilo_type',
-        'name',
-        existing_type=sa.String(length=256),
-        type_=sa.String(length=10),
-        existing_nullable=False
-    )
+    pass

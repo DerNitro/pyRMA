@@ -26,6 +26,8 @@
 </div>
 <hr>
 {% endif %}
+<a href="/hosts">/</a>{% for k, v in path.items() %}<a href="/hosts/{{ v.id }}">{{v.name}}</a>/{% endfor %}
+<hr>
 {% if (admin or EditDirectory) and directory_id > 0 and jump_form %}
 <div class="addJump">
     <details>
@@ -61,13 +63,7 @@
 {% endif %}
 {% if note %}
 <div class="note_folder">
-    <details>
-        <summary>Note</summary>
-        {% for key, value in note.items()|sort() %}
-            <h5>{{ key }}</h5>
-            <p>{{ value }}</p>
-        {% endfor %}
-    </details>
+    {{ note | safe }}
 </div>
 <hr>
 {% endif %}

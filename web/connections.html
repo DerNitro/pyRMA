@@ -11,7 +11,7 @@
 <form action="/connection" method="POST" name="change_date">
     {{ filter_field.csrf_token }}
     <p>
-        {{ filter_field.date() }} {{ filter_field.sub() }}
+        Период с {{ filter_field.date_start() }} по {{ filter_field.date_end() }} {{ filter_field.sub() }}
     </p>
 </form>
 <hr>

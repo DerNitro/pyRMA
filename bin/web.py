@@ -18,7 +18,7 @@
    limitations under the License.
 """
 import datetime
-import json
+import markdown
 
 from flask import Flask, render_template, request, redirect, session, url_for, send_from_directory
 from flask_wtf.csrf import CSRFProtect
@@ -136,8 +136,12 @@ def connections():
         return render_template(siteMap['access_denied'])
 
     if request.method == 'POST' and filter_field.validate_on_submit():
-        message = "Подключения за {}".format(filter_field.date.data)
-        connection = applib.get_connections(webParameters,date=filter_field.date.data)
+        message = f"Подключения за период с {filter_field.date_start.data} по {filter_field.date_end.data}"
+        connection = applib.get_connections(
+            webParameters,
+            date_start=filter_field.date_start.data,
+            date_end=filter_field.date_end.data
+        )
     else:
         message = 'Подключения за последние сутки'
         connection = applib.get_connections(webParameters)
@@ -311,7 +315,7 @@ def hosts(directory_id=None):
         group = None
     host_list = applib.get_host_list(webParameters, directory_id)
     if folder and folder.note:
-        note = json.loads(folder.note)
+        note = markdown.markdown(folder.note)
     else:
         note = None
     return render_template(
@@ -323,6 +327,7 @@ def hosts(directory_id=None):
         jump_form=jump_form,
         search=search_field,
         group=group,
+        path=applib.get_folder_path(webParameters, directory_id),
         group_form=group_form,
         directory_id=directory_id,
         EditHostInformation=edit_host_information,
@@ -461,6 +466,7 @@ def add_host(directory_id):
             os.mkdir('/tmp/pyRMA')
         f.save(os.path.join('/tmp/pyRMA', filename))
         try:
+            webParameters.log.debug("web.py: add_host(POST FILE)")
             applib.add_hosts_file(webParameters, os.path.join('/tmp/pyRMA', filename), parent=directory_id)
             status = "Узлы добавлены"
             return redirect(url_for('hosts', directory_id=directory_id))
@@ -580,9 +586,11 @@ def host(host_id):
     group_form = forms.AddHostGroup()
     connection_filter = forms.ConnectionFilter()
 
-    cdate = None
+    c_start_date = None
+    c_end_date = None
     if request.method == 'POST' and connection_filter.validate_on_submit():
-        cdate = connection_filter.date.data
+        c_start_date = connection_filter.date_start.data
+        c_end_date = connection_filter.date_end.data
     
     if applib.get_group_host(webParameters):
         group_form.name.choices = [(t.id, t.name) for t in applib.get_group_host(webParameters)]
@@ -590,7 +598,12 @@ def host(host_id):
         group_form = False
     
     object_host = applib.get_host(webParameters, host_id=host_id)
-    content_host = applib.get_content_host(webParameters, host_id, connection_date=cdate)
+    content_host = applib.get_content_host(
+        webParameters,
+        host_id,
+        connection_date_start=c_start_date,
+        connection_date_end=c_end_date
+    )
     show_host_info = access.check_access(webParameters, 'ShowHostInformation', h_object=object_host)
     admin = webParameters.user_info.admin
     if show_host_info or admin:
@@ -612,6 +625,7 @@ def host(host_id):
             jump_form=jump_form,
             group_form=group_form,
             search=search_field,
+            path=applib.get_folder_path(webParameters, object_host.parent),
             connection_filter=connection_filter,
             username=webParameters.user_info.login,
             acs_ip=webParameters.app_ip_address
@@ -1096,14 +1110,16 @@ def administrate_user(uid):
     connection_filter = forms.ConnectionFilter()
     user_form = forms.User()
 
-    cdate = None
+    c_start_date = None
+    c_end_date = None
     if request.method == 'POST' and connection_filter.validate_on_submit():
-        cdate = connection_filter.date.data
+        c_start_date = connection_filter.date_start.data
+        c_end_date = connection_filter.date_end.data
 
     if request.method == 'POST' and user_form.validate_on_submit():
         applib.user_edit(webParameters, uid, user_form.name.data, user_form.email.data, user_form.ip.data)
 
-    content = applib.get_user(webParameters, uid, connection_date=cdate)
+    content = applib.get_user(webParameters, uid, connection_date_start=c_start_date, connection_date_end=c_end_date)
     user_form.email.data = content['user'].email
     user_form.ip.data = content['user'].ip
     user_form.name.data = content['user'].full_name
