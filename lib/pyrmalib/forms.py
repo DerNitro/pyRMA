@@ -28,7 +28,7 @@ from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileRequired
 from wtforms import StringField, SubmitField, TextAreaField, SelectField, IntegerField, BooleanField, PasswordField
 from wtforms.fields.datetime import DateField
-from wtforms.validators import DataRequired, IPAddress, NumberRange, EqualTo, Email, ValidationError
+from wtforms.validators import DataRequired, IPAddress, NumberRange, ValidationError
 
 
 def ip_net_check(form, field):
@@ -66,6 +66,7 @@ class EditFolder(FlaskForm):
 
 class EditHost(FlaskForm):
     name = StringField('Имя', validators=[DataRequired()])
+    folder = SelectField('Директория')
     ip = StringField('IP адрес', validators=[DataRequired(), IPAddress()])
     port = IntegerField('Порт', validators=[NumberRange(min=0, max=65536)])
     connection_type = SelectField('Протокол подключения')

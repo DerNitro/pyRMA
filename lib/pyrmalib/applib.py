@@ -605,6 +605,25 @@ def get_ilo_type(param: parameters.WebParameters, ipmi_id=None, raw=False):
         return [(None, 'Нет')] + [(t.id, t.name) for t in ilo_type]
 
 
+def get_folders(param: parameters.WebParameters, raw=False):
+    with schema.db_select(param.engine) as db:
+        folders = db.query(schema.Host).filter(schema.Host.type == 2, schema.Host.remove == False).all()
+    if raw:
+        return folders
+    else:
+        result = []
+        for f in folders:
+            folder_path = get_folder_path(param, f.id)
+            folder_path_string = ""
+            for k, v in folder_path.items():
+                folder_path_string += "/"
+                folder_path_string += v.name
+            result.append(tuple((f.id, folder_path_string)))
+            result.sort(key = lambda i: i[1])
+
+        return result
+
+
 def get_service_type(param: parameters.Parameters, service_type_id=None, raw=False):
     with schema.db_select(param.engine) as db:
         if service_type_id:
@@ -1587,6 +1606,7 @@ def edit_host(param: parameters.WebParameters, d, host_id):
         host = db.query(schema.Host).filter(schema.Host.id == host_id).one()
         host.name = d['name']
         host.ip = d['ip']
+        host.parent = d['parent']
         host.connection_type = d['connection_type']
         host.file_transfer_type = d['file_transfer_type']
         host.describe = d['describe']
@@ -1610,18 +1630,23 @@ def edit_host(param: parameters.WebParameters, d, host_id):
     return True
 
 
-def delete_folder(param: parameters.WebParameters, host_id):
+def delete_folder(param: parameters.WebParameters, host_id, action=True):
     with schema.db_edit(param.engine) as db:
         d_host = db.query(schema.Host).filter(schema.Host.id == host_id).one()
         d_host.remove = True
-        action = schema.Action(
-            user=param.user_info.uid,
-            action_type=12,
-            date=datetime.datetime.now(),
-            message="Удаление директории: {folder.name} - id={folder.id}".format(folder=d_host)
-        )
-        db.add(action)
+        if action:
+            action = schema.Action(
+                user=param.user_info.uid,
+                action_type=12,
+                date=datetime.datetime.now(),
+                message="Удаление директории: {folder.name} - id={folder.id}".format(folder=d_host)
+            )
+            db.add(action)
         db.flush()
+
+        child_folder = db.query(schema.Host).filter(schema.Host.parent == host_id, schema.Host.type == 2).all()
+        for f in child_folder:
+            delete_folder(param, f.id, action=False)
 
     return True
 
