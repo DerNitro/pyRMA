@@ -412,7 +412,7 @@ def edit_folder(directory_id):
 
     elif request.method == 'POST' and form.delete_sub.data:
         applib.delete_folder(webParameters, directory_id)
-        status = "Директория удалена"
+        return redirect(url_for('hosts', directory_id=h.parent))
 
     return render_template(
         siteMap['edit_folder'],
@@ -496,6 +496,8 @@ def edit_host(host_id):
     form.connection_type.choices = applib.get_connection_type(webParameters)
     form.file_transfer_type.choices = applib.get_file_transfer_type(webParameters)
     form.ilo_type.choices = applib.get_ilo_type(webParameters)
+    form.folder.choices = applib.get_folders(webParameters)
+    # webParameters.log.debug(f"form.folder.choices: {form.folder.choices}")
     error = None
     status = None
 
@@ -515,11 +517,13 @@ def edit_host(host_id):
             form.connection_type.process_data(h.connection_type)
             form.file_transfer_type.process_data(h.file_transfer_type)
             form.ilo_type.process_data(h.ilo_type)
+            form.folder.process_data(h.parent)
 
     if request.method == 'POST' and form.edit_sub.data:
         d = {
             'name': form.name.data,
             'ip': form.ip.data,
+            'parent': form.folder.data,
             'port': form.port.data,
             'connection_type': form.connection_type.data,
             'file_transfer_type': form.file_transfer_type.data if form.file_transfer_type.data != 'None' else sql.null(),
