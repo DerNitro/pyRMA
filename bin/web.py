@@ -179,6 +179,7 @@ def connection(connection_id=None):
     search_field = forms.Search()
 
     content = applib.get_connection(webParameters, connection_id)
+    command_list = applib.get_stdin_command(webParameters, connection_id)
 
     if not webParameters.user_info.admin \
         and not applib.access.check_access(webParameters, 'ShowAllSession', h_object=content['host']):
@@ -189,7 +190,8 @@ def connection(connection_id=None):
         admin=webParameters.user_info.admin,
         search=search_field,
         username=webParameters.user_info.login,
-        content=content
+        content=content,
+        command_list=command_list
     )
 
 

@@ -100,6 +100,13 @@
 {% endfor %}
 </table>
 {% endif %}
+{% if content['connection'].connection_type == 1 %}
+<hr>
+<details>
+    <summary>Введенные команды</summary>
+    <code><pre>{{ command_list }}</pre></code>
+</details>
+{% endif %}
 <hr>
 <center>
     <div id="tty"></div>
