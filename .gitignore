@@ -1,5 +1,6 @@
 ansible/inventory.yml
 venv
+test
 .*
 *.pyc
 *~

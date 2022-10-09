@@ -25,7 +25,7 @@ import ast
 
 from sqlalchemy.orm import aliased
 
-from pyrmalib import schema, utils, parameters, error, access, forms
+from pyrmalib import schema, utils, parameters, error, access, forms, rec_file
 from functools import wraps
 import hashlib
 import sqlalchemy
@@ -232,9 +232,6 @@ def get_stdin_command(param: parameters.Parameters, id) -> str:
     """
     Возвращает список команд введенных в сессии
     """
-    result = []
-    string_line = []
-    cursor_line = 0
 
     with schema.db_select(param.engine) as db:
         record = db.query(schema.Connection, schema.Session).filter(
@@ -242,34 +239,10 @@ def get_stdin_command(param: parameters.Parameters, id) -> str:
                 schema.Connection.id == id
             ).one()
         _, session = record
-    
-    record_file = open(os.path.join(param.data_dir, session.ttyrec), 'r')
-    for line in record_file:
-        line = ast.literal_eval(line)
-        if isinstance(line, list) and line[1] == "i":
-            if line[2] == '\r' and len(string_line) != 0:
-                if len(str("".join(string_line)).strip()) != 0:
-                    result.append("".join(string_line))
-                string_line.clear()
-                cursor_line = 0
-            elif line[2] in ['\u001bOB', '\u001bOA']:
-                pass
-            elif line[2] == '\u001b[H':
-                cursor_line = 0
-            elif line[2] == '\u001b[F':
-                cursor_line = len(string_line)
-            elif line[2] == '\u001b[D' and cursor_line > 0:
-                cursor_line -= 1
-            elif line[2] == '\u001b[C' and cursor_line < len(string_line):
-                cursor_line += 1
-            elif line[2] == '\u007f' and len(string_line) > 0:
-                string_line.pop()
-                cursor_line -= 1
-            elif str(line[2]).isprintable() or line[2] == '\t':
-                string_line.insert(cursor_line, line[2])
-                cursor_line += 1
 
-    return "\n".join(result)
+    record_file = rec_file.RecFile(os.path.join(param.data_dir, session.ttyrec))
+
+    return record_file.stdin_to_line()
 
 def get_connection(param: parameters.Parameters, id):
     """
