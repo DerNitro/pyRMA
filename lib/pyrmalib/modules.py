@@ -21,6 +21,7 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 """
+import sys
 from pyrmalib import schema, parameters, applib, utils, error
 import datetime
 from sshtunnel import SSHTunnelForwarder, BaseSSHTunnelForwarderError
@@ -210,7 +211,9 @@ class ConnectionModules(Modules):
         """
         if not applib.tcp_forward_connection_is_active(self.PARAMETERS, self.TCP_FORWARD):
             self.firewall('open')
-        pass
+        
+        print(f'\33]0;{self.HOST.name}\a', end='', flush=True)
+
 
     def firewall(self, state):
         """
