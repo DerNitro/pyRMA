@@ -36,11 +36,6 @@ class MultiLineEditableBoxed(npyscreen.BoxTitle):
     _contained_widget = npyscreen.MultiLineEditable
 
 
-class ButtonLine(npyscreen.FixedText):
-    def display(self, *args, **keywords):
-        self.value = 'Используйте F1 или CTRL + o для просмотра списка команд.'
-
-
 class RecordList(npyscreen.MultiLineAction):
     def display_value(self, vl: schema.Host):
         if type(vl) is schema.Host:
@@ -115,17 +110,25 @@ class RecordList(npyscreen.MultiLineAction):
 
 class HostListDisplay(npyscreen.FormMutt):
     MAIN_WIDGET_CLASS = RecordList
-    COMMAND_WIDGET_CLASS = ButtonLine
     Level = [0]
     History = []
     Filter = ''
     SelectHost = None  # scheme.Host
     HostList = None
 
+    def folder_path(self, host_id):
+        result = []
+        hosts = applib.get_folder_path(appParameters, host_id)
+        for _, host in hosts.items():
+            result.append(host.name)
+
+        appParameters.log.debug(f"HostListDisplay.folder_path - {result}")
+        return '/'.join(result)
+
+
     def beforeEditing(self):
-        self.wStatus1.value = ' {0} - {1} '.format(appParameters.program,
-                                                   appParameters.version)
-        self.wStatus2.value = ' Управление: '
+        self.wStatus1.value = ' Используйте F1 или CTRL + o для просмотра списка команд.'
+        self.wStatus2.value = ' folder: '
         self.keypress_timeout = 1
         self.update_list()
 
@@ -144,6 +147,7 @@ class HostListDisplay(npyscreen.FormMutt):
         )
 
     def update_list(self):
+        self.wCommand.value = f" /{self.folder_path(self.Level[-1])}"
         if self.Level[-1] == 'Find':
             pass
         else:
@@ -176,7 +180,7 @@ class HostListDisplay(npyscreen.FormMutt):
             self.app_exit()
 
         self.wMain.display()
-        self.wCommand.display()
+        self.wCommand.update()
 
     def app_exit(self, *args, **keywords):
         appParameters.log.debug('Выход из интерфейса.')
