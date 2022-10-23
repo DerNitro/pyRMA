@@ -445,9 +445,13 @@ class ConnectionForm(npyscreen.Form):
                 access_list.append('Передача файлов')
             if not self.btn_ipmi.hidden:
                 access_list.append('IPMI')
-            access_form = AccessRequest(name=self.host.name, access_list=access_list)
-            access_form.host = self.host
-            access_form.edit()
+            
+            if applib.check_access_request(appParameters, appParameters.user_info.uid, self.host.id):
+                echo_form('Запрос доступа уже был отправлен ранее')
+            else:
+                access_form = AccessRequest(name=self.host.name, access_list=access_list)
+                access_form.host = self.host
+                access_form.edit()
 
     def file_transfer(self):
         global connection_host
@@ -478,9 +482,13 @@ class ConnectionForm(npyscreen.Form):
                 access_list.append('Передача файлов')
             if not self.btn_ipmi.hidden:
                 access_list.append('IPMI')
-            access_form = AccessRequest(name=self.host.name, access_list=access_list)
-            access_form.host = self.host
-            access_form.edit()
+            
+            if applib.check_access_request(appParameters, appParameters.user_info.uid, self.host.id):
+                echo_form('Запрос доступа уже был отправлен ранее')
+            else:
+                access_form = AccessRequest(name=self.host.name, access_list=access_list)
+                access_form.host = self.host
+                access_form.edit()
 
     def connection_ilo(self):
         global connection_host
@@ -494,9 +502,13 @@ class ConnectionForm(npyscreen.Form):
                 access_list.append('Передача файлов')
             if not self.btn_ipmi.hidden:
                 access_list.append('IPMI')
-            access_form = AccessRequest(name=self.host.name, access_list=access_list)
-            access_form.host = self.host
-            access_form.edit()
+            
+            if applib.check_access_request(appParameters, appParameters.user_info.uid, self.host.id):
+                echo_form('Запрос доступа уже был отправлен ранее')
+            else:
+                access_form = AccessRequest(name=self.host.name, access_list=access_list)
+                access_form.host = self.host
+                access_form.edit()
 
 
 class InformationForm(npyscreen.Form):

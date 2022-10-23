@@ -228,6 +228,19 @@ def get_access_request(param: parameters.WebParameters, acc_id=None):
     return result
 
 
+def check_access_request(param: parameters.WebParameters, user_id: int, host_id: int):
+    # Проверка существующего запроса доступа пользователя к узлу
+    try:
+        with schema.db_select(param.engine) as db:
+            db.query(schema.RequestAccess).filter(
+                schema.RequestAccess.host == host_id, 
+                schema.RequestAccess.user == user_id,
+                schema.RequestAccess.status == 0
+            ).one()
+        return True
+    except NoResultFound:
+        return False
+
 def get_stdin_command(param: parameters.Parameters, id) -> str:
     """
     Возвращает список команд введенных в сессии
