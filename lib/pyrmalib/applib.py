@@ -1206,8 +1206,7 @@ def search(param: parameters.Parameters, query):
                         schema.Host.ip == query,
                         schema.Host.describe.like("%" + query + "%"),
                         schema.Host.note.like("%" + query + "%"))) \
-            .filter(schema.Host.remove.is_(False),
-                    schema.Host.prefix == param.user_info.prefix) \
+            .filter(schema.Host.remove.is_(False), schema.Host.type == 1) \
             .order_by(schema.Host.type.desc()).order_by(schema.Host.name).all()
     return host_list
 
