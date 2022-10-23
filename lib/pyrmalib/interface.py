@@ -113,6 +113,7 @@ class HostListDisplay(npyscreen.FormMutt):
     Level = [0]
     History = []
     Filter = ''
+    FindText = ''
     SelectHost = None  # scheme.Host
     HostList = None
 
@@ -147,10 +148,10 @@ class HostListDisplay(npyscreen.FormMutt):
         )
 
     def update_list(self):
-        self.wCommand.value = f" /{self.folder_path(self.Level[-1])}"
         if self.Level[-1] == 'Find':
-            pass
+            self.wCommand.value = f" FIND: {self.FindText}"
         else:
+            self.wCommand.value = f" /{self.folder_path(self.Level[-1])}"
             if appParameters.user_info.admin:
                 with schema.db_select(appParameters.engine) as db:
                     self.HostList = db.query(schema.Host).filter(schema.Host.parent == self.Level[-1]). \
@@ -223,6 +224,7 @@ class Find(npyscreen.Popup):
         super(Find, self).create()
 
     def adjust_widgets(self):
+        self.owner.FindText = self.FindText.value
         self.owner.HostList = applib.search(appParameters, self.FindText.value)
 
 
