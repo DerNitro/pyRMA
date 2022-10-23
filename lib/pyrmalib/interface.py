@@ -322,9 +322,15 @@ class ConnectionForm(npyscreen.Form):
 
     def __init__(self, *args, **keywords):
         super().__init__(*args, **keywords)
-        self.host = keywords['host']  # type: schema.Host
+        self.host = keywords['host']                                                                # type: schema.Host
         self.name = 'Подключение к узлу: {0}'.format(self.host.name)
         self.add_handlers({'^Q': self.exit_editing})
+        
+        if not self.host.default_login:
+            self.host.default_login = 'user'
+        if not self.host.default_password:
+            self.host.default_password = ''
+
         self.fill_values()
 
     def create(self):
@@ -367,8 +373,7 @@ class ConnectionForm(npyscreen.Form):
             self.password.value = '*' * len(self.login_password.password)
         else:
             self.login.value = self.host.default_login
-            if self.host.default_password is not None:
-                self.password.value = '*' * len(self.host.default_password)
+            self.password.value = '*' * len(self.host.default_password)
         services = applib.get_service(appParameters, self.host.id)
         service_types = applib.get_service_type(appParameters, raw=True)
         if access.check_access(appParameters, 'EditCredential', h_object=self.host):
