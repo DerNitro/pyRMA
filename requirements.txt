@@ -13,3 +13,5 @@ pysftp==0.2.9
 checksumdir==1.2.0
 markdown==3.4.1
 alembic==1.8.1
+Flask-RESTful==0.3.9
+Flask-HTTPAuth==4.7.0
