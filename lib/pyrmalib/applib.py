@@ -1476,6 +1476,7 @@ def add_service_type(param: parameters.WebParameters, name, default_port):
 
 
 def add_hosts_file(param: parameters.WebParameters, filepath: str, parent=0):
+    # TODO: Оптимизировать загрузку хостов
     if not os.path.isfile(filepath):
         raise error.WTF("Отсутствует файл на загрузку")
     created_host = 0
@@ -1548,7 +1549,7 @@ def add_hosts_file(param: parameters.WebParameters, filepath: str, parent=0):
         )
         db.add(action)
         db.flush()
-    return True
+    return created_host, updated_host
 
 
 def add_jump(param: parameters.WebParameters, r):

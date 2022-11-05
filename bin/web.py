@@ -22,7 +22,8 @@ import markdown
 
 from flask import Flask, render_template, request, redirect, session, url_for, send_from_directory
 from flask_wtf.csrf import CSRFProtect
-from pyrmalib import schema, parameters, applib, access, forms, error as rma_error
+from flask_restful import Api
+from pyrmalib import api as rma_api, schema, parameters, applib, access, forms, error as rma_error
 import os
 import pwd
 from sqlalchemy import create_engine, sql
@@ -51,6 +52,10 @@ else:
     app.debug = False
 csrf = CSRFProtect()
 csrf.init_app(app)
+
+api = Api(app, decorators=[csrf.exempt])
+api.add_resource(rma_api.Monitoring, '/api/monitor')
+api.add_resource(rma_api.HostUpload, '/api/host/upload')
 
 # Создание пользователя администратор.
 pw_name, pw_passwd, pw_uid, pw_gid, pw_gecos, pw_dir, pw_shell = pwd.getpwuid(os.getuid())
