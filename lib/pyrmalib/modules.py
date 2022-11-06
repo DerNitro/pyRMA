@@ -88,9 +88,7 @@ class ConnectionModules(Modules):
             db.refresh(connection)
             self.connection_id = connection.id
 
-        self.JUMP = applib.get_jump_host(self.PARAMETERS, self.HOST.id) \
-            if applib.get_jump_host(self.PARAMETERS, self.HOST.id) \
-                else applib.get_jump_host(self.PARAMETERS, self.HOST.parent)
+        self.JUMP = applib.get_jump_host(self.PARAMETERS, self.HOST.id)
 
         # Строка информации о подключении
         print('=================== pyRMA ===================')

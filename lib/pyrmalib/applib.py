@@ -421,7 +421,7 @@ def get_content_host(param: parameters.WebParameters, host_id, connection_date_s
         date_start=connection_date_start,
         date_end=connection_date_end
     )
-    content['id'] = host_id
+    content['id'] = int(host_id)
     content['deleted'] = host.remove
     content['proxy'] = host.proxy
     content['name'] = host.name
@@ -688,17 +688,29 @@ def get_jump_hosts(param: parameters.WebParameters):
     return [(t.id, t.name) for t in jump_hosts]
 
 
-def get_jump_host(param: parameters.WebParameters, host_id) -> schema.Host:
-    try:
-        with schema.db_select(param.engine) as db:
-            _, jump = db.query(schema.JumpHost, schema.Host).join(schema.Host, schema.Host.id == schema.JumpHost.jump). \
-                filter(schema.JumpHost.host == host_id).one()
-    except NoResultFound:
-        jump = None
-    except MultipleResultsFound:
-        raise error.WTF("Дубли Jump в таблице jump!!!")
+def get_jump_host(param: parameters.WebParameters, host_id, schema_jump_host=False) -> schema.Host:
+    host_id_ = host_id
+    while True:
+        try:
+            with schema.db_select(param.engine) as db:
+                jump_host, jump = db.query(schema.JumpHost, schema.Host).join(schema.Host, schema.Host.id == schema.JumpHost.jump). \
+                    filter(schema.JumpHost.host == host_id_).one()
 
-    return jump
+            break
+        except NoResultFound:
+            if host_id_ == 0:
+                jump_host = None
+                jump = None
+                break
+            else:
+                host = get_host(param, host_id=host_id_)
+                host_id_ = host.parent
+        except MultipleResultsFound:
+            raise error.WTF("Дубли Jump в таблице jump!!!")
+    if schema_jump_host:
+        return jump, jump_host
+    else:
+        return jump
 
 
 def get_group(param: parameters.WebParameters, group_id):
