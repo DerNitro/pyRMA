@@ -77,7 +77,7 @@ class EditHost(FlaskForm):
     default_login = StringField('Логин')
     default_password = StringField('Пароль')
     note = TextAreaField('Note')
-    proxy = BooleanField('Прокси-сервер')
+    proxy = BooleanField('Jump-хост')
     add_sub = SubmitField('Добавить')
     edit_sub = SubmitField('Изменить')
     delete_sub = SubmitField('Удалить')

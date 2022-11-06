@@ -33,7 +33,7 @@
         </form>
         <form action="/host/{{ content['id'] }}" method="POST">
             {{ jump_form.csrf_token }}
-            <p>{% if jump %} Текущий Jump хост: {{ jump.name }} {{ jump_form.clear_sub() }} {% endif %}</p>
+            <p>{% if jump %} Текущий Jump хост: {{ jump.name }} {% if jump_host.host == content['id'] %} {{ jump_form.clear_sub() }}  {% endif %} {% endif %}</p>
         </form>
     </details>
 </div>

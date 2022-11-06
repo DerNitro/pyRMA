@@ -325,12 +325,16 @@ def hosts(directory_id=None):
         note = markdown.markdown(folder.note)
     else:
         note = None
+
+    jump, jump_host = applib.get_jump_host(webParameters, directory_id, schema_jump_host=True)
+
     return render_template(
         siteMap['hosts'],
         admin=admin,
         host_list=host_list,
         note=note,
-        jump = applib.get_jump_host(webParameters, directory_id),
+        jump=jump,
+        jump_host=jump_host,
         jump_form=jump_form,
         search=search_field,
         group=group,
@@ -617,6 +621,7 @@ def host(host_id):
     )
     show_host_info = access.check_access(webParameters, 'ShowHostInformation', h_object=object_host)
     admin = webParameters.user_info.admin
+    jump, jump_host = applib.get_jump_host(webParameters, host_id, schema_jump_host=True)
     if show_host_info or admin:
         return render_template(
             siteMap['host'],
@@ -632,7 +637,8 @@ def host(host_id):
                 h_object=object_host
             ) or webParameters.user_info.admin,
             content=content_host,
-            jump = applib.get_jump_host(webParameters, host_id),
+            jump=jump,
+            jump_host=jump_host,
             jump_form=jump_form,
             group_form=group_form,
             search=search_field,
