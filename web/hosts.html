@@ -77,7 +77,7 @@
         {% else %}
         <td width="25%"><a href="/hosts/{{ host.id }}"><b>{{ host.name }}</b></a></td>
         {% endif %}
-        <td>{{ host.describe }}</td>
+        <td>{% if host.describe %} {{ host.describe }} {% endif %}</td>
     {% else %}
         Нет хостов для отображения
     </tr>

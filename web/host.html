@@ -73,7 +73,7 @@
 </tr>
 <tr>
     <td style="width: 450px;">IPMI</td>
-    <td style="width: 550px;">{{ content['ilo_type'] }}: {{ content['ilo'] }}</td>
+    <td style="width: 550px;">{% if content['ilo_type'] %}{{ content['ilo_type'] }}: {{ content['ilo'] }} {% endif %}</td>
 </tr>
 <tr>
     <td style="width: 450px;">Login</td>
