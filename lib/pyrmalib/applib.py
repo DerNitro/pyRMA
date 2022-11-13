@@ -1213,11 +1213,11 @@ def search(param: parameters.Parameters, query):
     """
     with schema.db_select(param.engine) as db:
         host_list = db.query(schema.Host) \
-            .filter(or_(schema.Host.name.like("%" + query + "%"),
+            .filter(or_(schema.Host.name.ilike("%" + query + "%"),
                         schema.Host.ilo == query,
                         schema.Host.ip == query,
-                        schema.Host.describe.like("%" + query + "%"),
-                        schema.Host.note.like("%" + query + "%"))) \
+                        schema.Host.describe.ilike("%" + query + "%"),
+                        schema.Host.note.ilike("%" + query + "%"))) \
             .filter(schema.Host.remove.is_(False), schema.Host.type == 1) \
             .order_by(schema.Host.type.desc()).order_by(schema.Host.name).all()
     return host_list
