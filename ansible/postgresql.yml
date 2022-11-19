@@ -26,6 +26,13 @@
         state: started
         enabled: yes
 
+    - name: Set max_connections for PostgreSQL
+      ansible.builtin.lineinfile:
+        path: /etc/postgresql/12/main/postgresql.conf
+        regexp: '^max_connections'
+        line: "max_connections = {{ postgres_max_connections | default('100') }}"
+      notify: Restart postgresql.service
+
     - name: Create a new database with name {{ pyrma_database.name }}
       become_user: postgres
       community.postgresql.postgresql_db:
