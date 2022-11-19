@@ -321,6 +321,7 @@ class ConnectionForm(npyscreen.Form):
     btn_file_transfer = None
     btn_ipmi = None
     button_line_relx = 0
+    PRESERVE_SELECTED_WIDGET_DEFAULT = True
 
     def __init__(self, *args, **keywords):
         super().__init__(*args, **keywords)
@@ -343,11 +344,10 @@ class ConnectionForm(npyscreen.Form):
         self.login = self.add(npyscreen.TitleText, name='Login', hidden=True)
         self.password = self.add(npyscreen.TitlePassword, name='Password', hidden=True)
         self.save_pass = self.add(npyscreen.MultiSelect, max_height=2, values=["Сохранить пароль?"], hidden=True)
-        self.service = self.add(npyscreen.BoxTitle, name='Service', max_height=7)
-        self.add(npyscreen.FixedText)
+        self.add(npyscreen.FixedText, hidden=True)
         self.btn_connection = self.add(
             npyscreen.ButtonPress, name='Подключение',
-            when_pressed_function=self.connection
+            when_pressed_function=self.connection, w_id=100
         )
         self.button_line_relx += self._widgets__[-1].label_width + 2
         self.btn_file_transfer = self.add(
@@ -364,6 +364,8 @@ class ConnectionForm(npyscreen.Form):
             relx=self.button_line_relx,
             when_pressed_function=self.connection_ilo,
             hidden=True)
+        self.add(npyscreen.FixedText, hidden=True)
+        self.service = self.add(npyscreen.BoxTitle, name='Service', max_height=7)
         pass
 
     def fill_values(self):
@@ -405,6 +407,13 @@ class ConnectionForm(npyscreen.Form):
                     )
                 )
             self.service.values = service_string_list
+        
+        for n in list(range(0, len(self._widgets__))):
+            if self._widgets__[n].editable and not self._widgets__[n].hidden:
+                if self.get_widget(100) == self._widgets__[n]:
+                    self.editw = n
+                    break
+
         self.DISPLAY()
         pass
 
