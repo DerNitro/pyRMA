@@ -1514,6 +1514,11 @@ def add_hosts_file(param: parameters.WebParameters, filepath: str, parent=0):
                     n_host.default_login = val
                 if str(indx).upper() == 'IPMI'.upper():
                     n_host.ilo = val
+                if str(indx).upper() == 'Jump'.upper():
+                    if isinstance(val, str) and len(val) > 0:
+                        jump_host = val
+                    else:
+                        jump_host = None
                 if str(indx).upper() == 'Protocol'.upper():
                     with schema.db_select(param.engine) as db:
                         try:
@@ -1546,11 +1551,13 @@ def add_hosts_file(param: parameters.WebParameters, filepath: str, parent=0):
                         order_by(schema.FileTransferType.id).first().id
             param.log.debug("add_hosts_file: host: {}, parent: {}".format(n_host, folder.parent))
             if get_host(param, name=n_host.name, ip=n_host.ip):
-                update_host(param, n_host, password=password, parent=folder.id, action=False)
+                result = update_host(param, n_host, password=password, parent=folder.id, action=False)
                 updated_host += 1
             else:
-                add_host(param, n_host, password=password, parent=folder.id, action=False)
+                result = add_host(param, n_host, password=password, parent=folder.id, action=False)
                 created_host += 1
+            if jump_host:
+                jump = get_host()
             del n_host
     with schema.db_edit(param.engine) as db:
         action = schema.Action(
