@@ -683,7 +683,7 @@ def get_jump_hosts(param: parameters.WebParameters):
         jump_hosts = db.query(schema.Host).filter(
             schema.Host.proxy.is_(True),
             schema.Host.remove.is_(False)
-        ).all()
+        ).order_by(schema.Host.name).all()
 
     return [(t.id, t.name) for t in jump_hosts]
 
