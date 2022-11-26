@@ -1415,7 +1415,7 @@ def add_host(param: parameters.WebParameters, host: schema.Host, parent=0, passw
     
     return host
 
-def update_host(param: parameters.WebParameters, host: schema.Host, parent=0, password=None, action=True):
+def update_host(param: parameters.WebParameters, host: schema.Host, parent=0, password=None, action=True) -> schema.Host:
     with schema.db_edit(param.engine) as db:
         upd_host = db.query(schema.Host).filter(
                     schema.Host.name == host.name,
@@ -1514,6 +1514,14 @@ def add_hosts_file(param: parameters.WebParameters, filepath: str, parent=0):
                     n_host.default_login = val
                 if str(indx).upper() == 'IPMI'.upper():
                     n_host.ilo = val
+                if str(indx).upper() == 'Jump'.upper():
+                    if isinstance(val, str) and len(val) > 0:
+                        jump_host = val
+                    else:
+                        jump_host = None
+                if str(indx).upper() == 'IsJump'.upper():
+                    if isinstance(val, str) and len(val) > 0:
+                        n_host.proxy = True
                 if str(indx).upper() == 'Protocol'.upper():
                     with schema.db_select(param.engine) as db:
                         try:
@@ -1546,11 +1554,16 @@ def add_hosts_file(param: parameters.WebParameters, filepath: str, parent=0):
                         order_by(schema.FileTransferType.id).first().id
             param.log.debug("add_hosts_file: host: {}, parent: {}".format(n_host, folder.parent))
             if get_host(param, name=n_host.name, ip=n_host.ip):
-                update_host(param, n_host, password=password, parent=folder.id, action=False)
+                result = update_host(param, n_host, password=password, parent=folder.id, action=False)
                 updated_host += 1
             else:
-                add_host(param, n_host, password=password, parent=folder.id, action=False)
+                result = add_host(param, n_host, password=password, parent=folder.id, action=False)
                 created_host += 1
+            if jump_host:
+                jumps = get_jump_hosts(param)
+                for a, b in jumps:
+                    if jump_host.lower() == str(b).lower():
+                        add_jump(param, {'host': result.id, 'jump': a}, action=False)
             del n_host
     with schema.db_edit(param.engine) as db:
         action = schema.Action(
@@ -1564,7 +1577,7 @@ def add_hosts_file(param: parameters.WebParameters, filepath: str, parent=0):
     return created_host, updated_host
 
 
-def add_jump(param: parameters.WebParameters, r):
+def add_jump(param: parameters.WebParameters, r, action=True):
     with schema.db_edit(param.engine) as db:
         db.query(schema.JumpHost).filter(schema.JumpHost.host == r['host']).delete()
         jump = schema.JumpHost(
@@ -1574,15 +1587,15 @@ def add_jump(param: parameters.WebParameters, r):
         db.add(jump)
         db.flush()
         db.refresh(jump)
-
-        action = schema.Action(
-            user=param.user_info.uid,
-            action_type=25,
-            date=datetime.datetime.now(),
-            message="Добавлен Jump хост: {jump.host} - id={jump.id}({jump})".format(jump=jump)
-        )
-        db.add(action)
-        db.flush()
+        if action:
+            action = schema.Action(
+                user=param.user_info.uid,
+                action_type=25,
+                date=datetime.datetime.now(),
+                message="Добавлен Jump хост: {jump.host} - id={jump.id}({jump})".format(jump=jump)
+            )
+            db.add(action)
+            db.flush()
     return True
 
 
