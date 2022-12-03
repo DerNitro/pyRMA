@@ -642,6 +642,7 @@ def get_folders(param: parameters.WebParameters, raw=False):
         return folders
     else:
         result = []
+        result.append(tuple((0, '/')))
         for f in folders:
             folder_path = get_folder_path(param, f.id)
             folder_path_string = ""
