@@ -158,6 +158,8 @@ def password(passwd, magic, mask=True):
     c_h = 'PQRabc=>?@[\]defghijkopqJKLrstuv&\'wxy234789!"#$%()*+z01,-./:;<}~ABCDlmnEFGHI56MNOST^_`{|UVWXYZ'
     result = ''
     magic = list(str(magic))
+    if not passwd:
+        return ""
     if set(passwd).issubset(set(c_h)):
         if mask:
             passwd = list(passwd)

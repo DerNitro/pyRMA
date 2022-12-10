@@ -35,7 +35,7 @@ import psutil
 
 __author__ = 'Sergey Utkin'
 __email__ = 'utkins01@gmail.com'
-__version__ = "1.1.4"
+__version__ = "1.2.0"
 __status__ = "stable"
 __maintainer__ = "Sergey Utkin"
 __copyright__ = "Copyright 2016, Sergey Utkin"

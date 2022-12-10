@@ -33,6 +33,9 @@ pyRMA
 
 **Возможные переменные**:
 
+.. warning::
+  Изменение переменной **postgres_max_connections** приведет к перезапуску СУБД
+
 * **deploy_user**: Пользователь под которым проводится установка ACS
 * **app_user**: локальный пользователь, по умолчанию 'acs'
 * **app_user_password**: пароль локального пользователя, по умолчанию 'admin'
@@ -50,6 +53,7 @@ pyRMA
     * **username**: Имя пользователя для подключения к базе данных, по умолчанию 'acs'
     * **password**: Пароль пользователя, для подключения к базе данных, по умолчанию 'acs'
 * **install_postgresql**: Флаг установки СУБД PostgreSQL, принимает значения yes/no
+* **postgres_max_connections**: Максимальное число подключений к СУБД PostgreSQL, по умолчанию 100
 * **email_smtp_host**: SMPT сервер, по умолчанию 'localhost'
 * **email_smtp_port**: Порт SMPT сервера, по умолчанию '25'
 * **email_send_from**: Имя пользователя под которым будут отправляться сообщения, по умолчанию 'acs@localhost'
@@ -122,6 +126,8 @@ Window/Translation/Enable VT100 line drawing even in UTF-8 mode
 * **IPMI**: IP адрес интерфейса управления
 * **Protocol**: протокол подключения, доступные значения SSH|TELNET
 * **Vendor**: вендор IPMI, ВНИМАНИЕ!!! должен быть создан в системе
+* **Jump**: имя узла, который будет является промежуточным для подключения.
+* **IsJump**: Флаг, обозначающий, что данный узел является Jump. Если поле заполнено то узел заносится в список промежуточных узлов.
 * **Note:<Topic>**: Дополнительная информация о узле
 
 **Пример:**
@@ -133,4 +139,33 @@ Window/Translation/Enable VT100 line drawing even in UTF-8 mode
     jump.vbox.local,192.168.56.11:22,222222,VirtualBox,Ubuntu 20.04,,user,password,
     mysql.vbox.local,192.168.56.12:22,333333,VirtualBox,Ubuntu 20.04,,user,password,
     psql.vbox.local,192.168.56.13:22,333333,VirtualBox,Ubuntu 20.04,,user,password,
+
+API
+===
+
+Для использования API требуется HTTP авторизация, так же пользователь должен иметь права администратора
+
+api/monitor
+-----------
+
+Получение статуса о:
+
+1. Активных подключениях 
+2. Регистрации новых пользователей
+3. Регистрации новых запросов доступа
+
+.. code-block::
+
+  curl -u user:password -X GET http://pyrma:8080/api/monitor
+
+api/host/upload
+---------------
+
+Загрузка данных хостов из CSV файла.
+
+**Пример загрузки файла upload_file.csv**
+
+.. code-block::
+
+  curl -u user:password -X POST -H "Content-Type: multipart/form-data" -F 'file=@upload_file.csv' http://pyrma:8080/api/host/upload
 

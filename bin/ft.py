@@ -40,7 +40,7 @@ import signal
 
 __author__ = 'Sergey Utkin'
 __email__ = 'utkins01@gmail.com'
-__version__ = "1.1.4"
+__version__ = "1.2.0"
 __status__ = "Stable"
 __maintainer__ = "Sergey Utkin"
 __copyright__ = "Copyright 2016, Sergey Utkin"
@@ -236,6 +236,10 @@ class RemoteMultiLineAction (npyscreen.MultiLineAction):
         global remote_path
         if stat.S_IFMT(record.st_mode) == stat.S_IFDIR and record.name != '..':
             remote_path.append(record.name)
+        if stat.S_IFMT(record.st_mode) == stat.S_IFLNK and record.name != '..':
+            with pysftp.Connection(**cinfo) as sftp:
+                if sftp.isdir(os.path.join(*remote_path, record.name)):
+                    remote_path.append(record.name)
         if stat.S_IFMT(record.st_mode) == stat.S_IFDIR and record.name == '..':
             remote_path.pop()
 
@@ -287,6 +291,7 @@ class FT(npyscreen.FormBaseNew):
 
         try:
             self.source.values = self.get_local_files(os.path.join(*local_path))
+            self.source.name = f"acs - /{'/'.join(local_path[1:])}"
         except error.ErrorGetListFiles as e:
             local_path.pop()
             ftParameters.log.warning(e)
@@ -294,6 +299,7 @@ class FT(npyscreen.FormBaseNew):
 
         try:
             self.dest.values = self.get_remote_files()
+            self.dest.name = f"{ftParameters.connection['host'].name} - /{'/'.join(remote_path[1:])}"
         except error.ErrorGetListFiles as e:
             remote_path.pop()
             ftParameters.log.warning(e)
@@ -639,10 +645,11 @@ class UserApp(npyscreen.NPSAppManaged):
             self.addForm("MAIN", FT)
         else:
             self.addForm("MAIN", ErrorForm)
-            self.getForm("MAIN").error_text = str(e)
-            ftParameters.log.error('Ошибка подключения к узлу: {}'.format(e), pr=True)
+            self.getForm("MAIN").error_text = str(connection_error_message)
+            ftParameters.log.error('Ошибка подключения к узлу: {}'.format(connection_error_message), pr=True)
 
 connection_error = False
+connection_error_message = ''
 try:
     sftp = pysftp.Connection(**cinfo)
     remote_path.append('/')
@@ -652,6 +659,7 @@ try:
     sftp.close()
 except (ssh_exception.AuthenticationException, ssh_exception.SSHException) as e:
     connection_error = True
+    connection_error_message = e
 
 if __name__ == "__main__":
     while not exit_flag:

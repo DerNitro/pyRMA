@@ -36,11 +36,6 @@ class MultiLineEditableBoxed(npyscreen.BoxTitle):
     _contained_widget = npyscreen.MultiLineEditable
 
 
-class ButtonLine(npyscreen.FixedText):
-    def display(self, *args, **keywords):
-        self.value = 'Используйте F1 или CTRL + o для просмотра списка команд.'
-
-
 class RecordList(npyscreen.MultiLineAction):
     def display_value(self, vl: schema.Host):
         if type(vl) is schema.Host:
@@ -115,17 +110,26 @@ class RecordList(npyscreen.MultiLineAction):
 
 class HostListDisplay(npyscreen.FormMutt):
     MAIN_WIDGET_CLASS = RecordList
-    COMMAND_WIDGET_CLASS = ButtonLine
     Level = [0]
     History = []
     Filter = ''
+    FindText = ''
     SelectHost = None  # scheme.Host
     HostList = None
 
+    def folder_path(self, host_id):
+        result = []
+        hosts = applib.get_folder_path(appParameters, host_id)
+        for _, host in hosts.items():
+            result.append(host.name)
+
+        appParameters.log.debug(f"HostListDisplay.folder_path - {result}")
+        return '/'.join(result)
+
+
     def beforeEditing(self):
-        self.wStatus1.value = ' {0} - {1} '.format(appParameters.program,
-                                                   appParameters.version)
-        self.wStatus2.value = ' Управление: '
+        self.wStatus1.value = ' Используйте F1 или CTRL + o для просмотра списка команд.'
+        self.wStatus2.value = ' folder: '
         self.keypress_timeout = 1
         self.update_list()
 
@@ -145,8 +149,9 @@ class HostListDisplay(npyscreen.FormMutt):
 
     def update_list(self):
         if self.Level[-1] == 'Find':
-            pass
+            self.wCommand.value = f" FIND: {self.FindText}"
         else:
+            self.wCommand.value = f" /{self.folder_path(self.Level[-1])}"
             if appParameters.user_info.admin:
                 with schema.db_select(appParameters.engine) as db:
                     self.HostList = db.query(schema.Host).filter(schema.Host.parent == self.Level[-1]). \
@@ -176,7 +181,7 @@ class HostListDisplay(npyscreen.FormMutt):
             self.app_exit()
 
         self.wMain.display()
-        self.wCommand.display()
+        self.wCommand.update()
 
     def app_exit(self, *args, **keywords):
         appParameters.log.debug('Выход из интерфейса.')
@@ -219,6 +224,7 @@ class Find(npyscreen.Popup):
         super(Find, self).create()
 
     def adjust_widgets(self):
+        self.owner.FindText = self.FindText.value
         self.owner.HostList = applib.search(appParameters, self.FindText.value)
 
 
@@ -315,12 +321,19 @@ class ConnectionForm(npyscreen.Form):
     btn_file_transfer = None
     btn_ipmi = None
     button_line_relx = 0
+    PRESERVE_SELECTED_WIDGET_DEFAULT = True
 
     def __init__(self, *args, **keywords):
         super().__init__(*args, **keywords)
-        self.host = keywords['host']  # type: schema.Host
+        self.host = keywords['host']                                                                # type: schema.Host
         self.name = 'Подключение к узлу: {0}'.format(self.host.name)
         self.add_handlers({'^Q': self.exit_editing})
+        
+        if not self.host.default_login:
+            self.host.default_login = 'user'
+        if not self.host.default_password:
+            self.host.default_password = ''
+
         self.fill_values()
 
     def create(self):
@@ -331,11 +344,10 @@ class ConnectionForm(npyscreen.Form):
         self.login = self.add(npyscreen.TitleText, name='Login', hidden=True)
         self.password = self.add(npyscreen.TitlePassword, name='Password', hidden=True)
         self.save_pass = self.add(npyscreen.MultiSelect, max_height=2, values=["Сохранить пароль?"], hidden=True)
-        self.service = self.add(npyscreen.BoxTitle, name='Service', max_height=7)
-        self.add(npyscreen.FixedText)
+        self.add(npyscreen.FixedText, hidden=True)
         self.btn_connection = self.add(
             npyscreen.ButtonPress, name='Подключение',
-            when_pressed_function=self.connection
+            when_pressed_function=self.connection, w_id=100
         )
         self.button_line_relx += self._widgets__[-1].label_width + 2
         self.btn_file_transfer = self.add(
@@ -352,6 +364,8 @@ class ConnectionForm(npyscreen.Form):
             relx=self.button_line_relx,
             when_pressed_function=self.connection_ilo,
             hidden=True)
+        self.add(npyscreen.FixedText, hidden=True)
+        self.service = self.add(npyscreen.BoxTitle, name='Service', max_height=7)
         pass
 
     def fill_values(self):
@@ -363,8 +377,7 @@ class ConnectionForm(npyscreen.Form):
             self.password.value = '*' * len(self.login_password.password)
         else:
             self.login.value = self.host.default_login
-            if self.host.default_password is not None:
-                self.password.value = '*' * len(self.host.default_password)
+            self.password.value = '*' * len(self.host.default_password)
         services = applib.get_service(appParameters, self.host.id)
         service_types = applib.get_service_type(appParameters, raw=True)
         if access.check_access(appParameters, 'EditCredential', h_object=self.host):
@@ -394,6 +407,13 @@ class ConnectionForm(npyscreen.Form):
                     )
                 )
             self.service.values = service_string_list
+        
+        for n in list(range(0, len(self._widgets__))):
+            if self._widgets__[n].editable and not self._widgets__[n].hidden:
+                if self.get_widget(100) == self._widgets__[n]:
+                    self.editw = n
+                    break
+
         self.DISPLAY()
         pass
 
@@ -441,9 +461,13 @@ class ConnectionForm(npyscreen.Form):
                 access_list.append('Передача файлов')
             if not self.btn_ipmi.hidden:
                 access_list.append('IPMI')
-            access_form = AccessRequest(name=self.host.name, access_list=access_list)
-            access_form.host = self.host
-            access_form.edit()
+            
+            if applib.check_access_request(appParameters, appParameters.user_info.uid, self.host.id):
+                echo_form('Запрос доступа уже был отправлен ранее')
+            else:
+                access_form = AccessRequest(name=self.host.name, access_list=access_list)
+                access_form.host = self.host
+                access_form.edit()
 
     def file_transfer(self):
         global connection_host
@@ -474,9 +498,13 @@ class ConnectionForm(npyscreen.Form):
                 access_list.append('Передача файлов')
             if not self.btn_ipmi.hidden:
                 access_list.append('IPMI')
-            access_form = AccessRequest(name=self.host.name, access_list=access_list)
-            access_form.host = self.host
-            access_form.edit()
+            
+            if applib.check_access_request(appParameters, appParameters.user_info.uid, self.host.id):
+                echo_form('Запрос доступа уже был отправлен ранее')
+            else:
+                access_form = AccessRequest(name=self.host.name, access_list=access_list)
+                access_form.host = self.host
+                access_form.edit()
 
     def connection_ilo(self):
         global connection_host
@@ -490,9 +518,13 @@ class ConnectionForm(npyscreen.Form):
                 access_list.append('Передача файлов')
             if not self.btn_ipmi.hidden:
                 access_list.append('IPMI')
-            access_form = AccessRequest(name=self.host.name, access_list=access_list)
-            access_form.host = self.host
-            access_form.edit()
+            
+            if applib.check_access_request(appParameters, appParameters.user_info.uid, self.host.id):
+                echo_form('Запрос доступа уже был отправлен ранее')
+            else:
+                access_form = AccessRequest(name=self.host.name, access_list=access_list)
+                access_form.host = self.host
+                access_form.edit()
 
 
 class InformationForm(npyscreen.Form):

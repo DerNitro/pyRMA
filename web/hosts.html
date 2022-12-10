@@ -40,7 +40,7 @@
         </form>
         <form action="/hosts/{{ directory_id }}" method="POST">
             {{ jump_form.csrf_token }}
-            <p>{% if jump %} Текущий Jump хост: {{ jump.name }} {{ jump_form.clear_sub() }} {% endif %}</p>
+            <p>{% if jump %} Текущий Jump хост: {{ jump.name }} {% if jump_host.host == directory_id %} {{ jump_form.clear_sub() }}  {% endif %} {% endif %}</p>
         </form>
     </details>
 </div>
@@ -77,7 +77,7 @@
         {% else %}
         <td width="25%"><a href="/hosts/{{ host.id }}"><b>{{ host.name }}</b></a></td>
         {% endif %}
-        <td>{{ host.describe }}</td>
+        <td>{% if host.describe %} {{ host.describe }} {% endif %}</td>
     {% else %}
         Нет хостов для отображения
     </tr>

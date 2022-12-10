@@ -130,6 +130,14 @@ class WebParameters(Parameters):
         self.template = self.conf.get('Web', 'template')
         self.log = log.Log('pyrma_web', **self.log_param)
 
+class APIParameters(Parameters):
+    def __init__(self):
+        super().__init__()
+        self.log_param = {
+            'level': self.conf.get('Web', 'log_level', fallback='INFO'),
+            'filename': 'pyrma_api.log'
+        }
+        self.log = log.Log('pyrma_api', **self.log_param)
 
 class FirewallParameters(Parameters):
 

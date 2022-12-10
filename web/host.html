@@ -33,7 +33,7 @@
         </form>
         <form action="/host/{{ content['id'] }}" method="POST">
             {{ jump_form.csrf_token }}
-            <p>{% if jump %} Текущий Jump хост: {{ jump.name }} {{ jump_form.clear_sub() }} {% endif %}</p>
+            <p>{% if jump %} Текущий Jump хост: {{ jump.name }} {% if jump_host.host == content['id'] %} {{ jump_form.clear_sub() }}  {% endif %} {% endif %}</p>
         </form>
     </details>
 </div>
@@ -73,7 +73,7 @@
 </tr>
 <tr>
     <td style="width: 450px;">IPMI</td>
-    <td style="width: 550px;">{{ content['ilo_type'] }}: {{ content['ilo'] }}</td>
+    <td style="width: 550px;">{% if content['ilo_type'] %}{{ content['ilo_type'] }}: {{ content['ilo'] }} {% endif %}</td>
 </tr>
 <tr>
     <td style="width: 450px;">Login</td>
@@ -140,15 +140,15 @@
         Период с {{ connection_filter.date_start() }} по {{ connection_filter.date_end() }} {{ connection_filter.sub() }}
     </p>
 </form>
-<table border="1" width="95%">
+<table border="1" width="95%" id="host_connection_table">
     <th></th>
-    <th>Пользователь</th>
-    <th>Подключение</th>
-    <th>Статус</th>
-    <th>Завершение</th>
-    <th>Дата Начала</th>
-    <th>Дата завершения</th>
-    <th>Ошибка</th>
+    <th onclick="sortTable(1)">Пользователь</th>
+    <th onclick="sortTable(2)">Подключение</th>
+    <th onclick="sortTable(3)">Статус</th>
+    <th onclick="sortTable(4)">Завершение</th>
+    <th onclick="sortTable(5)">Дата Начала</th>
+    <th onclick="sortTable(6)">Дата завершения</th>
+    <th onclick="sortTable(7)">Ошибка</th>
     {% for i in content['connection'] %}
     {% if i['connection'].termination == 2 %} <tr bgcolor="#ff807a"> {% else %} <tr> {% endif %}
         <td align=center><a href="/connection/{{ i['connection'].id }}">
@@ -175,4 +175,62 @@
     </tr>
     {% endfor %}
 </table>
+
+<script>
+    /* https://www.w3schools.com/howto/howto_js_sort_table.asp */
+    function sortTable(n) {
+      var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+      table = document.getElementById("host_connection_table");
+      switching = true;
+      // Set the sorting direction to ascending:
+      dir = "asc";
+      /* Make a loop that will continue until
+      no switching has been done: */
+      while (switching) {
+        // Start by saying: no switching is done:
+        switching = false;
+        rows = table.rows;
+        /* Loop through all table rows (except the
+        first, which contains table headers): */
+        for (i = 1; i < (rows.length - 1); i++) {
+          // Start by saying there should be no switching:
+          shouldSwitch = false;
+          /* Get the two elements you want to compare,
+          one from current row and one from the next: */
+          x = rows[i].getElementsByTagName("TD")[n];
+          y = rows[i + 1].getElementsByTagName("TD")[n];
+          /* Check if the two rows should switch place,
+          based on the direction, asc or desc: */
+          if (dir == "asc") {
+            if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+              // If so, mark as a switch and break the loop:
+              shouldSwitch = true;
+              break;
+            }
+          } else if (dir == "desc") {
+            if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+              // If so, mark as a switch and break the loop:
+              shouldSwitch = true;
+              break;
+            }
+          }
+        }
+        if (shouldSwitch) {
+          /* If a switch has been marked, make the switch
+          and mark that a switch has been done: */
+          rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+          switching = true;
+          // Each time a switch is done, increase this count by 1:
+          switchcount ++;
+        } else {
+          /* If no switching has been done AND the direction is "asc",
+          set the direction to "desc" and run the while loop again. */
+          if (switchcount == 0 && dir == "asc") {
+            dir = "desc";
+            switching = true;
+          }
+        }
+      }
+    }
+</script>
 {% endblock %}

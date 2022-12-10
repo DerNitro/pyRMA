@@ -29,6 +29,10 @@
             {% endfor %}
         </p>
         <p>
+            {{ form.folder.label }}<br>
+            {{ form.folder() }}<br>
+        </p>
+        <p>
             {{ form.proxy.label }}<br>
             {{ form.proxy() }}<br>
             {% for error in form.proxy.errors %}
@@ -44,7 +48,7 @@
         </p>
         <p>
             {{ form.ip.label }}:{{ form.port.label }}<br>
-            {{ form.ip(size=32) }}:{{ form.port(size=4) }}<br>
+            {{ form.ip(size=21) }}:{{ form.port(size=4) }}<br>
             {% for error in form.ip.errors %}
             <span style="color: red;">[{{ error }}]</span>
             {% endfor %}

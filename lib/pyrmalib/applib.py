@@ -21,10 +21,11 @@ import os
 import pam
 import markdown
 import csv
+import ast
 
 from sqlalchemy.orm import aliased
 
-from pyrmalib import schema, utils, parameters, error, access, forms
+from pyrmalib import schema, utils, parameters, error, access, forms, rec_file
 from functools import wraps
 import hashlib
 import sqlalchemy
@@ -227,6 +228,35 @@ def get_access_request(param: parameters.WebParameters, acc_id=None):
     return result
 
 
+def check_access_request(param: parameters.WebParameters, user_id: int, host_id: int):
+    # Проверка существующего запроса доступа пользователя к узлу
+    try:
+        with schema.db_select(param.engine) as db:
+            db.query(schema.RequestAccess).filter(
+                schema.RequestAccess.host == host_id, 
+                schema.RequestAccess.user == user_id,
+                schema.RequestAccess.status == 0
+            ).one()
+        return True
+    except NoResultFound:
+        return False
+
+def get_stdin_command(param: parameters.Parameters, id) -> str:
+    """
+    Возвращает список команд введенных в сессии
+    """
+
+    with schema.db_select(param.engine) as db:
+        record = db.query(schema.Connection, schema.Session).filter(
+                schema.Session.id == schema.Connection.session,
+                schema.Connection.id == id
+            ).one()
+        _, session = record
+
+    record_file = rec_file.RecFile(os.path.join(param.data_dir, session.ttyrec))
+
+    return record_file.stdin_to_line()
+
 def get_connection(param: parameters.Parameters, id):
     """
     Возвращает информацию о подключении
@@ -391,7 +421,7 @@ def get_content_host(param: parameters.WebParameters, host_id, connection_date_s
         date_start=connection_date_start,
         date_end=connection_date_end
     )
-    content['id'] = host_id
+    content['id'] = int(host_id)
     content['deleted'] = host.remove
     content['proxy'] = host.proxy
     content['name'] = host.name
@@ -605,6 +635,26 @@ def get_ilo_type(param: parameters.WebParameters, ipmi_id=None, raw=False):
         return [(None, 'Нет')] + [(t.id, t.name) for t in ilo_type]
 
 
+def get_folders(param: parameters.WebParameters, raw=False):
+    with schema.db_select(param.engine) as db:
+        folders = db.query(schema.Host).filter(schema.Host.type == 2, schema.Host.remove == False).all()
+    if raw:
+        return folders
+    else:
+        result = []
+        result.append(tuple((0, '/')))
+        for f in folders:
+            folder_path = get_folder_path(param, f.id)
+            folder_path_string = ""
+            for k, v in folder_path.items():
+                folder_path_string += "/"
+                folder_path_string += v.name
+            result.append(tuple((f.id, folder_path_string)))
+            result.sort(key = lambda i: i[1])
+
+        return result
+
+
 def get_service_type(param: parameters.Parameters, service_type_id=None, raw=False):
     with schema.db_select(param.engine) as db:
         if service_type_id:
@@ -634,22 +684,34 @@ def get_jump_hosts(param: parameters.WebParameters):
         jump_hosts = db.query(schema.Host).filter(
             schema.Host.proxy.is_(True),
             schema.Host.remove.is_(False)
-        ).all()
+        ).order_by(schema.Host.name).all()
 
     return [(t.id, t.name) for t in jump_hosts]
 
 
-def get_jump_host(param: parameters.WebParameters, host_id) -> schema.Host:
-    try:
-        with schema.db_select(param.engine) as db:
-            _, jump = db.query(schema.JumpHost, schema.Host).join(schema.Host, schema.Host.id == schema.JumpHost.jump). \
-                filter(schema.JumpHost.host == host_id).one()
-    except NoResultFound:
-        jump = None
-    except MultipleResultsFound:
-        raise error.WTF("Дубли Jump в таблице jump!!!")
+def get_jump_host(param: parameters.WebParameters, host_id, schema_jump_host=False) -> schema.Host:
+    host_id_ = host_id
+    while True:
+        try:
+            with schema.db_select(param.engine) as db:
+                jump_host, jump = db.query(schema.JumpHost, schema.Host).join(schema.Host, schema.Host.id == schema.JumpHost.jump). \
+                    filter(schema.JumpHost.host == host_id_).one()
 
-    return jump
+            break
+        except NoResultFound:
+            if host_id_ == 0:
+                jump_host = None
+                jump = None
+                break
+            else:
+                host = get_host(param, host_id=host_id_)
+                host_id_ = host.parent
+        except MultipleResultsFound:
+            raise error.WTF("Дубли Jump в таблице jump!!!")
+    if schema_jump_host:
+        return jump, jump_host
+    else:
+        return jump
 
 
 def get_group(param: parameters.WebParameters, group_id):
@@ -1152,13 +1214,12 @@ def search(param: parameters.Parameters, query):
     """
     with schema.db_select(param.engine) as db:
         host_list = db.query(schema.Host) \
-            .filter(or_(schema.Host.name.like("%" + query + "%"),
+            .filter(or_(schema.Host.name.ilike("%" + query + "%"),
                         schema.Host.ilo == query,
                         schema.Host.ip == query,
-                        schema.Host.describe.like("%" + query + "%"),
-                        schema.Host.note.like("%" + query + "%"))) \
-            .filter(schema.Host.remove.is_(False),
-                    schema.Host.prefix == param.user_info.prefix) \
+                        schema.Host.describe.ilike("%" + query + "%"),
+                        schema.Host.note.ilike("%" + query + "%"))) \
+            .filter(schema.Host.remove.is_(False), schema.Host.type == 1) \
             .order_by(schema.Host.type.desc()).order_by(schema.Host.name).all()
     return host_list
 
@@ -1355,7 +1416,7 @@ def add_host(param: parameters.WebParameters, host: schema.Host, parent=0, passw
     
     return host
 
-def update_host(param: parameters.WebParameters, host: schema.Host, parent=0, password=None, action=True):
+def update_host(param: parameters.WebParameters, host: schema.Host, parent=0, password=None, action=True) -> schema.Host:
     with schema.db_edit(param.engine) as db:
         upd_host = db.query(schema.Host).filter(
                     schema.Host.name == host.name,
@@ -1428,6 +1489,7 @@ def add_service_type(param: parameters.WebParameters, name, default_port):
 
 
 def add_hosts_file(param: parameters.WebParameters, filepath: str, parent=0):
+    # TODO: Оптимизировать загрузку хостов
     if not os.path.isfile(filepath):
         raise error.WTF("Отсутствует файл на загрузку")
     created_host = 0
@@ -1453,6 +1515,14 @@ def add_hosts_file(param: parameters.WebParameters, filepath: str, parent=0):
                     n_host.default_login = val
                 if str(indx).upper() == 'IPMI'.upper():
                     n_host.ilo = val
+                if str(indx).upper() == 'Jump'.upper():
+                    if isinstance(val, str) and len(val) > 0:
+                        jump_host = val
+                    else:
+                        jump_host = None
+                if str(indx).upper() == 'IsJump'.upper():
+                    if isinstance(val, str) and len(val) > 0:
+                        n_host.proxy = True
                 if str(indx).upper() == 'Protocol'.upper():
                     with schema.db_select(param.engine) as db:
                         try:
@@ -1485,11 +1555,16 @@ def add_hosts_file(param: parameters.WebParameters, filepath: str, parent=0):
                         order_by(schema.FileTransferType.id).first().id
             param.log.debug("add_hosts_file: host: {}, parent: {}".format(n_host, folder.parent))
             if get_host(param, name=n_host.name, ip=n_host.ip):
-                update_host(param, n_host, password=password, parent=folder.id, action=False)
+                result = update_host(param, n_host, password=password, parent=folder.id, action=False)
                 updated_host += 1
             else:
-                add_host(param, n_host, password=password, parent=folder.id, action=False)
+                result = add_host(param, n_host, password=password, parent=folder.id, action=False)
                 created_host += 1
+            if jump_host:
+                jumps = get_jump_hosts(param)
+                for a, b in jumps:
+                    if jump_host.lower() == str(b).lower():
+                        add_jump(param, {'host': result.id, 'jump': a}, action=False)
             del n_host
     with schema.db_edit(param.engine) as db:
         action = schema.Action(
@@ -1500,10 +1575,10 @@ def add_hosts_file(param: parameters.WebParameters, filepath: str, parent=0):
         )
         db.add(action)
         db.flush()
-    return True
+    return created_host, updated_host
 
 
-def add_jump(param: parameters.WebParameters, r):
+def add_jump(param: parameters.WebParameters, r, action=True):
     with schema.db_edit(param.engine) as db:
         db.query(schema.JumpHost).filter(schema.JumpHost.host == r['host']).delete()
         jump = schema.JumpHost(
@@ -1513,15 +1588,15 @@ def add_jump(param: parameters.WebParameters, r):
         db.add(jump)
         db.flush()
         db.refresh(jump)
-
-        action = schema.Action(
-            user=param.user_info.uid,
-            action_type=25,
-            date=datetime.datetime.now(),
-            message="Добавлен Jump хост: {jump.host} - id={jump.id}({jump})".format(jump=jump)
-        )
-        db.add(action)
-        db.flush()
+        if action:
+            action = schema.Action(
+                user=param.user_info.uid,
+                action_type=25,
+                date=datetime.datetime.now(),
+                message="Добавлен Jump хост: {jump.host} - id={jump.id}({jump})".format(jump=jump)
+            )
+            db.add(action)
+            db.flush()
     return True
 
 
@@ -1587,6 +1662,7 @@ def edit_host(param: parameters.WebParameters, d, host_id):
         host = db.query(schema.Host).filter(schema.Host.id == host_id).one()
         host.name = d['name']
         host.ip = d['ip']
+        host.parent = d['parent']
         host.connection_type = d['connection_type']
         host.file_transfer_type = d['file_transfer_type']
         host.describe = d['describe']
@@ -1610,18 +1686,23 @@ def edit_host(param: parameters.WebParameters, d, host_id):
     return True
 
 
-def delete_folder(param: parameters.WebParameters, host_id):
+def delete_folder(param: parameters.WebParameters, host_id, action=True):
     with schema.db_edit(param.engine) as db:
         d_host = db.query(schema.Host).filter(schema.Host.id == host_id).one()
         d_host.remove = True
-        action = schema.Action(
-            user=param.user_info.uid,
-            action_type=12,
-            date=datetime.datetime.now(),
-            message="Удаление директории: {folder.name} - id={folder.id}".format(folder=d_host)
-        )
-        db.add(action)
+        if action:
+            action = schema.Action(
+                user=param.user_info.uid,
+                action_type=12,
+                date=datetime.datetime.now(),
+                message="Удаление директории: {folder.name} - id={folder.id}".format(folder=d_host)
+            )
+            db.add(action)
         db.flush()
+
+        child_folder = db.query(schema.Host).filter(schema.Host.parent == host_id, schema.Host.type == 2).all()
+        for f in child_folder:
+            delete_folder(param, f.id, action=False)
 
     return True
 

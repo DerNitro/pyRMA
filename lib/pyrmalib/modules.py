@@ -21,6 +21,7 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 """
+import sys
 from pyrmalib import schema, parameters, applib, utils, error
 import datetime
 from sshtunnel import SSHTunnelForwarder, BaseSSHTunnelForwarderError
@@ -87,9 +88,7 @@ class ConnectionModules(Modules):
             db.refresh(connection)
             self.connection_id = connection.id
 
-        self.JUMP = applib.get_jump_host(self.PARAMETERS, self.HOST.id) \
-            if applib.get_jump_host(self.PARAMETERS, self.HOST.id) \
-                else applib.get_jump_host(self.PARAMETERS, self.HOST.parent)
+        self.JUMP = applib.get_jump_host(self.PARAMETERS, self.HOST.id)
 
         # Строка информации о подключении
         print('=================== pyRMA ===================')
@@ -109,23 +108,25 @@ class ConnectionModules(Modules):
         self.services = None
 
         if self.JUMP and self.JUMP.id != self.HOST.id:
-            self.jump = SSHTunnelForwarder(
-                (self.JUMP.ip, self.JUMP.tcp_port),
-                ssh_username=self.JUMP.default_login,
-                ssh_password=utils.password(self.JUMP.default_password, self.JUMP.id, mask=False),
-                remote_bind_address=(self.HOST.ip, self.HOST.tcp_port),
-                local_bind_address=('127.0.0.1', )
-            )
             try:
+                self.jump = SSHTunnelForwarder(
+                    (self.JUMP.ip, self.JUMP.tcp_port),
+                    ssh_username=self.JUMP.default_login,
+                    ssh_password=utils.password(self.JUMP.default_password, self.JUMP.id, mask=False),
+                    remote_bind_address=(self.HOST.ip, self.HOST.tcp_port),
+                    local_bind_address=('127.0.0.1', )
+                )
                 self.jump.start()
-            except BaseSSHTunnelForwarderError as e:
+            except (BaseSSHTunnelForwarderError, ValueError) as e:
+                _error = e
+
                 self.PARAMETERS.log.error(
-                    'Ошибка подключения к Jump хосту({}): {}'.format(self.JUMP.name, e.value),
+                    'Ошибка подключения к Jump хосту({}): {}'.format(self.JUMP.name, _error),
                     pr=True
                 )
                 self.TERMINATION = 2
-                self.ERROR = 'Ошибка подключения к Jump хосту({}): {}'.format(self.JUMP.name, e.value)
-                raise error.ErrorConnectionJump('Ошибка подключения к Jump хосту({}): {}'.format(self.JUMP.name, e.value))
+                self.ERROR = 'Ошибка подключения к Jump хосту({}): {}'.format(self.JUMP.name, _error)
+                raise error.ErrorConnectionJump('Ошибка подключения к Jump хосту({}): {}'.format(self.JUMP.name, _error))
             self.PARAMETERS.log.debug(
                 'self.jump: {}'.format(self.jump)
             )
@@ -184,7 +185,7 @@ class ConnectionModules(Modules):
         )
         
         if self.JUMP and self.JUMP.id != self.HOST.id:
-            if self.jump.is_active:
+            if isinstance(self.jump, SSHTunnelForwarder) and self.jump.is_active:
                 self.jump.stop()
 
         if self.SERVICE:
@@ -210,7 +211,9 @@ class ConnectionModules(Modules):
         """
         if not applib.tcp_forward_connection_is_active(self.PARAMETERS, self.TCP_FORWARD):
             self.firewall('open')
-        pass
+        
+        print(f'\33]0;{self.HOST.name}\a', end='', flush=True)
+
 
     def firewall(self, state):
         """

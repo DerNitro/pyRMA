@@ -22,7 +22,8 @@ import markdown
 
 from flask import Flask, render_template, request, redirect, session, url_for, send_from_directory
 from flask_wtf.csrf import CSRFProtect
-from pyrmalib import schema, parameters, applib, access, forms, error as rma_error
+from flask_restful import Api
+from pyrmalib import api as rma_api, schema, parameters, applib, access, forms, error as rma_error
 import os
 import pwd
 from sqlalchemy import create_engine, sql
@@ -51,6 +52,10 @@ else:
     app.debug = False
 csrf = CSRFProtect()
 csrf.init_app(app)
+
+api = Api(app, decorators=[csrf.exempt])
+api.add_resource(rma_api.Monitoring, '/api/monitor')
+api.add_resource(rma_api.HostUpload, '/api/host/upload')
 
 # Создание пользователя администратор.
 pw_name, pw_passwd, pw_uid, pw_gid, pw_gecos, pw_dir, pw_shell = pwd.getpwuid(os.getuid())
@@ -179,6 +184,7 @@ def connection(connection_id=None):
     search_field = forms.Search()
 
     content = applib.get_connection(webParameters, connection_id)
+    command_list = applib.get_stdin_command(webParameters, connection_id)
 
     if not webParameters.user_info.admin \
         and not applib.access.check_access(webParameters, 'ShowAllSession', h_object=content['host']):
@@ -189,7 +195,8 @@ def connection(connection_id=None):
         admin=webParameters.user_info.admin,
         search=search_field,
         username=webParameters.user_info.login,
-        content=content
+        content=content,
+        command_list=command_list
     )
 
 
@@ -318,12 +325,16 @@ def hosts(directory_id=None):
         note = markdown.markdown(folder.note)
     else:
         note = None
+
+    jump, jump_host = applib.get_jump_host(webParameters, directory_id, schema_jump_host=True)
+
     return render_template(
         siteMap['hosts'],
         admin=admin,
         host_list=host_list,
         note=note,
-        jump = applib.get_jump_host(webParameters, directory_id),
+        jump=jump,
+        jump_host=jump_host,
         jump_form=jump_form,
         search=search_field,
         group=group,
@@ -412,7 +423,7 @@ def edit_folder(directory_id):
 
     elif request.method == 'POST' and form.delete_sub.data:
         applib.delete_folder(webParameters, directory_id)
-        status = "Директория удалена"
+        return redirect(url_for('hosts', directory_id=h.parent))
 
     return render_template(
         siteMap['edit_folder'],
@@ -496,6 +507,8 @@ def edit_host(host_id):
     form.connection_type.choices = applib.get_connection_type(webParameters)
     form.file_transfer_type.choices = applib.get_file_transfer_type(webParameters)
     form.ilo_type.choices = applib.get_ilo_type(webParameters)
+    form.folder.choices = applib.get_folders(webParameters)
+    # webParameters.log.debug(f"form.folder.choices: {form.folder.choices}")
     error = None
     status = None
 
@@ -515,11 +528,13 @@ def edit_host(host_id):
             form.connection_type.process_data(h.connection_type)
             form.file_transfer_type.process_data(h.file_transfer_type)
             form.ilo_type.process_data(h.ilo_type)
+            form.folder.process_data(h.parent)
 
     if request.method == 'POST' and form.edit_sub.data:
         d = {
             'name': form.name.data,
             'ip': form.ip.data,
+            'parent': form.folder.data,
             'port': form.port.data,
             'connection_type': form.connection_type.data,
             'file_transfer_type': form.file_transfer_type.data if form.file_transfer_type.data != 'None' else sql.null(),
@@ -606,6 +621,7 @@ def host(host_id):
     )
     show_host_info = access.check_access(webParameters, 'ShowHostInformation', h_object=object_host)
     admin = webParameters.user_info.admin
+    jump, jump_host = applib.get_jump_host(webParameters, host_id, schema_jump_host=True)
     if show_host_info or admin:
         return render_template(
             siteMap['host'],
@@ -621,7 +637,8 @@ def host(host_id):
                 h_object=object_host
             ) or webParameters.user_info.admin,
             content=content_host,
-            jump = applib.get_jump_host(webParameters, host_id),
+            jump=jump,
+            jump_host=jump_host,
             jump_form=jump_form,
             group_form=group_form,
             search=search_field,
