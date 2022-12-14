@@ -1491,7 +1491,7 @@ def add_service_type(param: parameters.WebParameters, name, default_port):
 def add_hosts_file(param: parameters.WebParameters, filepath: str, parent=0):
     # TODO: Оптимизировать загрузку хостов
     if not os.path.isfile(filepath):
-        raise error.WTF("Отсутствует файл на загрузку")
+        raise error.WTF("Missing file to upload")
     created_host = 0
     updated_host = 0
     with open(filepath, newline='') as f:

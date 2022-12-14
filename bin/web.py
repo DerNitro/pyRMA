@@ -27,7 +27,7 @@ from pyrmalib import api as rma_api, schema, parameters, applib, access, forms, 
 import os
 import pwd
 from sqlalchemy import create_engine, sql
-from werkzeug.utils import secure_filename
+import tempfile
 
 webParameters = parameters.WebParameters()
 webParameters.engine = create_engine(
@@ -472,19 +472,18 @@ def add_host(directory_id):
 
     if request.method == 'POST' and form.upload_sub.data:
         f = form.file_host.data
-        filename = secure_filename(f.filename)
-        if not os.path.isdir('/tmp/pyRMA'):
-            os.mkdir('/tmp/pyRMA')
-        f.save(os.path.join('/tmp/pyRMA', filename))
+        _, filename = tempfile.mkstemp()
+        f.save(filename)
+        
         try:
-            webParameters.log.debug("web.py: add_host(POST FILE)")
-            applib.add_hosts_file(webParameters, os.path.join('/tmp/pyRMA', filename), parent=directory_id)
+            webParameters.log.debug(f"web.py: add_host(POST FILE), tempfile: {filename}")
+            applib.add_hosts_file(webParameters, filename, parent=directory_id)
             status = "Узлы добавлены"
             return redirect(url_for('hosts', directory_id=directory_id))
         except rma_error.WTF as e:
             error = e
         finally:
-            os.remove(os.path.join('/tmp/pyRMA', filename))
+            os.remove(filename)
 
     return render_template(
         siteMap['add_host'],
