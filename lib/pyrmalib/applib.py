@@ -536,7 +536,7 @@ def get_host(param: parameters.WebParameters, host_id=None, name=None, ip=None, 
             except NoResultFound:
                 return None
             except MultipleResultsFound:
-                raise error.WTF("Дубли Host.id в таблице Host!!!")
+                raise error.WTF(f"Duplicate Host.id: {host_id} in the table Host!!!")
         if host.default_password and len(host.default_password) > 0:
             host.default_password = utils.password(host.default_password, host.id, False)
         return host
@@ -551,7 +551,7 @@ def get_host(param: parameters.WebParameters, host_id=None, name=None, ip=None, 
             except NoResultFound:
                 return None
             except MultipleResultsFound:
-                raise error.WTF("Дубли Host.name|ip в таблице Host!!!")
+                raise error.WTF(f"Duplicate Host.name|ip: {name}|{ip} in the table Host!!!")
         if host.default_password and len(host.default_password) > 0:
             host.default_password = utils.password(host.default_password, host.id, False)
         return host
@@ -566,7 +566,7 @@ def get_host(param: parameters.WebParameters, host_id=None, name=None, ip=None, 
             except NoResultFound:
                 return None
             except MultipleResultsFound:
-                raise error.WTF("Дубли Host.name в таблице Host!!!")
+                raise error.WTF(f"Duplicate Host.name: {name} in the table Host!!!")
         if host.default_password and len(host.default_password) > 0:
             host.default_password = utils.password(host.default_password, host.id, False)
         return host
@@ -707,7 +707,7 @@ def get_jump_host(param: parameters.WebParameters, host_id, schema_jump_host=Fal
                 host = get_host(param, host_id=host_id_)
                 host_id_ = host.parent
         except MultipleResultsFound:
-            raise error.WTF("Дубли Jump в таблице jump!!!")
+            raise error.WTF(f"Duplicate Jump: {host_id} in the table jump!!!")
     if schema_jump_host:
         return jump, jump_host
     else:
@@ -723,7 +723,7 @@ def get_group(param: parameters.WebParameters, group_id):
         except NoResultFound:
             return False
         except MultipleResultsFound:
-            raise error.WTF("Дубли Group.id в таблице Group!!!")
+            raise error.WTF(f"Duplicate Group.id: {group_id} in the table Group!!!")
 
     if group.type == 0:
         with schema.db_select(param.engine) as db:
@@ -752,7 +752,7 @@ def get_group(param: parameters.WebParameters, group_id):
         except NoResultFound:
             content['permission'] = None
         except MultipleResultsFound:
-            raise error.WTF("Дубли default Permission в таблице Permission!!!")
+            raise error.WTF(f"Duplicate default Permission: {group_id} in the table Permission!!!")
     return content
 
 
@@ -857,7 +857,7 @@ def get_user_access(param: parameters.Parameters, uid, hid=None):
             except NoResultFound:
                 return None
             except MultipleResultsFound:
-                raise error.WTF('Дубли в аксес листах!!!')
+                raise error.WTF(f'Duplicate uid({uid}) and hid({hid}) in the table AccessList')
         else:
             user_access = db.query(schema.AccessList).filter(
                 schema.AccessList.status == 1,
@@ -1098,7 +1098,7 @@ def set_user_permission(param: parameters.WebParameters, user_access: int, conne
             )
             db.add(perm)
         except MultipleResultsFound:
-            raise error.WTF("Дубли default Permission в таблице Permission!!!")
+            raise error.WTF("Duplicate default Permission: uid({uid}) in the table Permission!!!")
 
 
 def set_group_permission(param: parameters.WebParameters, group_id, form: forms.ChangePermission):
@@ -1138,7 +1138,7 @@ def set_group_permission(param: parameters.WebParameters, group_id, form: forms.
             )
             db.add(perm)
         except MultipleResultsFound:
-            raise error.WTF("Дубли default Permission в таблице Permission!!!")
+            raise error.WTF("Duplicate default Permission: group_id({group_id}) in the table Permission!!!")
 
         action = schema.Action(
             user=param.user_info.uid,
@@ -1473,7 +1473,7 @@ def add_service_type(param: parameters.WebParameters, name, default_port):
             db.flush()
         except sqlalchemy.exc.IntegrityError as e:
             if 'duplicate key value' in str(e):
-                raise error.InsertError('дублирующая запись!!!')
+                raise error.InsertError('duplicate key value!')
             else:
                 raise error.WTF(e)
         db.refresh(service_type)
