@@ -94,6 +94,7 @@ class HostUpload(Resource):
 
         try:
             created_host, updated_host, skipped_host = applib.add_hosts_file(apiParameters, upload_file_path)
+            apiParameters.log.info(f'Uploaded: {created_host}, Updated: {updated_host}, Skipped: {skipped_host}')
         except error.WTF as e:
             return {'status': 'error', 'error': str(e)}, 500
         finally:

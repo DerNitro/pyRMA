@@ -1698,12 +1698,17 @@ def delete_folder(param: parameters.WebParameters, host_id, action=True):
     with schema.db_edit(param.engine) as db:
         d_host = db.query(schema.Host).filter(schema.Host.id == host_id).one()
         d_host.remove = True
+        folder_path = get_folder_path(param, d_host.parent)
+        folder_path_string = ""
+        for _, v in folder_path.items():
+            folder_path_string += "/"
+            folder_path_string += v.name
         if action:
             action = schema.Action(
                 user=param.user_info.uid,
                 action_type=12,
                 date=datetime.datetime.now(),
-                message="Удаление директории: {folder.name} - id={folder.id}".format(folder=d_host)
+                message=f"Удаление директории: {folder_path_string}"
             )
             db.add(action)
         db.flush()
@@ -1726,12 +1731,17 @@ def delete_host(param: parameters.WebParameters, host_id, action=True):
     with schema.db_edit(param.engine) as db:
         d_host = db.query(schema.Host).filter(schema.Host.id == host_id).one()
         d_host.remove = True
+        folder_path = get_folder_path(param, d_host.parent)
+        folder_path_string = ""
+        for _, v in folder_path.items():
+            folder_path_string += "/"
+            folder_path_string += v.name
         if action:
             action = schema.Action(
                 user=param.user_info.uid,
                 action_type=22,
                 date=datetime.datetime.now(),
-                message="Удаление хоста: {folder.name} - id={folder.id}".format(folder=d_host)
+                message=f"Удаление хоста: {folder_path_string}/{d_host.name}"
             )
             db.add(action)
         db.flush()
