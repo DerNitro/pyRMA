@@ -25,6 +25,13 @@ class QueryError(Exception):
     def __repr__(self):
         return self.desc
 
+class HostDuplicatedResult(Exception):
+    def __init__(self, desc):
+        self.desc = desc
+
+    def __repr__(self):
+        return self.desc
+
 
 class WTF(Exception):
     def __init__(self, desc):

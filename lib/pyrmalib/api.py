@@ -93,10 +93,15 @@ class HostUpload(Resource):
         upload_file.save(upload_file_path)
 
         try:
-            created_host, updated_host = applib.add_hosts_file(apiParameters, upload_file_path)
+            created_host, updated_host, skipped_host = applib.add_hosts_file(apiParameters, upload_file_path)
         except error.WTF as e:
             return {'status': 'error', 'error': str(e)}, 500
         finally:
             os.remove(upload_file_path)
         
-        return {'status': 'success', 'created host': created_host, 'updated host': updated_host}, 200
+        return {
+            'status': 'success', 
+            'created host': created_host, 
+            'updated host': updated_host, 
+            'skipped host': skipped_host
+            }, 200

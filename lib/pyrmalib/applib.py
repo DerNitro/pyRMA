@@ -536,7 +536,7 @@ def get_host(param: parameters.WebParameters, host_id=None, name=None, ip=None, 
             except NoResultFound:
                 return None
             except MultipleResultsFound:
-                raise error.WTF(f"Duplicate Host.id: {host_id} in the table Host!!!")
+                raise error.HostDuplicatedResult(f"Duplicate Host.id: {host_id} in the table Host!!!")
         if host.default_password and len(host.default_password) > 0:
             host.default_password = utils.password(host.default_password, host.id, False)
         return host
@@ -551,7 +551,7 @@ def get_host(param: parameters.WebParameters, host_id=None, name=None, ip=None, 
             except NoResultFound:
                 return None
             except MultipleResultsFound:
-                raise error.WTF(f"Duplicate Host.name|ip: {name}|{ip} in the table Host!!!")
+                raise error.HostDuplicatedResult(f"Duplicate Host.name|ip: {name}|{ip} in the table Host!!!")
         if host.default_password and len(host.default_password) > 0:
             host.default_password = utils.password(host.default_password, host.id, False)
         return host
@@ -566,7 +566,7 @@ def get_host(param: parameters.WebParameters, host_id=None, name=None, ip=None, 
             except NoResultFound:
                 return None
             except MultipleResultsFound:
-                raise error.WTF(f"Duplicate Host.name: {name} in the table Host!!!")
+                raise error.HostDuplicatedResult(f"Duplicate Host.name: {name} in the table Host!!!")
         if host.default_password and len(host.default_password) > 0:
             host.default_password = utils.password(host.default_password, host.id, False)
         return host
@@ -1494,6 +1494,7 @@ def add_hosts_file(param: parameters.WebParameters, filepath: str, parent=0):
         raise error.WTF("Missing file to upload")
     created_host = 0
     updated_host = 0
+    skipped_host = 0
     with open(filepath, newline='') as f:
         reader = csv.DictReader(f, delimiter=',')
         for row in reader:
@@ -1554,7 +1555,14 @@ def add_hosts_file(param: parameters.WebParameters, filepath: str, parent=0):
                     n_host.file_transfer_type = db.query(schema.FileTransferType). \
                         order_by(schema.FileTransferType.id).first().id
             param.log.debug("add_hosts_file: host: {}, parent: {}".format(n_host, folder.parent))
-            if get_host(param, name=n_host.name, ip=n_host.ip):
+            try:
+                check_host = get_host(param, name=n_host.name, ip=n_host.ip)
+            except error.HostDuplicatedResult as e:
+                skipped_host += 1
+                param.log.warning(e)
+                continue
+
+            if check_host:
                 result = update_host(param, n_host, password=password, parent=folder.id, action=False)
                 updated_host += 1
             else:
@@ -1571,11 +1579,11 @@ def add_hosts_file(param: parameters.WebParameters, filepath: str, parent=0):
             user=param.user_info.uid,
             action_type=27,
             date=datetime.datetime.now(),
-            message=f"Загрузка файла: {os.path.basename(filepath)}. Добавлено хостов: {created_host}, Обновлено хостов: {updated_host}"
+            message=f"Загрузка файла. Добавлено хостов: {created_host}, Обновлено хостов: {updated_host}, Пропущено хостов: {skipped_host}"
         )
         db.add(action)
         db.flush()
-    return created_host, updated_host
+    return created_host, updated_host, skipped_host
 
 
 def add_jump(param: parameters.WebParameters, r, action=True):
@@ -1700,6 +1708,13 @@ def delete_folder(param: parameters.WebParameters, host_id, action=True):
             db.add(action)
         db.flush()
 
+        child_hosts = db.query(schema.Host).filter(schema.Host.parent == host_id, schema.Host.type == 1).all()
+
+        for host in child_hosts:
+            host.remove = True
+
+        db.flush()
+
         child_folder = db.query(schema.Host).filter(schema.Host.parent == host_id, schema.Host.type == 2).all()
         for f in child_folder:
             delete_folder(param, f.id, action=False)
@@ -1707,17 +1722,18 @@ def delete_folder(param: parameters.WebParameters, host_id, action=True):
     return True
 
 
-def delete_host(param: parameters.WebParameters, host_id):
+def delete_host(param: parameters.WebParameters, host_id, action=True):
     with schema.db_edit(param.engine) as db:
         d_host = db.query(schema.Host).filter(schema.Host.id == host_id).one()
         d_host.remove = True
-        action = schema.Action(
-            user=param.user_info.uid,
-            action_type=22,
-            date=datetime.datetime.now(),
-            message="Удаление хоста: {folder.name} - id={folder.id}".format(folder=d_host)
-        )
-        db.add(action)
+        if action:
+            action = schema.Action(
+                user=param.user_info.uid,
+                action_type=22,
+                date=datetime.datetime.now(),
+                message="Удаление хоста: {folder.name} - id={folder.id}".format(folder=d_host)
+            )
+            db.add(action)
         db.flush()
 
     return True
