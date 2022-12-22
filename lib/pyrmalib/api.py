@@ -16,12 +16,12 @@
    limitations under the License.
 """
 
-from flask_restful import Resource, reqparse, request
+from flask_restful import Resource, request
 from flask_httpauth import HTTPBasicAuth
 
 import pam
 import os
-import csv
+import tempfile
 from sqlalchemy import create_engine
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from pyrmalib import parameters, schema, applib, utils, error
@@ -85,16 +85,24 @@ class HostUpload(Resource):
     decorators = [auth.login_required]
 
     def post(self):
-        upload_file_path = '/tmp/upload_file.csv'
-        
         upload_file = request.files['file']
+        _, upload_file_path = tempfile.mkstemp()
+        
+        apiParameters.log.debug(f'tempfile: {upload_file_path}')
         apiParameters.log.info(f'/api/host/upload post request: {upload_file.filename}')
         upload_file.save(upload_file_path)
 
         try:
-            created_host, updated_host = applib.add_hosts_file(apiParameters, upload_file_path)
+            created_host, updated_host, skipped_host = applib.add_hosts_file(apiParameters, upload_file_path)
+            apiParameters.log.info(f'Uploaded: {created_host}, Updated: {updated_host}, Skipped: {skipped_host}')
         except error.WTF as e:
-            return {'status': 'error', 'error': e}, 500
-
-        os.remove(upload_file_path)
-        return {'status': 'success', 'created host': created_host, 'updated host': updated_host}, 200
+            return {'status': 'error', 'error': str(e)}, 500
+        finally:
+            os.remove(upload_file_path)
+        
+        return {
+            'status': 'success', 
+            'created host': created_host, 
+            'updated host': updated_host, 
+            'skipped host': skipped_host
+            }, 200

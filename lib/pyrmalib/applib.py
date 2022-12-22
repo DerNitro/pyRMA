@@ -536,7 +536,7 @@ def get_host(param: parameters.WebParameters, host_id=None, name=None, ip=None, 
             except NoResultFound:
                 return None
             except MultipleResultsFound:
-                raise error.WTF("Дубли Host.id в таблице Host!!!")
+                raise error.HostDuplicatedResult(f"Duplicate Host.id: {host_id} in the table Host!!!")
         if host.default_password and len(host.default_password) > 0:
             host.default_password = utils.password(host.default_password, host.id, False)
         return host
@@ -551,7 +551,7 @@ def get_host(param: parameters.WebParameters, host_id=None, name=None, ip=None, 
             except NoResultFound:
                 return None
             except MultipleResultsFound:
-                raise error.WTF("Дубли Host.name|ip в таблице Host!!!")
+                raise error.HostDuplicatedResult(f"Duplicate Host.name|ip: {name}|{ip} in the table Host!!!")
         if host.default_password and len(host.default_password) > 0:
             host.default_password = utils.password(host.default_password, host.id, False)
         return host
@@ -566,7 +566,7 @@ def get_host(param: parameters.WebParameters, host_id=None, name=None, ip=None, 
             except NoResultFound:
                 return None
             except MultipleResultsFound:
-                raise error.WTF("Дубли Host.name в таблице Host!!!")
+                raise error.HostDuplicatedResult(f"Duplicate Host.name: {name} in the table Host!!!")
         if host.default_password and len(host.default_password) > 0:
             host.default_password = utils.password(host.default_password, host.id, False)
         return host
@@ -707,7 +707,7 @@ def get_jump_host(param: parameters.WebParameters, host_id, schema_jump_host=Fal
                 host = get_host(param, host_id=host_id_)
                 host_id_ = host.parent
         except MultipleResultsFound:
-            raise error.WTF("Дубли Jump в таблице jump!!!")
+            raise error.WTF(f"Duplicate Jump: {host_id} in the table jump!!!")
     if schema_jump_host:
         return jump, jump_host
     else:
@@ -723,7 +723,7 @@ def get_group(param: parameters.WebParameters, group_id):
         except NoResultFound:
             return False
         except MultipleResultsFound:
-            raise error.WTF("Дубли Group.id в таблице Group!!!")
+            raise error.WTF(f"Duplicate Group.id: {group_id} in the table Group!!!")
 
     if group.type == 0:
         with schema.db_select(param.engine) as db:
@@ -752,7 +752,7 @@ def get_group(param: parameters.WebParameters, group_id):
         except NoResultFound:
             content['permission'] = None
         except MultipleResultsFound:
-            raise error.WTF("Дубли default Permission в таблице Permission!!!")
+            raise error.WTF(f"Duplicate default Permission: {group_id} in the table Permission!!!")
     return content
 
 
@@ -857,7 +857,7 @@ def get_user_access(param: parameters.Parameters, uid, hid=None):
             except NoResultFound:
                 return None
             except MultipleResultsFound:
-                raise error.WTF('Дубли в аксес листах!!!')
+                raise error.WTF(f'Duplicate uid({uid}) and hid({hid}) in the table AccessList')
         else:
             user_access = db.query(schema.AccessList).filter(
                 schema.AccessList.status == 1,
@@ -1098,7 +1098,7 @@ def set_user_permission(param: parameters.WebParameters, user_access: int, conne
             )
             db.add(perm)
         except MultipleResultsFound:
-            raise error.WTF("Дубли default Permission в таблице Permission!!!")
+            raise error.WTF("Duplicate default Permission: uid({uid}) in the table Permission!!!")
 
 
 def set_group_permission(param: parameters.WebParameters, group_id, form: forms.ChangePermission):
@@ -1138,7 +1138,7 @@ def set_group_permission(param: parameters.WebParameters, group_id, form: forms.
             )
             db.add(perm)
         except MultipleResultsFound:
-            raise error.WTF("Дубли default Permission в таблице Permission!!!")
+            raise error.WTF("Duplicate default Permission: group_id({group_id}) in the table Permission!!!")
 
         action = schema.Action(
             user=param.user_info.uid,
@@ -1423,13 +1423,19 @@ def update_host(param: parameters.WebParameters, host: schema.Host, parent=0, pa
                     schema.Host.ip == host.ip,
                     schema.Host.remove.is_(False)
                 ).one()
-        upd_host.default_login = host.default_login
-        upd_host.ilo = host.ilo
-        upd_host.ilo_type = host.ilo_type
+        
         upd_host.parent = parent
+
+        if host.default_login and len(host.default_login) > 0:
+            upd_host.default_login = host.default_login
+        if host.ilo and len(host.ilo) > 0:
+            upd_host.ilo = host.ilo
+        if host.ilo_type:
+            upd_host.ilo_type = host.ilo_type
         if password:
             upd_host.default_password = utils.password(password, host.id, True)
-        upd_host.note = host.note
+        if upd_host.note and len(upd_host.note) > 0:
+            upd_host.note = host.note
         db.flush()
         db.refresh(upd_host)
         
@@ -1473,7 +1479,7 @@ def add_service_type(param: parameters.WebParameters, name, default_port):
             db.flush()
         except sqlalchemy.exc.IntegrityError as e:
             if 'duplicate key value' in str(e):
-                raise error.InsertError('дублирующая запись!!!')
+                raise error.InsertError('duplicate key value!')
             else:
                 raise error.WTF(e)
         db.refresh(service_type)
@@ -1491,9 +1497,10 @@ def add_service_type(param: parameters.WebParameters, name, default_port):
 def add_hosts_file(param: parameters.WebParameters, filepath: str, parent=0):
     # TODO: Оптимизировать загрузку хостов
     if not os.path.isfile(filepath):
-        raise error.WTF("Отсутствует файл на загрузку")
+        raise error.WTF("Missing file to upload")
     created_host = 0
     updated_host = 0
+    skipped_host = 0
     with open(filepath, newline='') as f:
         reader = csv.DictReader(f, delimiter=',')
         for row in reader:
@@ -1554,7 +1561,14 @@ def add_hosts_file(param: parameters.WebParameters, filepath: str, parent=0):
                     n_host.file_transfer_type = db.query(schema.FileTransferType). \
                         order_by(schema.FileTransferType.id).first().id
             param.log.debug("add_hosts_file: host: {}, parent: {}".format(n_host, folder.parent))
-            if get_host(param, name=n_host.name, ip=n_host.ip):
+            try:
+                check_host = get_host(param, name=n_host.name, ip=n_host.ip)
+            except error.HostDuplicatedResult as e:
+                skipped_host += 1
+                param.log.warning(e)
+                continue
+
+            if check_host:
                 result = update_host(param, n_host, password=password, parent=folder.id, action=False)
                 updated_host += 1
             else:
@@ -1571,11 +1585,11 @@ def add_hosts_file(param: parameters.WebParameters, filepath: str, parent=0):
             user=param.user_info.uid,
             action_type=27,
             date=datetime.datetime.now(),
-            message=f"Загрузка файла: {os.path.basename(filepath)}. Добавлено хостов: {created_host}, Обновлено хостов: {updated_host}"
+            message=f"Загрузка файла. Добавлено хостов: {created_host}, Обновлено хостов: {updated_host}, Пропущено хостов: {skipped_host}"
         )
         db.add(action)
         db.flush()
-    return created_host, updated_host
+    return created_host, updated_host, skipped_host
 
 
 def add_jump(param: parameters.WebParameters, r, action=True):
@@ -1690,14 +1704,26 @@ def delete_folder(param: parameters.WebParameters, host_id, action=True):
     with schema.db_edit(param.engine) as db:
         d_host = db.query(schema.Host).filter(schema.Host.id == host_id).one()
         d_host.remove = True
+        folder_path = get_folder_path(param, d_host.parent)
+        folder_path_string = ""
+        for _, v in folder_path.items():
+            folder_path_string += "/"
+            folder_path_string += v.name
         if action:
             action = schema.Action(
                 user=param.user_info.uid,
                 action_type=12,
                 date=datetime.datetime.now(),
-                message="Удаление директории: {folder.name} - id={folder.id}".format(folder=d_host)
+                message=f"Удаление директории: {folder_path_string}"
             )
             db.add(action)
+        db.flush()
+
+        child_hosts = db.query(schema.Host).filter(schema.Host.parent == host_id, schema.Host.type == 1).all()
+
+        for host in child_hosts:
+            host.remove = True
+
         db.flush()
 
         child_folder = db.query(schema.Host).filter(schema.Host.parent == host_id, schema.Host.type == 2).all()
@@ -1707,17 +1733,23 @@ def delete_folder(param: parameters.WebParameters, host_id, action=True):
     return True
 
 
-def delete_host(param: parameters.WebParameters, host_id):
+def delete_host(param: parameters.WebParameters, host_id, action=True):
     with schema.db_edit(param.engine) as db:
         d_host = db.query(schema.Host).filter(schema.Host.id == host_id).one()
         d_host.remove = True
-        action = schema.Action(
-            user=param.user_info.uid,
-            action_type=22,
-            date=datetime.datetime.now(),
-            message="Удаление хоста: {folder.name} - id={folder.id}".format(folder=d_host)
-        )
-        db.add(action)
+        folder_path = get_folder_path(param, d_host.parent)
+        folder_path_string = ""
+        for _, v in folder_path.items():
+            folder_path_string += "/"
+            folder_path_string += v.name
+        if action:
+            action = schema.Action(
+                user=param.user_info.uid,
+                action_type=22,
+                date=datetime.datetime.now(),
+                message=f"Удаление хоста: {folder_path_string}/{d_host.name}"
+            )
+            db.add(action)
         db.flush()
 
     return True
