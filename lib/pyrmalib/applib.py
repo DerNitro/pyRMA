@@ -1423,13 +1423,19 @@ def update_host(param: parameters.WebParameters, host: schema.Host, parent=0, pa
                     schema.Host.ip == host.ip,
                     schema.Host.remove.is_(False)
                 ).one()
-        upd_host.default_login = host.default_login
-        upd_host.ilo = host.ilo
-        upd_host.ilo_type = host.ilo_type
+        
         upd_host.parent = parent
+
+        if host.default_login and len(host.default_login) > 0:
+            upd_host.default_login = host.default_login
+        if host.ilo and len(host.ilo) > 0:
+            upd_host.ilo = host.ilo
+        if host.ilo_type:
+            upd_host.ilo_type = host.ilo_type
         if password:
             upd_host.default_password = utils.password(password, host.id, True)
-        upd_host.note = host.note
+        if upd_host.note and len(upd_host.note) > 0:
+            upd_host.note = host.note
         db.flush()
         db.refresh(upd_host)
         
