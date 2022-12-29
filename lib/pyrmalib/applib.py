@@ -446,7 +446,8 @@ def get_content_host(param: parameters.WebParameters, host_id, connection_date_s
         else:
             content['default_login'] = ''
     else:
-        content['default_login'] = '*' * len(host.default_login)
+        content['default_login'] = ''
+    
     if access.check_access(param, 'ShowPassword', h_object=host) \
             or param.user_info.admin:
         if host.default_password:
@@ -454,7 +455,8 @@ def get_content_host(param: parameters.WebParameters, host_id, connection_date_s
         else:
             content['default_password'] = ''
     else:
-        content['default_password'] = '*' * len(host.default_password)
+        content['default_password'] = ''
+    
     content['tcp_port'] = host.tcp_port
     content['note'] = markdown.markdown(host.note)
 
