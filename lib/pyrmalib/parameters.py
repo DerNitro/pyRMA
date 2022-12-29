@@ -50,7 +50,10 @@ class Parameters:
 
     def __init__(self):
         if not os.path.isfile(pathConfigFile):
-            raise FileNotFoundError('Отсутствует конфигурационный файл: {0}'.format(pathConfigFile))
+            raise FileNotFoundError(f"Missing config file: {pathConfigFile}")
+
+        if not os.access(pathConfigFile, os.R_OK):
+            raise OSError(f"Can't open configuration file: {pathConfigFile}")
 
         self.conf = configparser.ConfigParser()
         self.conf.read(pathConfigFile)
