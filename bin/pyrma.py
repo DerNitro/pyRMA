@@ -20,20 +20,33 @@
 """
 
 from pickle import TRUE
-import sys
+import sys, os
 import pwd, grp
-import traceback
-from pyrmalib import parameters, interface, schema, applib, mail, template
+from pyrmalib import parameters
+
+try:
+    appParameters = parameters.AppParameters()
+except FileNotFoundError as err:
+    print(f"Error: {err}!!!")
+    sys.exit(1)
+except parameters.CheckConfigError as err:
+    print(f"Error: {err}!!!")
+    sys.exit(2)
+except OSError as err:
+    print(f"Error: {err}!!!")
+    sys.exit(1)
+
+from pyrmalib import interface, schema, applib, mail, template
 import sqlalchemy.orm
 from sqlalchemy import create_engine
-from pyrmalib.utils import *
-from pyrmalib.error import *
+import pyrmalib.utils as pyutils
+import pyrmalib.error as pyerror
 import datetime
 import signal
 
 __author__ = 'Sergey Utkin'
 __email__ = 'utkins01@gmail.com'
-__version__ = "1.2.1"
+__version__ = "1.2.2"
 __status__ = "Stable"
 __maintainer__ = "Sergey Utkin"
 __copyright__ = "Copyright 2016, Sergey Utkin"
@@ -41,23 +54,12 @@ __program__ = 'pyRMA'
 
 
 def handle_sig_term(signum, frame):
-    raise HandleSigTerm('Получен сигнал на завершение приложения!!!({},{})'.format(signum, frame))
+    raise pyerror.HandleSigTerm('Получен сигнал на завершение приложения!!!({},{})'.format(signum, frame))
 
 signal.signal(signal.SIGTERM, handle_sig_term)
 signal.signal(signal.SIGINT, handle_sig_term)
 signal.signal(signal.SIGCHLD, handle_sig_term)
 signal.signal(signal.SIGHUP, handle_sig_term)
-
-try:
-    appParameters = parameters.AppParameters()
-except FileNotFoundError:
-    print('Ошибка инициализации приложения!!!')
-    print(traceback.print_exc(limit=1))
-    sys.exit(1)
-except parameters.CheckConfigError:
-    print('Ошибка инициализации приложения!!!')
-    print(traceback.print_exc(limit=1))
-    sys.exit(2)
 
 appParameters.program = __program__
 appParameters.version = __version__
@@ -142,7 +144,7 @@ except sqlalchemy.orm.exc.NoResultFound:
 if appParameters.check_source_ip == '0':
     appParameters.log.debug("Проверка IP отключена")
 else:
-    if not check_ip(ssh_client_ip, user_info.ip):
+    if not pyutils.check_ip(ssh_client_ip, user_info.ip):
         appParameters.log.error("Подключение с неразрешенного IP адрес", pr=True)
         sys.exit(15)
     else:
@@ -213,11 +215,11 @@ if connection_host:      # type: modules.ConnectionModules
         connection_host.connection()
     except KeyboardInterrupt:
         pass
-    except ErrorConnectionJump:
+    except pyerror.ErrorConnectionJump:
         pass
-    except ErrorConnectionIPMI as e:
+    except pyerror.ErrorConnectionIPMI as e:
         print(e)
-    except HandleSigTerm as e:
+    except pyerror.HandleSigTerm as e:
         appParameters.log.debug(e)
     finally:
         connection_host.close()
