@@ -1,6 +1,6 @@
 ansible==7.0.0
 ansible-lint==5.4.0
-flask==2.1.2
+flask==2.3.2
 npyscreen==4.10.5
 flask_wtf==1.0.1
 sqlalchemy==1.4.36
