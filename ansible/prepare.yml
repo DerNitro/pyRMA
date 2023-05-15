@@ -1,7 +1,7 @@
 ---
 - name: Install requirement packages
   become: true
-  apt:
+  ansible.builtin.apt:
     name:
       - sshpass
       - asciinema
@@ -10,6 +10,13 @@
       - acl                           # https://github.com/georchestra/ansible/issues/55#issuecomment-651043423
     update_cache: yes
     cache_valid_time: 3600
+
+# https://github.com/pypa/pip/issues/11795
+- name: Uninstall python3-openssl
+  become: true
+  ansible.builtin.apt:
+    name: python3-openssl
+    state: absent
 
 - name: Ensure a locale exists
   become: true
