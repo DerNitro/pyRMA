@@ -235,7 +235,8 @@ def check_access_request(param: parameters.WebParameters, user_id: int, host_id:
             db.query(schema.RequestAccess).filter(
                 schema.RequestAccess.host == host_id, 
                 schema.RequestAccess.user == user_id,
-                schema.RequestAccess.status == 0
+                schema.RequestAccess.status == 0,
+                schema.RequestAccess.date_access > datetime.datetime.now()
             ).one()
         return True
     except NoResultFound:
