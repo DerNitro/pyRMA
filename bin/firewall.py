@@ -33,13 +33,7 @@ import shlex
 import subprocess
 import psutil
 
-__author__ = 'Sergey Utkin'
-__email__ = 'utkins01@gmail.com'
-__version__ = "1.2.2"
-__status__ = "stable"
-__maintainer__ = "Sergey Utkin"
-__copyright__ = "Copyright 2016, Sergey Utkin"
-__program__ = 'pyRMA'
+from .info import *
 
 interrupted = False
 dump_traffic = []
