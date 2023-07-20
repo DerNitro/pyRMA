@@ -462,7 +462,8 @@ class ConnectionForm(npyscreen.Form):
             if not self.btn_ipmi.hidden:
                 access_list.append('IPMI')
             
-            if applib.check_access_request(appParameters, appParameters.user_info.uid, self.host.id):
+            if applib.check_access_request(appParameters, appParameters.user_info.uid, self.host.id) or \
+                applib.get_user_access(appParameters, appParameters.user_info.uid, hid=self.host.id):
                 echo_form('Запрос доступа уже был отправлен ранее')
             else:
                 access_form = AccessRequest(name=self.host.name, access_list=access_list)
@@ -499,7 +500,8 @@ class ConnectionForm(npyscreen.Form):
             if not self.btn_ipmi.hidden:
                 access_list.append('IPMI')
             
-            if applib.check_access_request(appParameters, appParameters.user_info.uid, self.host.id):
+            if applib.check_access_request(appParameters, appParameters.user_info.uid, self.host.id) or \
+                applib.get_user_access(appParameters, appParameters.user_info.uid, hid=self.host.id):
                 echo_form('Запрос доступа уже был отправлен ранее')
             else:
                 access_form = AccessRequest(name=self.host.name, access_list=access_list)
@@ -519,7 +521,8 @@ class ConnectionForm(npyscreen.Form):
             if not self.btn_ipmi.hidden:
                 access_list.append('IPMI')
             
-            if applib.check_access_request(appParameters, appParameters.user_info.uid, self.host.id):
+            if applib.check_access_request(appParameters, appParameters.user_info.uid, self.host.id) or \
+                applib.get_user_access(appParameters, appParameters.user_info.uid, hid=self.host.id):
                 echo_form('Запрос доступа уже был отправлен ранее')
             else:
                 access_form = AccessRequest(name=self.host.name, access_list=access_list)

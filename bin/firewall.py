@@ -33,13 +33,7 @@ import shlex
 import subprocess
 import psutil
 
-__author__ = 'Sergey Utkin'
-__email__ = 'utkins01@gmail.com'
-__version__ = "1.2.2"
-__status__ = "stable"
-__maintainer__ = "Sergey Utkin"
-__copyright__ = "Copyright 2016, Sergey Utkin"
-__program__ = 'pyRMA'
+import pyrmalib.info as app_info
 
 interrupted = False
 dump_traffic = []
@@ -190,7 +184,7 @@ except parameters.CheckConfigError:
     print(traceback.print_exc(limit=1))
     sys.exit(2)
 
-appParameters.log.info('Запуск приложения {}'.format(__version__))
+appParameters.log.info('Запуск приложения {}'.format(app_info.version))
 
 signal.signal(signal.SIGTERM, handle_sig_term)
 signal.signal(signal.SIGINT, handle_sig_term)

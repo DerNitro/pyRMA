@@ -2,7 +2,7 @@ ansible==7.0.0
 ansible-lint==5.4.0
 flask==2.3.2
 npyscreen==4.10.5
-flask_wtf==1.0.1
+# flask_wtf==1.0.1
 sqlalchemy==1.4.36
 wtforms==3.0.1
 psutil==5.9.0
@@ -16,3 +16,8 @@ markdown==3.4.1
 alembic==1.8.1
 Flask-RESTful==0.3.9
 Flask-HTTPAuth==4.7.0
+Flask-WTF==1.1.1
+
+# PyTEST packages
+pytest==7.4.0
+pytest-sqlalchemy-mock==0.1.5

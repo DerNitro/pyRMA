@@ -38,13 +38,8 @@ from paramiko.py3compat import strftime
 from sqlalchemy import create_engine
 import signal
 
-__author__ = 'Sergey Utkin'
-__email__ = 'utkins01@gmail.com'
-__version__ = "1.2.2"
-__status__ = "Stable"
-__maintainer__ = "Sergey Utkin"
-__copyright__ = "Copyright 2016, Sergey Utkin"
-__program__ = 'pyRMA'
+import pyrmalib.info as app_info
+
 
 ftParameters = parameters.FileTransfer()
 
@@ -60,7 +55,7 @@ engine = create_engine(
 )
 ftParameters.engine = engine
 
-ftParameters.log.info('запуск модуля передачи файлов - {} v.{}'.format(__program__, __version__))
+ftParameters.log.info('запуск модуля передачи файлов - {} v.{}'.format(app_info.program, app_info.version))
 
 parser = argparse.ArgumentParser(description='Модуль передачи файлов pyRMA')
 parser.add_argument('--host', help='Узел для подключения', required=True)
@@ -362,7 +357,7 @@ class FT(npyscreen.FormBaseNew):
                 curses.KEY_EIC: self.mark_file,
             }
         )
-        self.help = template.help_ft_form().format(program=__program__, version=__version__)
+        self.help = template.help_ft_form().format(program=app_info.program, version=app_info.version)
 
         try:
             self.source.values = self.get_local_files(os.path.join(*local_path))
