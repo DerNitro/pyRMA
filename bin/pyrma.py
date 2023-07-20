@@ -44,7 +44,7 @@ import pyrmalib.error as pyerror
 import datetime
 import signal
 
-from .info import *
+import pyrmalib.info as app_info
 
 
 def handle_sig_term(signum, frame):
@@ -55,9 +55,9 @@ signal.signal(signal.SIGINT, handle_sig_term)
 signal.signal(signal.SIGCHLD, handle_sig_term)
 signal.signal(signal.SIGHUP, handle_sig_term)
 
-appParameters.program = __program__
-appParameters.version = __version__
-appParameters.log.info('Запуск приложения: {0} {1}'.format(__program__, __version__))
+appParameters.program = app_info.program
+appParameters.version = app_info.version
+appParameters.log.info('Запуск приложения: {0} {1}'.format(app_info.program, app_info.version))
 appParameters.log.debug(appParameters)
 pw_name, pw_passwd, pw_uid, pw_gid, pw_gecos, pw_dir, pw_shell = pwd.getpwuid(os.getuid())
 

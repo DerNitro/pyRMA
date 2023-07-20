@@ -33,7 +33,7 @@ import shlex
 import subprocess
 import psutil
 
-from .info import *
+import pyrmalib.info as app_info
 
 interrupted = False
 dump_traffic = []
@@ -184,7 +184,7 @@ except parameters.CheckConfigError:
     print(traceback.print_exc(limit=1))
     sys.exit(2)
 
-appParameters.log.info('Запуск приложения {}'.format(__version__))
+appParameters.log.info('Запуск приложения {}'.format(app_info.version))
 
 signal.signal(signal.SIGTERM, handle_sig_term)
 signal.signal(signal.SIGINT, handle_sig_term)
