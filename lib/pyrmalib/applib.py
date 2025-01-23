@@ -1507,6 +1507,7 @@ def add_hosts_file(param: parameters.WebParameters, filepath: str, parent=0):
     with open(filepath, newline='') as f:
         reader = csv.DictReader(f, delimiter=',')
         for row in reader:
+            jump_host = None
             password = None
             n_host = schema.Host()
             n_host.type = 1
@@ -1528,8 +1529,6 @@ def add_hosts_file(param: parameters.WebParameters, filepath: str, parent=0):
                 if str(indx).upper() == 'Jump'.upper():
                     if isinstance(val, str) and len(val) > 0:
                         jump_host = val
-                    else:
-                        jump_host = None
                 if str(indx).upper() == 'IsJump'.upper():
                     if isinstance(val, str) and len(val) > 0:
                         n_host.proxy = True
@@ -1572,7 +1571,7 @@ def add_hosts_file(param: parameters.WebParameters, filepath: str, parent=0):
                 continue
 
             if check_host:
-                result = update_host(param, n_host, password=password, parent=folder.id, action=False)
+                result = update_host(param, check_host, password=password, parent=folder.id, action=False)
                 updated_host += 1
             else:
                 result = add_host(param, n_host, password=password, parent=folder.id, action=False)
