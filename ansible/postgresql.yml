@@ -8,7 +8,7 @@
       encoding:  "{{ pyrma_database.encoding | default('UTF-8') }}"
       username:  "{{ pyrma_database.username | default('acs') }}"
       password:  "{{ pyrma_database.password | default('acs') }}"
-      source:    "{{ pyrma_database.source | default('127.0.0.1/8') }}"
+      source:    "{{ pyrma_database.source | default('127.0.0.1/32') }}"
 
 - name: Install and configure PostgreSQL
   become: true
@@ -55,6 +55,13 @@
         type: database
         role: "{{ pyrma_database.username }}"
 
+    - name: Deleted older value from pg_hba.conf
+      become_user: postgres
+      ansible.builtin.lineinfile:
+        regexp: '^host.+acs.+acs.+127.0.0.1\/8.+md5'
+        path: /etc/postgresql/12/main/pg_hba.conf
+        state: absent
+
     - name: Grant some_user access to some_db
       become_user: postgres
       community.postgresql.postgresql_pg_hba:
@@ -80,7 +87,7 @@
 
 - name: Check connection host {{ pyrma_database.host }}, db {{ pyrma_database.name }}
   assert:
-    that: 
+    that:
       - __psql_ping.is_available
     fail_msg: "{{ __psql_ping.warnings | default('') }}"
     success_msg: "PostgreSQL is available"
