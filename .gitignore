@@ -5,3 +5,4 @@ test
 *.pyc
 *~
 *.csv
+tests/csv_generator.py
