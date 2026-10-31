@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 """
     Filename : forms
@@ -22,13 +21,22 @@
    limitations under the License.
 """
 from datetime import date
-from pyrmalib import utils
 
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileRequired
-from wtforms import StringField, SubmitField, TextAreaField, SelectField, IntegerField, BooleanField, PasswordField
+from wtforms import (
+    BooleanField,
+    IntegerField,
+    PasswordField,
+    SelectField,
+    StringField,
+    SubmitField,
+    TextAreaField,
+)
 from wtforms.fields.datetime import DateField
 from wtforms.validators import DataRequired, IPAddress, NumberRange, ValidationError
+
+from pyrmalib import utils
 
 
 def ip_net_check(form, field):

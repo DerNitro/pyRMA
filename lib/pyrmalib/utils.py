@@ -14,11 +14,12 @@
    limitations under the License.
 """
 
-import os
 import hashlib
 import ipaddress
-import pyrmalib.error
+import os
 from datetime import date, datetime
+
+import pyrmalib.error
 
 
 def get_app_parameters(table_parameter, param):
@@ -39,12 +40,12 @@ def check_license(lic):
     :type lic:  str
     :return: Возвращает Истина если файл валидный.
     """
+    import datetime
+    import hashlib
     from platform import system
     from socket import gethostname
-    import hashlib
-    import datetime
 
-    f = open(lic, 'r', encoding='utf-8')
+    f = open(lic, encoding='utf-8')
     allhash, idhost, hostname, platform, days = str(f.readline()).split()
     f.close()
 
@@ -155,7 +156,7 @@ def password(passwd, magic, mask=True):
     :type mask: bool
     :return: Возвращает преобразованный пароль
     """
-    c_h = 'PQRabc=>?@[\]defghijkopqJKLrstuv&\'wxy234789!"#$%()*+z01,-./:;<}~ABCDlmnEFGHI56MNOST^_`{|UVWXYZ'
+    c_h = 'PQRabc=>?@[\\]defghijkopqJKLrstuv&\'wxy234789!"#$%()*+z01,-./:;<}~ABCDlmnEFGHI56MNOST^_`{|UVWXYZ'
     result = ''
     magic = list(str(magic))
     if not passwd:

@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-# encoding: utf-8
 
 """
        Copyright 2016 Sergey Utkin utkins01@gmail.com
@@ -18,16 +16,19 @@
    limitations under the License.
 """
 import datetime
-import markdown
-
-from flask import Flask, render_template, request, redirect, session, url_for, send_from_directory
-from flask_wtf.csrf import CSRFProtect
-from flask_restful import Api
-from pyrmalib import api as rma_api, schema, parameters, applib, access, forms, error as rma_error
 import os
 import pwd
-from sqlalchemy import create_engine, sql
 import tempfile
+
+import markdown
+from flask import Flask, redirect, render_template, request, send_from_directory, session, url_for
+from flask_restful import Api
+from flask_wtf.csrf import CSRFProtect
+from sqlalchemy import create_engine, sql
+
+from pyrmalib import access, applib, forms, parameters, schema
+from pyrmalib import api as rma_api
+from pyrmalib import error as rma_error
 
 webParameters = parameters.WebParameters()
 webParameters.engine = create_engine(
@@ -228,7 +229,7 @@ def login():
                                request.remote_addr,
                                webParameters):
             session['username'] = request.form['username']
-            session['web_live_time'] = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(minutes=webParameters.web_live_time)
+            session['web_live_time'] = datetime.datetime.now(tz=datetime.UTC) + datetime.timedelta(minutes=webParameters.web_live_time)
             return redirect(url_for('root'))
         else:
             error = 'Не правильный логин|пароль или учетная запись заблокирована!!!'
@@ -246,7 +247,7 @@ def logout():
 def logs(date=None):
     if not webParameters.user_info.admin:
         return render_template(siteMap['access_denied'])
-    
+
     search_field = forms.Search()
     form = forms.ShowLog()
     form.user.choices = [(0, "Все")]
@@ -279,7 +280,7 @@ def hosts(directory_id=None):
     jump_form = forms.JumpHost()
     search_field = forms.Search()
     admin = webParameters.user_info.admin
-    
+
     if request.method == 'POST' and jump_form.add_sub.data:
         applib.add_jump(
             webParameters,
@@ -288,20 +289,20 @@ def hosts(directory_id=None):
                 'jump': jump_form.jump.data
             }
         )
-    
+
     if request.method == 'POST' and jump_form.clear_sub.data:
         applib.clear_jump(webParameters, directory_id)
-    
+
     if applib.get_group_host(webParameters):
         group_form.name.choices = [(t.id, t.name) for t in applib.get_group_host(webParameters)]
     else:
         group_form = False
-    
+
     if applib.get_jump_hosts(webParameters):
         jump_form.jump.choices = applib.get_jump_hosts(webParameters)
     else:
         jump_form = False
-    
+
     if directory_id:
         directory_id = int(directory_id)
         edit_host_information = access.check_access(
@@ -474,7 +475,7 @@ def add_host(directory_id):
         f = form.file_host.data
         _, filename = tempfile.mkstemp()
         f.save(filename)
-        
+
         try:
             webParameters.log.debug(f"web.py: add_host(POST FILE), tempfile: {filename}")
             applib.add_hosts_file(webParameters, filename, parent=directory_id)
@@ -584,7 +585,7 @@ def host(host_id):
                 'jump': jump_form.jump.data
             }
         )
-    
+
     if request.method == 'POST' and jump_form.clear_sub.data:
         applib.clear_jump(webParameters, host_id)
 
@@ -592,10 +593,10 @@ def host(host_id):
         jump_form.jump.choices = applib.get_jump_hosts(webParameters)
     else:
         jump_form = False
-    
+
     if not applib.check_host(webParameters, host_id):
         return redirect(url_for('hosts', directory_id=host_id))
-    
+
     search_field = forms.Search()
     group_form = forms.AddHostGroup()
     connection_filter = forms.ConnectionFilter()
@@ -605,12 +606,12 @@ def host(host_id):
     if request.method == 'POST' and connection_filter.validate_on_submit():
         c_start_date = connection_filter.date_start.data
         c_end_date = connection_filter.date_end.data
-    
+
     if applib.get_group_host(webParameters):
         group_form.name.choices = [(t.id, t.name) for t in applib.get_group_host(webParameters)]
     else:
         group_form = False
-    
+
     object_host = applib.get_host(webParameters, host_id=host_id)
     content_host = applib.get_content_host(
         webParameters,
@@ -658,7 +659,7 @@ def del_service(service_id):
     service = applib.get_service(webParameters, service=service_id)
     if request.method == 'POST' and del_button.validate_on_submit():
         applib.del_service(webParameters, service=service_id)
-        return redirect('/host/{service.host}'.format(service=service))
+        return redirect(f'/host/{service.host}')
     return render_template(
         siteMap['delete_service'],
         admin=webParameters.user_info.admin,
@@ -691,7 +692,7 @@ def add_service(host_id):
 
         if request.method == 'POST' and form.add_sub.data:
             service_type = applib.get_service_type(webParameters, service_type_id=form.type.data)
-            
+
             s = schema.Service(
                 type=form.type.data,
                 host=host_id,
@@ -742,7 +743,7 @@ def administrate():
 def administrate_service():
     if not webParameters.user_info.admin:
         return render_template(siteMap['access_denied'])
-    
+
     search_field = forms.Search()
     form_add_service = forms.AddService()
     service = applib.get_service_type(webParameters, raw=True)
@@ -780,7 +781,7 @@ def administrate_ipmi():
 def administrate_ipmi_add():
     if not webParameters.user_info.admin:
         return render_template(siteMap['access_denied'])
-    
+
     form_add_ipmi = forms.IPMI()
     if request.method == 'POST' and form_add_ipmi.validate_on_submit():
         applib.add_ipmi(
@@ -908,7 +909,7 @@ def administrate_ipmi_change(ipmi_id):
 def administrate_access():
     if not webParameters.user_info.admin:
         return render_template(siteMap['access_denied'])
-    
+
     search_field = forms.Search()
     if not applib.get_group_user(webParameters):
         return render_template(siteMap['error'], error="Не созданы группы пользователей!!!")
@@ -948,7 +949,7 @@ def administrate_access():
 def administrate_access_delete(aid):
     if not webParameters.user_info.admin:
         return render_template(siteMap['access_denied'])
-    
+
     applib.del_access(webParameters, aid)
     return redirect(request.referrer)
 
@@ -984,7 +985,7 @@ def administrate_group():
 def administrate_group_show(group_id):
     if not webParameters.user_info.admin:
         return render_template(siteMap['access_denied'])
-    
+
     search_field = forms.Search()
     form = forms.ChangePermission()
     if request.method == 'POST' and form.edit_sub.data:
@@ -1038,7 +1039,7 @@ def administrate_group_show(group_id):
 def administrate_group_delete(group_id):
     if not webParameters.user_info.admin:
         return render_template(siteMap['access_denied'])
-    
+
     search_field = forms.Search()
     del_button = forms.DelButton()
     if request.method == 'POST' and del_button.validate_on_submit():
@@ -1077,7 +1078,7 @@ def administrate_users():
 def administrate_user_enable(uid):
     if not webParameters.user_info.admin:
         return render_template(siteMap['access_denied'])
-    
+
     if webParameters.user_info.admin:
         applib.user_disable(webParameters, uid, enable=True)
     return redirect(request.referrer)
@@ -1088,7 +1089,7 @@ def administrate_user_enable(uid):
 def administrate_user_disable(uid):
     if not webParameters.user_info.admin:
         return render_template(siteMap['access_denied'])
-    
+
     if webParameters.user_info.admin:
         applib.user_disable(webParameters, uid, disable=True)
     return redirect(request.referrer)
@@ -1099,7 +1100,7 @@ def administrate_user_disable(uid):
 def administrate_user_enable_admin(uid):
     if not webParameters.user_info.admin:
         return render_template(siteMap['access_denied'])
-    
+
     if webParameters.user_info.admin:
         applib.user_admin_disable(webParameters, uid, enable=True)
     return redirect(request.referrer)
@@ -1139,7 +1140,7 @@ def administrate_user(uid):
     user_form.email.data = content['user'].email
     user_form.ip.data = content['user'].ip
     user_form.name.data = content['user'].full_name
-    
+
     if applib.get_group_user(webParameters):
         group_user_form = forms.AddUserGroup()
         group_user_form.name.choices = [(t.id, t.name) for t in applib.get_group_user(webParameters)]
@@ -1186,7 +1187,7 @@ def administrate_host_group_delete(host_id, group):
 def administrate_host(host_id):
     if not webParameters.user_info.admin:
         return render_template(siteMap['access_denied'])
-    
+
     form = forms.AddHostGroup()
     if request.method == 'POST' and form.add_sub.data:
         applib.add_host_group(webParameters, host_id, form.name.data)

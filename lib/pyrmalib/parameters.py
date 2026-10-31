@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-# encoding: utf-8
 
 """
        Copyright 2016 Sergey Utkin utkins01@gmail.com
@@ -17,19 +15,20 @@
    limitations under the License.
 """
 
-import getpass
-from pyrmalib import log, schema
 import configparser
+import getpass
 import os
+
+from pyrmalib import log
 
 pathConfigFile = '/etc/pyrma/pyrma.conf'
 
 
 def check_config(config):
     if not config.has_section('Main'):
-        raise CheckConfigError('Отсутствует секция Main - {0}'.format(pathConfigFile))
+        raise CheckConfigError(f'Отсутствует секция Main - {pathConfigFile}')
     if not config.has_section('DataBase'):
-        raise CheckConfigError('Отсутствует секция DataBase - {0}'.format(pathConfigFile))
+        raise CheckConfigError(f'Отсутствует секция DataBase - {pathConfigFile}')
     return True
 
 
@@ -91,7 +90,7 @@ class Parameters:
         return True
 
     def __repr__(self):
-        return "{0}".format(self.__dict__)
+        return f"{self.__dict__}"
 
 
 class AppParameters(Parameters):

@@ -1,4 +1,3 @@
-# coding=utf-8
 """
        Copyright 2016 Sergey Utkin utkins01@gmail.com
 
@@ -14,12 +13,14 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 """
-import os
-import datetime
-import weakref
-import npyscreen
 import curses.ascii
-from pyrmalib import schema, template, access, parameters, utils, applib, connection
+import datetime
+import os
+import weakref
+
+import npyscreen
+
+from pyrmalib import access, applib, connection, parameters, schema, template, utils
 
 appParameters = parameters.AppParameters()  # type: parameters.AppParameters
 connection_host = None
@@ -155,7 +156,7 @@ class HostListDisplay(npyscreen.FormMutt):
             if appParameters.user_info.admin:
                 with schema.db_select(appParameters.engine) as db:
                     self.HostList = db.query(schema.Host).filter(schema.Host.parent == self.Level[-1]). \
-                        filter(schema.Host.name.like('%{0}%'.format(self.Filter)),
+                        filter(schema.Host.name.like(f'%{self.Filter}%'),
                                schema.Host.remove.is_(False)). \
                         order_by(schema.Host.type.desc()).order_by(schema.Host.name).all()
             else:
@@ -163,11 +164,11 @@ class HostListDisplay(npyscreen.FormMutt):
                     self.HostList = db.query(schema.Host). \
                         filter(schema.Host.prefix == appParameters.user_info.prefix,
                                schema.Host.parent == self.Level[-1],
-                               schema.Host.name.like('%{0}%'.format(self.Filter)),
+                               schema.Host.name.like(f'%{self.Filter}%'),
                                schema.Host.remove.is_(False)). \
                         order_by(schema.Host.type.desc()).order_by(schema.Host.name).all()
 
-        appParameters.log.debug("HostListDisplay.update_list - {}".format(self.HostList))
+        appParameters.log.debug(f"HostListDisplay.update_list - {self.HostList}")
 
         if len(self.Level) == 1:
             self.wMain.values = self.HostList
@@ -221,7 +222,7 @@ class Find(npyscreen.Popup):
         self.FindText = self.add(npyscreen.TitleText, name='Поиск:')
 
     def create(self):
-        super(Find, self).create()
+        super().create()
 
     def adjust_widgets(self):
         self.owner.FindText = self.FindText.value
@@ -246,16 +247,16 @@ class AccessRequest(npyscreen.ActionForm):
         )
         self.ticket = self.add(npyscreen.TitleText, name='Номер Заявки', begin_entry_at=20)
         self.access = self.add(
-            npyscreen.TitleMultiSelect, 
-            name='Доступы', 
-            max_height=4, 
+            npyscreen.TitleMultiSelect,
+            name='Доступы',
+            max_height=4,
             values=keywords['access_list'],
             begin_entry_at=20
         )
         self.note = self.add(npyscreen.MultiLineEditableBoxed, name='Дополнительное Описание', editable=True)
 
     def create(self):
-        super(AccessRequest, self).create()
+        super().create()
         self.cycle_widgets = True
 
     def on_ok(self):
@@ -300,7 +301,7 @@ class Filter(npyscreen.Popup):
             self.Status_Line.value = '(%s совпадений)' % count
 
     def create(self):
-        super(Filter, self).create()
+        super().create()
 
     def adjust_widgets(self):
         self.update_status()
@@ -326,9 +327,9 @@ class ConnectionForm(npyscreen.Form):
     def __init__(self, *args, **keywords):
         super().__init__(*args, **keywords)
         self.host = keywords['host']                                                                # type: schema.Host
-        self.name = 'Подключение к узлу: {0}'.format(self.host.name)
+        self.name = f'Подключение к узлу: {self.host.name}'
         self.add_handlers({'^Q': self.exit_editing})
-        
+
         if not self.host.default_login:
             self.host.default_login = 'user'
         if not self.host.default_password:
@@ -337,7 +338,7 @@ class ConnectionForm(npyscreen.Form):
         self.fill_values()
 
     def create(self):
-        super(ConnectionForm, self).create()
+        super().create()
         self.cycle_widgets = True
         self.ip_address = self.add(npyscreen.TitleFixedText, name='IP адрес')
         self.description = self.add(npyscreen.TitleFixedText, name='Описание')
@@ -389,7 +390,7 @@ class ConnectionForm(npyscreen.Form):
         if self.host.file_transfer_type:
             self.btn_file_transfer.hidden = False
         if len(services) > 0 and (
-            access.check_access(appParameters, 'ConnectionService', h_object=self.host) or 
+            access.check_access(appParameters, 'ConnectionService', h_object=self.host) or
             access.check_access(appParameters, 'ConnectionOnlyService', h_object=self.host)
         ):
             service_string_list = []
@@ -400,14 +401,10 @@ class ConnectionForm(npyscreen.Form):
                         service_type = st.name
                         break
                 service_string_list.append(
-                    '{service_type}: {acs_ip}:{s.local_port} -> {s.remote_ip}:{s.remote_port} {s.describe}'.format(
-                        s=s,
-                        acs_ip=appParameters.app_ip_address,
-                        service_type=service_type
-                    )
+                    f'{service_type}: {appParameters.app_ip_address}:{s.local_port} -> {s.remote_ip}:{s.remote_port} {s.describe}'
                 )
             self.service.values = service_string_list
-        
+
         for n in list(range(0, len(self._widgets__))):
             if self._widgets__[n].editable and not self._widgets__[n].hidden:
                 if self.get_widget(100) == self._widgets__[n]:
@@ -461,7 +458,7 @@ class ConnectionForm(npyscreen.Form):
                 access_list.append('Передача файлов')
             if not self.btn_ipmi.hidden:
                 access_list.append('IPMI')
-            
+
             if applib.check_access_request(appParameters, appParameters.user_info.uid, self.host.id) or \
                 applib.get_user_access(appParameters, appParameters.user_info.uid, hid=self.host.id):
                 echo_form('Запрос доступа уже был отправлен ранее')
@@ -499,7 +496,7 @@ class ConnectionForm(npyscreen.Form):
                 access_list.append('Передача файлов')
             if not self.btn_ipmi.hidden:
                 access_list.append('IPMI')
-            
+
             if applib.check_access_request(appParameters, appParameters.user_info.uid, self.host.id) or \
                 applib.get_user_access(appParameters, appParameters.user_info.uid, hid=self.host.id):
                 echo_form('Запрос доступа уже был отправлен ранее')
@@ -520,7 +517,7 @@ class ConnectionForm(npyscreen.Form):
                 access_list.append('Передача файлов')
             if not self.btn_ipmi.hidden:
                 access_list.append('IPMI')
-            
+
             if applib.check_access_request(appParameters, appParameters.user_info.uid, self.host.id) or \
                 applib.get_user_access(appParameters, appParameters.user_info.uid, hid=self.host.id):
                 echo_form('Запрос доступа уже был отправлен ранее')
@@ -541,7 +538,7 @@ class InformationForm(npyscreen.Form):
     def __init__(self, *args, **keywords):
         super().__init__(*args, **keywords)
         self.host = keywords['host']  # type: schema.Host
-        self.name = 'Информация о узле {name}'.format(name=self.host.name)
+        self.name = f'Информация о узле {self.host.name}'
 
     def create(self):
         self.cycle_widgets = True
@@ -590,11 +587,7 @@ class InformationForm(npyscreen.Form):
                         service_type = st.name
                         break
                 service_string_list.append(
-                    '{service_type}: {acs_ip}:{s.local_port} -> {s.remote_ip}:{s.remote_port} {s.describe}'.format(
-                        s=s,
-                        service_type=service_type,
-                        acs_ip=appParameters.app_ip_address
-                    )
+                    f'{service_type}: {appParameters.app_ip_address}:{s.local_port} -> {s.remote_ip}:{s.remote_port} {s.describe}'
                 )
             self.service.values = service_string_list
         self.note.values = self.host.note.split('\n')
@@ -637,7 +630,7 @@ class Interface(npyscreen.NPSAppManaged):
             'x': x
         }
         appParameters.log.debug('Запуск формы MAIN.')
-        appParameters.log.debug('screen size: x = {0}, y = {1}'.format(x, y))
+        appParameters.log.debug(f'screen size: x = {x}, y = {y}')
         if not appParameters.user_info.check:
             self.addForm("MAIN", ErrorForm)
             self.getForm("MAIN").error_text = 'Пользователь проходит проверку администратором!'
@@ -650,7 +643,7 @@ class Interface(npyscreen.NPSAppManaged):
             self.getForm("MAIN").error_text = 'Размер терминала не поддерживается!'
 
     def run(self, fork=None):
-        super(Interface, self).run(fork=None)
+        super().run(fork=None)
         return connection_host
 
     @staticmethod

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-# encoding: utf-8
 """
        Copyright 2016 Sergey Utkin utkins01@gmail.com
 
@@ -16,37 +14,35 @@
    limitations under the License.
 """
 
-import psutil
-import os
-import pam
-import markdown
 import csv
-import ast
-
-from sqlalchemy.orm import aliased
-
-from pyrmalib import schema, utils, parameters, error, access, forms, rec_file
-from functools import wraps
-import hashlib
-import sqlalchemy
 import datetime
-from flask import request, redirect, session
-from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
-from sqlalchemy import create_engine, func, or_, and_, sql
-from typing import Dict, List
+import hashlib
+import os
+from functools import wraps
+
+import markdown
+import pam
+import psutil
+import sqlalchemy
+from flask import redirect, request, session
+from sqlalchemy import and_, create_engine, func, or_, sql
+from sqlalchemy.orm import aliased
+from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
+
+from pyrmalib import access, error, forms, parameters, rec_file, schema, utils
 
 
 def authorization(web_session: session, req: request, param: parameters.WebParameters, ):
     def decorator(function):
         @wraps(function)
         def wrapper(*args, **kwargs):
-            param.log.debug("web_session: {}".format(web_session))
-            param.log.debug("web_session: {}".format(req))
+            param.log.debug(f"web_session: {web_session}")
+            param.log.debug(f"web_session: {req}")
             if 'username' in web_session and 'web_live_time' in web_session:
-                if web_session['web_live_time'] < datetime.datetime.now(tz=datetime.timezone.utc):
-                    return redirect('/login')    
+                if web_session['web_live_time'] < datetime.datetime.now(tz=datetime.UTC):
+                    return redirect('/login')
                 param.user_info = user_info(web_session['username'], param.engine)
-                web_session['web_live_time'] = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(minutes=param.web_live_time)
+                web_session['web_live_time'] = datetime.datetime.now(tz=datetime.UTC) + datetime.timedelta(minutes=param.web_live_time)
                 return function(*args, **kwargs)
             else:
                 return redirect('/login')
@@ -108,7 +104,7 @@ def change_ipmi(param: parameters.WebParameters, ipmi_id, data):
             user=param.user_info.uid,
             action_type=6,
             date=datetime.datetime.now(),
-            message="Изменение IPMI{ipmi}".format(ipmi=ipmi)
+            message=f"Изменение IPMI{ipmi}"
         )
         db.add(action)
         db.flush()
@@ -233,7 +229,7 @@ def check_access_request(param: parameters.WebParameters, user_id: int, host_id:
     try:
         with schema.db_select(param.engine) as db:
             db.query(schema.RequestAccess).filter(
-                schema.RequestAccess.host == host_id, 
+                schema.RequestAccess.host == host_id,
                 schema.RequestAccess.user == user_id,
                 schema.RequestAccess.status == 0,
                 schema.RequestAccess.date_access > datetime.datetime.now()
@@ -305,20 +301,20 @@ def get_connection(param: parameters.Parameters, id):
             ).one()
         except NoResultFound:
             return None
-    
+
     user, host, connection, session = record
 
     return {
         'user': user,
         'host': host,
-        'connection': connection, 
+        'connection': connection,
         'session': session,
         'file': file_transfer,
         'capture_traffic': services_traffic,
         'ipmi': ipmi_traffic
     }
 
-def get_file_transfer(param: parameters.FileTransfer, md5=None, cid=None) -> List[schema.FileTransfer]:
+def get_file_transfer(param: parameters.FileTransfer, md5=None, cid=None) -> list[schema.FileTransfer]:
     with schema.db_select(param.engine) as db:
         if md5:
             records = db.query(schema.FileTransfer).filter(
@@ -328,7 +324,7 @@ def get_file_transfer(param: parameters.FileTransfer, md5=None, cid=None) -> Lis
             records = db.query(schema.FileTransfer).filter(
                 schema.FileTransfer.connection_id == cid
             ).all()
-    
+
     return records
 
 def get_session(param: parameters.WebParameters, id: int) -> schema.Session:
@@ -342,7 +338,7 @@ def get_connections(param: parameters.WebParameters, active=False, date_start=No
     Возвращает список подключений к хостам
     """
     connections = []
-    
+
     with schema.db_select(param.engine) as db:
         if active:
             tables = db.query(schema.User, schema.Host, schema.Connection).filter(
@@ -448,7 +444,7 @@ def get_content_host(param: parameters.WebParameters, host_id, connection_date_s
             content['default_login'] = ''
     else:
         content['default_login'] = ''
-    
+
     if access.check_access(param, 'ShowPassword', h_object=host) \
             or param.user_info.admin:
         if host.default_password:
@@ -457,7 +453,7 @@ def get_content_host(param: parameters.WebParameters, host_id, connection_date_s
             content['default_password'] = ''
     else:
         content['default_password'] = ''
-    
+
     content['tcp_port'] = host.tcp_port
     content['note'] = markdown.markdown(host.note)
 
@@ -532,7 +528,7 @@ def get_host(param: parameters.WebParameters, host_id=None, name=None, ip=None, 
     :param parent: schema.Host.parent
     :return: type: schema.Host
     """
-    if host_id or host_id == int(0):
+    if host_id or host_id == 0:
         with schema.db_select(param.engine) as db:
             try:
                 host = db.query(schema.Host).filter(schema.Host.id == host_id).one()
@@ -820,7 +816,7 @@ def get_user(param: parameters.Parameters, uid, connection_date_start=None, conn
                 schema.Action.user == uid,
                 schema.Action.action_type == schema.ActionType.id
                 ).order_by(schema.Action.date.desc()).limit(10)
-    
+
     content['connection'] = get_connections(
         param,
         user=content['user'],
@@ -831,7 +827,7 @@ def get_user(param: parameters.Parameters, uid, connection_date_start=None, conn
     return content
 
 
-def get_admin_users(param: parameters.Parameters) -> List[schema.User]:
+def get_admin_users(param: parameters.Parameters) -> list[schema.User]:
     admins = []
     with schema.db_select(param.engine) as db:
         admins = db.query(schema.User).filter(schema.User.admin == True).all()
@@ -1004,7 +1000,7 @@ def add_user_group(param: parameters.Parameters, uid: int, gid: int, action: boo
                 user=param.user_info.uid,
                 action_type=53,
                 date=datetime.datetime.now(),
-                message="Добавлена группа: {group.group} - user={group.user}({group})".format(group=r)
+                message=f"Добавлена группа: {r.group} - user={r.user}({r})"
             )
             db.add(action)
             db.flush()
@@ -1030,7 +1026,7 @@ def add_host_group(param: parameters.WebParameters, host_id, gid):
             user=param.user_info.uid,
             action_type=54,
             date=datetime.datetime.now(),
-            message="Добавлена группа: {group.group} - host={group.host}({group})".format(group=r)
+            message=f"Добавлена группа: {r.group} - host={r.host}({r})"
         )
         db.add(action)
         db.flush()
@@ -1051,7 +1047,7 @@ def add_prefix(param: parameters.WebParameters, name, describe):
             user=param.user_info.uid,
             action_type=3,
             date=datetime.datetime.now(),
-            message="Добавлен префикс ({prefix})".format(prefix=p)
+            message=f"Добавлен префикс ({p})"
         )
         db.add(action)
         db.flush()
@@ -1073,7 +1069,7 @@ def add_ipmi(param: parameters.WebParameters, name, vendor, ports):
             user=param.user_info.uid,
             action_type=5,
             date=datetime.datetime.now(),
-            message="Добавлен IPMI ({ipmi})".format(ipmi=i)
+            message=f"Добавлен IPMI ({i})"
         )
         db.add(action)
         db.flush()
@@ -1147,11 +1143,7 @@ def set_group_permission(param: parameters.WebParameters, group_id, form: forms.
             user=param.user_info.uid,
             action_type=61,
             date=datetime.datetime.now(),
-            message="Смена прав доступа для группы {group_id}({user_access}, {connection_access})".format(
-                group_id=group.name,
-                user_access=user_access.get_int(),
-                connection_access=connection_access.get_int()
-            )
+            message=f"Смена прав доступа для группы {group.name}({user_access.get_int()}, {connection_access.get_int()})"
         )
         db.add(action)
         db.flush()
@@ -1167,7 +1159,7 @@ def set_user_prefix(param: parameters.WebParameters, prefix, uid):
             user=param.user_info.uid,
             action_type=60,
             date=datetime.datetime.now(),
-            message="Смена префикса пользователя - {user.full_name}({user.prefix})".format(user=user)
+            message=f"Смена префикса пользователя - {user.full_name}({user.prefix})"
         )
         db.add(action)
         db.flush()
@@ -1187,7 +1179,7 @@ def set_parameters(param: parameters.WebParameters, name: str, value: str):
                 user=param.user_info.uid,
                 action_type=2,
                 date=datetime.datetime.now(),
-                message="Изменение параметров - {param}".format(param=p)
+                message=f"Изменение параметров - {p}"
             )
             db.add(action)
             db.flush()
@@ -1249,7 +1241,7 @@ def user_edit(param: parameters.WebParameters, uid, name, email, ip):
             user=param.user_info.uid,
             action_type=59,
             date=datetime.datetime.now(),
-            message="Редактирование пользователя: {user.full_name}({user})".format(user=user)
+            message=f"Редактирование пользователя: {user.full_name}({user})"
         )
         db.add(action)
         db.flush()
@@ -1285,7 +1277,7 @@ def user_disable(param: parameters.WebParameters, uid, disable=False, enable=Fal
             user=param.user_info.uid,
             action_type=status_id,
             date=datetime.datetime.now(),
-            message="{} пользователя: {user.full_name}({user})".format(status, user=user)
+            message=f"{status} пользователя: {user.full_name}({user})"
         )
         db.add(action)
         db.flush()
@@ -1319,7 +1311,7 @@ def user_admin_disable(param: parameters.WebParameters, uid, disable=False, enab
             user=param.user_info.uid,
             action_type=status_id,
             date=datetime.datetime.now(),
-            message="{} прав администратора: {user.full_name}({user})".format(status, user=user)
+            message=f"{status} прав администратора: {user.full_name}({user})"
         )
         db.add(action)
         db.flush()
@@ -1344,7 +1336,7 @@ def restore_deny_password(param: parameters.WebParameters, key):
                 user=param.user_info.uid if param.user_info else sql.null(),
                 action_type=50,
                 date=datetime.datetime.now(),
-                message='Восстановление пароля отменено (Client IP: {})'.format(request.remote_addr)
+                message=f'Восстановление пароля отменено (Client IP: {request.remote_addr})'
             )
         )
     return True
@@ -1392,7 +1384,7 @@ def add_folder(param: parameters.WebParameters, folder, action=True) -> schema.H
             )
             db.add(action)
             db.flush()
-    
+
     param.log.debug(f"add_folder: folder - {_folder}")
     return _folder
 
@@ -1412,11 +1404,11 @@ def add_host(param: parameters.WebParameters, host: schema.Host, parent=0, passw
                 user=param.user_info.uid,
                 action_type=20,
                 date=datetime.datetime.now(),
-                message="Создание хоста: {host.name} - id={host.id}({host})".format(host=host)
+                message=f"Создание хоста: {host.name} - id={host.id}({host})"
             )
             db.add(action)
             db.flush()
-    
+
     return host
 
 def update_host(param: parameters.WebParameters, host: schema.Host, parent=0, password=None, action=True) -> schema.Host:
@@ -1426,7 +1418,7 @@ def update_host(param: parameters.WebParameters, host: schema.Host, parent=0, pa
                     schema.Host.ip == host.ip,
                     schema.Host.remove.is_(False)
                 ).one()
-        
+
         upd_host.parent = parent
 
         if host.default_login and len(host.default_login) > 0:
@@ -1441,17 +1433,17 @@ def update_host(param: parameters.WebParameters, host: schema.Host, parent=0, pa
             upd_host.note = host.note
         db.flush()
         db.refresh(upd_host)
-        
+
         if action:
             action = schema.Action(
                 user=param.user_info.uid,
                 action_type=21,
                 date=datetime.datetime.now(),
-                message="Редактирование хоста: {host.name} - id={host.id}({host})".format(host=upd_host)
+                message=f"Редактирование хоста: {upd_host.name} - id={upd_host.id}({upd_host})"
             )
             db.add(action)
             db.flush()
-    
+
     return upd_host
 
 
@@ -1464,7 +1456,7 @@ def add_service(param: parameters.WebParameters, service: schema.Service):
             user=param.user_info.uid,
             action_type=23,
             date=datetime.datetime.now(),
-            message="Добавление сервиса: {service.host} - id={service.id}({service})".format(service=service)
+            message=f"Добавление сервиса: {service.host} - id={service.id}({service})"
         )
         db.add(action)
         db.flush()
@@ -1490,7 +1482,7 @@ def add_service_type(param: parameters.WebParameters, name, default_port):
             user=param.user_info.uid,
             action_type=8,
             date=datetime.datetime.now(),
-            message="Добавление сервиса: id={service.default_port}({service})".format(service=service_type)
+            message=f"Добавление сервиса: id={service_type.default_port}({service_type})"
         )
         db.add(action)
         db.flush()
@@ -1562,7 +1554,7 @@ def add_hosts_file(param: parameters.WebParameters, filepath: str, parent=0):
                 with schema.db_select(param.engine) as db:
                     n_host.file_transfer_type = db.query(schema.FileTransferType). \
                         order_by(schema.FileTransferType.id).first().id
-            param.log.debug("add_hosts_file: host: {}, parent: {}".format(n_host, folder.parent))
+            param.log.debug(f"add_hosts_file: host: {n_host}, parent: {folder.parent}")
             try:
                 check_host = get_host(param, name=n_host.name, ip=n_host.ip)
             except error.HostDuplicatedResult as e:
@@ -1609,7 +1601,7 @@ def add_jump(param: parameters.WebParameters, r, action=True):
                 user=param.user_info.uid,
                 action_type=25,
                 date=datetime.datetime.now(),
-                message="Добавлен Jump хост: {jump.host} - id={jump.id}({jump})".format(jump=jump)
+                message=f"Добавлен Jump хост: {jump.host} - id={jump.id}({jump})"
             )
             db.add(action)
             db.flush()
@@ -1630,7 +1622,7 @@ def add_group(param: parameters.WebParameters, g):
             user=param.user_info.uid,
             action_type=52,
             date=datetime.datetime.now(),
-            message="Добавлена группа: {group.name} - id={group.id}({group})".format(group=group)
+            message=f"Добавлена группа: {group.name} - id={group.id}({group})"
         )
         db.add(action)
         db.flush()
@@ -1647,7 +1639,7 @@ def add_access(param: parameters.WebParameters, a):
             user=param.user_info.uid,
             action_type=30,
             date=datetime.datetime.now(),
-            message="Добавлено правило доступа - id={a.id}({a})".format(a=a)
+            message=f"Добавлено правило доступа - id={a.id}({a})"
         )
         db.add(action)
         db.flush()
@@ -1665,7 +1657,7 @@ def edit_folder(param: parameters.WebParameters, folder, folder_id):
             user=param.user_info.uid,
             action_type=11,
             date=datetime.datetime.now(),
-            message="Редактирование директории: {folder.name} - id={folder.id}({folder})".format(folder=host)
+            message=f"Редактирование директории: {host.name} - id={host.id}({host})"
         )
         db.add(action)
         db.flush()
@@ -1694,7 +1686,7 @@ def edit_host(param: parameters.WebParameters, d, host_id):
             user=param.user_info.uid,
             action_type=21,
             date=datetime.datetime.now(),
-            message="Редактирование хоста: {folder.name} - id={folder.id}({folder})".format(folder=host)
+            message=f"Редактирование хоста: {host.name} - id={host.id}({host})"
         )
         db.add(action)
         db.flush()
@@ -1770,7 +1762,7 @@ def del_group(param: parameters.WebParameters, group=None):
             user=param.user_info.uid,
             action_type=24,
             date=datetime.datetime.now(),
-            message="Удаление группы: id={}".format(group)
+            message=f"Удаление группы: id={group}"
         )
         db.add(action)
         db.flush()
@@ -1797,7 +1789,7 @@ def del_access(param: parameters.WebParameters, access):
             user=param.user_info.uid,
             action_type=31,
             date=datetime.datetime.now(),
-            message="Удаление правила доступа: id={}".format(access)
+            message=f"Удаление правила доступа: id={access}"
         )
         db.add(action)
         db.flush()
@@ -1811,7 +1803,7 @@ def del_group_user(param: parameters.WebParameters, group=None, user=None):
             user=param.user_info.uid,
             action_type=55,
             date=datetime.datetime.now(),
-            message="Удаление группы у пользователя {}: id={}".format(user, group)
+            message=f"Удаление группы у пользователя {user}: id={group}"
         )
         db.add(action)
         db.flush()
@@ -1825,7 +1817,7 @@ def del_group_host(param: parameters.WebParameters, group=None, host=None):
             user=param.user_info.uid,
             action_type=56,
             date=datetime.datetime.now(),
-            message="Удаление группы у хоста {}: id={}".format(host, group)
+            message=f"Удаление группы у хоста {host}: id={group}"
         )
         db.add(action)
         db.flush()
@@ -1850,7 +1842,7 @@ def del_service(param: parameters.WebParameters, host=None, service=None):
                 user=param.user_info.uid,
                 action_type=24,
                 date=datetime.datetime.now(),
-                message="Удаление сервиса: host={}".format(host)
+                message=f"Удаление сервиса: host={host}"
             )
             db.add(action)
             db.flush()
@@ -1861,7 +1853,7 @@ def del_service(param: parameters.WebParameters, host=None, service=None):
                 user=param.user_info.uid,
                 action_type=24,
                 date=datetime.datetime.now(),
-                message="Удаление сервиса: id={}".format(service)
+                message=f"Удаление сервиса: id={service}"
             )
             db.add(action)
             db.flush()
@@ -1875,7 +1867,7 @@ def del_prefix(param: parameters.WebParameters, prefix):
             user=param.user_info.uid,
             action_type=4,
             date=datetime.datetime.now(),
-            message="Удаление префикса: {id}".format(id=prefix)
+            message=f"Удаление префикса: {prefix}"
         )
         db.add(action)
         db.flush()
@@ -1890,7 +1882,7 @@ def del_service_type(param: parameters.WebParameters, service):
             user=param.user_info.uid,
             action_type=9,
             date=datetime.datetime.now(),
-            message="Удаление сервиса: {service.name}({service.default_port})".format(service=s)
+            message=f"Удаление сервиса: {s.name}({s.default_port})"
         )
         db.add(action)
         db.flush()
@@ -1904,7 +1896,7 @@ def del_ipmi(param: parameters.WebParameters, ipmi):
             user=param.user_info.uid,
             action_type=7,
             date=datetime.datetime.now(),
-            message="Удаление IPMI: {id}".format(id=ipmi)
+            message=f"Удаление IPMI: {ipmi}"
         )
         db.add(action)
         db.flush()
@@ -1918,7 +1910,7 @@ def clear_jump(param: parameters.WebParameters, host_id):
             user=param.user_info.uid,
             action_type=26,
             date=datetime.datetime.now(),
-            message="Удаление Jump хоста: host={}".format(host_id)
+            message=f"Удаление Jump хоста: host={host_id}"
         )
         db.add(action)
         db.flush()
@@ -1933,7 +1925,7 @@ def close_dead_session(param: parameters.Parameters, session_id: int):
         tcp_port_forwards = db.query(schema.ForwardTCP).filter(schema.ForwardTCP.connection_id == connection.id).all()
         for tcp_port_forward in tcp_port_forwards:
             tcp_port_forward.state = 0
-        
+
         connection.status = 2
         connection.date_end = datetime.datetime.now()
         connection.termination = 0
@@ -2046,7 +2038,7 @@ def tcp_forward_connection(app_param: parameters.AppParameters, rules: list, sta
     return True
 
 
-def get_tcp_forward_connection(app_param: parameters.AppParameters) -> List[schema.ForwardTCP]:
+def get_tcp_forward_connection(app_param: parameters.AppParameters) -> list[schema.ForwardTCP]:
     """
     Список активных пробросов портов
     """
@@ -2102,7 +2094,7 @@ def add_capture_traffic(app_param: parameters.FirewallParameters, connection_id,
         )
         db.flush()
 
-def get_folder_path(param: parameters.Parameters, folder_id: id) -> Dict[int, schema.Host]:
+def get_folder_path(param: parameters.Parameters, folder_id: id) -> dict[int, schema.Host]:
     """
     Возвращает справочник директорий
     """
@@ -2113,7 +2105,7 @@ def get_folder_path(param: parameters.Parameters, folder_id: id) -> Dict[int, sc
         path[index] = host
         index += 1
         folder_id = host.parent
-    
+
     return dict(sorted(path.items(), reverse=True))
 
 def get_folder_id(param: parameters.WebParameters, folder: str, parent=0, create=False) -> schema.Host:
@@ -2136,7 +2128,7 @@ def get_folder_id(param: parameters.WebParameters, folder: str, parent=0, create
         param.log.debug(f"get_folder_id: get_host: {result}")
         if not result and create:
             result = add_folder(
-                param, 
+                param,
                 {
                     'name': folder_name,
                     'describe': '',
@@ -2150,7 +2142,7 @@ def get_folder_id(param: parameters.WebParameters, folder: str, parent=0, create
             return None
         param.log.debug(f"get_folder_id: result: {result}")
         _parent = result.id
-    
+
     return result
 
 
@@ -2162,4 +2154,4 @@ if __name__ == '__main__':
                                                          '5432',
                                                          'acs'
                                                          ))
-    print(hashlib.md5('admin'.encode()).hexdigest())
+    print(hashlib.md5(b'admin').hexdigest())

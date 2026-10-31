@@ -15,7 +15,6 @@
 """
 
 import textwrap
-import json
 
 footer = '\npyRMA\nCopyright 2016, Sergey Utkin'
 

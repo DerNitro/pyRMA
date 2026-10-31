@@ -14,9 +14,9 @@
    limitations under the License.
 """
 
-import sys
-import os
 import ast
+import os
+import sys
 
 # key UP, DOWN, PAGE UD|DOWN, TAB
 NO_ACTION_KEYS = ['\x1bOB', '\x1bOA', '\x1b[6~', '\x1b[5~', '\t', '\x04', '\x1b[B', '\x1b[A', '\x1bOH', '\x1b', '\x0f']
@@ -28,7 +28,7 @@ class RecFile:
         self.stdin = []
         if not os.path.isfile(filename):
             raise OSError('RecFile: filename is not regular file')
-        f = open(filename, 'r')
+        f = open(filename)
         for line in f:
             line = ast.literal_eval(line)
             if isinstance(line, list) and line[1] == "i":
@@ -38,7 +38,7 @@ class RecFile:
         lines = []
         cursor = 0
         line = []
-        try: 
+        try:
             for elem in self.stdin:
                 if elem == '\r':
                     if len(line) != 0:
@@ -72,7 +72,7 @@ class RecFile:
             return "ERROR: Ошибка выполнения анализа файла."
 
     def __repr__(self):
-        return "{0}".format(self.__dict__)
+        return f"{self.__dict__}"
 
 
 if __name__ == '__main__':

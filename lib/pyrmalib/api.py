@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-# encoding: utf-8
 """
        Copyright 2022 Sergey Utkin utkins01@gmail.com
 
@@ -16,15 +14,16 @@
    limitations under the License.
 """
 
-from flask_restful import Resource, request
-from flask_httpauth import HTTPBasicAuth
-
-import pam
 import os
 import tempfile
+
+import pam
+from flask_httpauth import HTTPBasicAuth
+from flask_restful import Resource, request
 from sqlalchemy import create_engine
-from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
-from pyrmalib import parameters, schema, applib, utils, error
+from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
+
+from pyrmalib import applib, error, parameters, schema, utils
 
 auth = HTTPBasicAuth()
 
@@ -45,7 +44,7 @@ def verify_password(username, password):
     apiParameters.log.info(f'verify_password: {username} from {request.remote_addr}')
     if not pam.authenticate(username=username, password=password):
         return False
-    
+
     with schema.db_select(apiParameters.engine) as db:
         try:
             user = db.query(schema.User).filter(schema.User.login == username).one()
@@ -73,7 +72,7 @@ class Monitoring(Resource):
 
     def get(self):
         apiParameters.log.info('/api/monitor get request')
-        
+
         return {
             "active_connection": len(applib.get_connections(apiParameters, active=True)),
             "new_user": len(applib.get_new_user(apiParameters)),
@@ -87,7 +86,7 @@ class HostUpload(Resource):
     def post(self):
         upload_file = request.files['file']
         _, upload_file_path = tempfile.mkstemp()
-        
+
         apiParameters.log.debug(f'tempfile: {upload_file_path}')
         apiParameters.log.info(f'/api/host/upload post request: {upload_file.filename}')
         upload_file.save(upload_file_path)
@@ -99,10 +98,10 @@ class HostUpload(Resource):
             return {'status': 'error', 'error': str(e)}, 500
         finally:
             os.remove(upload_file_path)
-        
+
         return {
-            'status': 'success', 
-            'created host': created_host, 
-            'updated host': updated_host, 
+            'status': 'success',
+            'created host': created_host,
+            'updated host': updated_host,
             'skipped host': skipped_host
             }, 200

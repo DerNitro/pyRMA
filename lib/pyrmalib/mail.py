@@ -14,10 +14,11 @@
    limitations under the License.
 """
 
-from pyrmalib import applib, schema, parameters, access
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+
+from pyrmalib import applib, parameters, schema
 
 
 class Mail:
@@ -42,10 +43,10 @@ class Mail:
         msg['Cc'] = ",".join(self.mail_cc)
         part = MIMEText(template.format(**data))
         msg.attach(part)
-        self.log.debug('Mail(send) self.subject: {}'.format(self.subject))
-        self.log.debug('Mail(send) self.mail_from: {}'.format(self.mail_from))
-        self.log.debug('Mail(send) self.mail_to: {}'.format(self.mail_to))
-        self.log.debug('Mail(send) self.mail_cc: {}'.format(self.mail_cc))
+        self.log.debug(f'Mail(send) self.subject: {self.subject}')
+        self.log.debug(f'Mail(send) self.mail_from: {self.mail_from}')
+        self.log.debug(f'Mail(send) self.mail_to: {self.mail_to}')
+        self.log.debug(f'Mail(send) self.mail_cc: {self.mail_cc}')
         try:
             s = smtplib.SMTP(host=self.host, port=self.port)
             s.sendmail(self.mail_from, self.mail_to, msg.as_string())
@@ -56,7 +57,7 @@ class Mail:
         return True
 
     def __repr__(self):
-        return "{0}".format(self.__dict__)
+        return f"{self.__dict__}"
 
 
 def send_mail(param: parameters.Parameters, subject, template, user: schema.User or list, data, admin_cc=False):
@@ -66,7 +67,7 @@ def send_mail(param: parameters.Parameters, subject, template, user: schema.User
         admins = applib.get_admin_users(param)
         for a in admins:
             mail.mail_cc.append(a.email)
-    
+
     if isinstance(user, list):
         for i in user:
             mail.mail_to.append(i.email)

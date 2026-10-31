@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 """
     Filename : Modules
@@ -21,10 +20,11 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 """
-import sys
-from pyrmalib import schema, parameters, applib, utils, error
 import datetime
-from sshtunnel import SSHTunnelForwarder, BaseSSHTunnelForwarderError
+
+from sshtunnel import BaseSSHTunnelForwarderError, SSHTunnelForwarder
+
+from pyrmalib import applib, error, parameters, schema, utils
 
 
 class Modules:
@@ -39,7 +39,7 @@ class Modules:
         pass
 
     def __repr__(self):
-        return "{0}".format(self.__dict__)
+        return f"{self.__dict__}"
 
 
 class ConnectionModules(Modules):
@@ -72,7 +72,7 @@ class ConnectionModules(Modules):
         :return: Возвращает код завершения
         """
         self.PARAMETERS.log.info(
-            'Подключение {name} к хосту {host.name}({host.ip})'.format(name=self.NAME, host=self.HOST)
+            f'Подключение {self.NAME} к хосту {self.HOST.name}({self.HOST.ip})'
         )
         connection = schema.Connection(
             status=1,
@@ -92,8 +92,7 @@ class ConnectionModules(Modules):
 
         # Строка информации о подключении
         print('=================== pyRMA ===================')
-        print('Подключение {name} к хосту {host.name}({host.ip}:{host.tcp_port})'.format(
-            name=self.NAME, host=self.HOST)
+        print(f'Подключение {self.NAME} к хосту {self.HOST.name}({self.HOST.ip}:{self.HOST.tcp_port})'
         )
         if self.SERVICE:
             print('Подключенные сервисы:')
@@ -121,24 +120,24 @@ class ConnectionModules(Modules):
                 _error = e
 
                 self.PARAMETERS.log.error(
-                    'Ошибка подключения к Jump хосту({}): {}'.format(self.JUMP.name, _error),
+                    f'Ошибка подключения к Jump хосту({self.JUMP.name}): {_error}',
                     pr=True
                 )
                 self.TERMINATION = 2
-                self.ERROR = 'Ошибка подключения к Jump хосту({}): {}'.format(self.JUMP.name, _error)
-                raise error.ErrorConnectionJump('Ошибка подключения к Jump хосту({}): {}'.format(self.JUMP.name, _error))
+                self.ERROR = f'Ошибка подключения к Jump хосту({self.JUMP.name}): {_error}'
+                raise error.ErrorConnectionJump(f'Ошибка подключения к Jump хосту({self.JUMP.name}): {_error}')
             self.PARAMETERS.log.debug(
-                'self.jump: {}'.format(self.jump)
+                f'self.jump: {self.jump}'
             )
             self.PARAMETERS.log.info(
-                'Подключение к Jump хосту: {}'.format(self.JUMP.name)
+                f'Подключение к Jump хосту: {self.JUMP.name}'
             )
             self.HOST.ip = '127.0.0.1'
             self.HOST.tcp_port = self.jump.local_bind_port
 
         if self.SERVICE:
             services = [(i['remote_ip'], i['remote_port']) for i in self.SERVICE]
-            self.PARAMETERS.log.debug('ConnectionModules(run) services: {}'.format(services))
+            self.PARAMETERS.log.debug(f'ConnectionModules(run) services: {services}')
             self.services = SSHTunnelForwarder(
                 (self.HOST.ip, self.HOST.tcp_port),
                 ssh_username=self.LOGIN,
@@ -150,12 +149,12 @@ class ConnectionModules(Modules):
                 self.services.start()
             except BaseSSHTunnelForwarderError as e:
                 self.PARAMETERS.log.warning(
-                    'Ошибка подключения сервисов: {}'.format(e.value)
+                    f'Ошибка подключения сервисов: {e.value}'
                 )
                 return
 
             self.PARAMETERS.log.debug(
-                'self.services: {}'.format(self.services)
+                f'self.services: {self.services}'
             )
             self.PARAMETERS.log.info(
                 'Подключение сервисов к хосту: {}'.format(", ".join([i['name'] for i in self.SERVICE]))
@@ -181,9 +180,9 @@ class ConnectionModules(Modules):
         :return: Возвращает код завершения
         """
         self.PARAMETERS.log.info(
-            'Отключение {name} от хоста {host.name}'.format(name=self.NAME, host=self.HOST)
+            f'Отключение {self.NAME} от хоста {self.HOST.name}'
         )
-        
+
         if self.JUMP and self.JUMP.id != self.HOST.id:
             if isinstance(self.jump, SSHTunnelForwarder) and self.jump.is_active:
                 self.jump.stop()
@@ -193,7 +192,7 @@ class ConnectionModules(Modules):
                 self.services.stop()
 
         self.firewall('close')
-        
+
         with schema.db_edit(self.PARAMETERS.engine) as db:
             connection = db.query(schema.Connection).filter(schema.Connection.id == self.connection_id).one()
             connection.date_end = datetime.datetime.now()
@@ -211,7 +210,7 @@ class ConnectionModules(Modules):
         """
         if not applib.tcp_forward_connection_is_active(self.PARAMETERS, self.TCP_FORWARD):
             self.firewall('open')
-        
+
         print(f'\33]0;{self.HOST.name}\a', end='', flush=True)
 
 

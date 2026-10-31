@@ -14,11 +14,12 @@
    limitations under the License.
 """
 
-import sqlalchemy
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
 import datetime
 from contextlib import contextmanager
+
+import sqlalchemy
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
 Base = declarative_base()
 
@@ -80,7 +81,7 @@ class User(Base):
     admin = sqlalchemy.Column(sqlalchemy.BOOLEAN(), default=False)
 
     def __repr__(self):
-        return "{0}".format(self.__dict__)
+        return f"{self.__dict__}"
 
     def get_id(self):
         return int(self.login)
@@ -105,7 +106,7 @@ class Action(Base):
     message = sqlalchemy.Column(sqlalchemy.Text())
 
     def __repr__(self):
-        return "{0}".format(self.__dict__)
+        return f"{self.__dict__}"
 
 
 class ActionType(Base):
@@ -120,7 +121,7 @@ class ActionType(Base):
     name = sqlalchemy.Column(sqlalchemy.String(256))
 
     def __repr__(self):
-        return "{0}".format(self.__dict__)
+        return f"{self.__dict__}"
 
 
 class RequestAccess(Base):
@@ -160,7 +161,7 @@ class RequestAccess(Base):
     ipmi = sqlalchemy.Column(sqlalchemy.Boolean)
 
     def __repr__(self):
-        return "{0}".format(self.__dict__)
+        return f"{self.__dict__}"
 
 
 class Host(Base):
@@ -210,7 +211,7 @@ class Host(Base):
     note = sqlalchemy.Column(sqlalchemy.Text)
 
     def __repr__(self):
-        return "{0}".format(self.__dict__)
+        return f"{self.__dict__}"
 
 
 class IPMIType(Base):
@@ -232,7 +233,7 @@ class IPMIType(Base):
     ports = sqlalchemy.Column(sqlalchemy.String(256))
 
     def __repr__(self):
-        return "{0}".format(self.__dict__)
+        return f"{self.__dict__}"
 
 
 class Service(Base):
@@ -257,7 +258,7 @@ class Service(Base):
     describe = sqlalchemy.Column(sqlalchemy.String)
 
     def __repr__(self):
-        return "{0}".format(self.__dict__)
+        return f"{self.__dict__}"
 
 
 class ServiceType(Base):
@@ -272,7 +273,7 @@ class ServiceType(Base):
     default_port = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, unique=True)
 
     def __repr__(self):
-        return "{0}".format(self.__dict__)
+        return f"{self.__dict__}"
 
 
 class JumpHost(Base):
@@ -289,7 +290,7 @@ class JumpHost(Base):
     jump = sqlalchemy.Column(sqlalchemy.Integer)
 
     def __repr__(self):
-        return "{0}".format(self.__dict__)
+        return f"{self.__dict__}"
 
 
 class Connection(Base):
@@ -330,7 +331,7 @@ class Connection(Base):
     session = sqlalchemy.Column(sqlalchemy.Integer)
 
     def __repr__(self):
-        return "{0}".format(self.__dict__)
+        return f"{self.__dict__}"
 
 
 class Session(Base):
@@ -364,7 +365,7 @@ class Session(Base):
     ttyrec = sqlalchemy.Column(sqlalchemy.String)
 
     def __repr__(self):
-        return "{0}".format(self.__dict__)
+        return f"{self.__dict__}"
 
 
 class ConnectionType(Base):
@@ -379,7 +380,7 @@ class ConnectionType(Base):
     name = sqlalchemy.Column(sqlalchemy.String(20), unique=True)
 
     def __repr__(self):
-        return "{0}".format(self.__dict__)
+        return f"{self.__dict__}"
 
 
 class FileTransferType(Base):
@@ -394,7 +395,7 @@ class FileTransferType(Base):
     name = sqlalchemy.Column(sqlalchemy.String(20), unique=True)
 
     def __repr__(self):
-        return "{0}".format(self.__dict__)
+        return f"{self.__dict__}"
 
 
 class Prefix(Base):
@@ -411,7 +412,7 @@ class Prefix(Base):
     note = sqlalchemy.Column(sqlalchemy.String)
 
     def __repr__(self):
-        return "{0}".format(self.__dict__)
+        return f"{self.__dict__}"
 
 
 class Group(Base):
@@ -430,7 +431,7 @@ class Group(Base):
     type = sqlalchemy.Column(sqlalchemy.Integer)
 
     def __repr__(self):
-        return "{0}".format(self.__dict__)
+        return f"{self.__dict__}"
 
 
 class GroupHost(Base):
@@ -447,7 +448,7 @@ class GroupHost(Base):
     group = sqlalchemy.Column(sqlalchemy.Integer)
 
     def __repr__(self):
-        return "{0}".format(self.__dict__)
+        return f"{self.__dict__}"
 
 
 class GroupUser(Base):
@@ -464,7 +465,7 @@ class GroupUser(Base):
     group = sqlalchemy.Column(sqlalchemy.Integer)
 
     def __repr__(self):
-        return "{0}".format(self.__dict__)
+        return f"{self.__dict__}"
 
 
 class Permission(Base):
@@ -486,7 +487,7 @@ class Permission(Base):
     user_access = sqlalchemy.Column(sqlalchemy.Integer)
 
     def __repr__(self):
-        return "{0}".format(self.__dict__)
+        return f"{self.__dict__}"
 
 
 class AccessList(Base):
@@ -523,7 +524,7 @@ class AccessList(Base):
     status = sqlalchemy.Column(sqlalchemy.Integer)
 
     def __repr__(self):
-        return "{0}".format(self.__dict__)
+        return f"{self.__dict__}"
 
 
 class PasswordList(Base):
@@ -544,7 +545,7 @@ class PasswordList(Base):
     password = sqlalchemy.Column(sqlalchemy.String)
 
     def __repr__(self):
-        return "{0}".format(self.__dict__)
+        return f"{self.__dict__}"
 
 
 class ForwardTCP(Base):
@@ -574,7 +575,7 @@ class ForwardTCP(Base):
     state = sqlalchemy.Column(sqlalchemy.Integer)
 
     def __repr__(self):
-        return "{0}".format(self.__dict__)
+        return f"{self.__dict__}"
 
 
 class FileTransfer(Base):
@@ -600,7 +601,7 @@ class FileTransfer(Base):
     direction = sqlalchemy.Column(sqlalchemy.String)
 
     def __repr__(self):
-        return "{0}".format(self.__dict__)
+        return f"{self.__dict__}"
 
 
 class CaptureTraffic(Base):
@@ -620,7 +621,7 @@ class CaptureTraffic(Base):
     service_port = sqlalchemy.Column(sqlalchemy.Integer)
 
     def __repr__(self):
-        return "{0}".format(self.__dict__)
+        return f"{self.__dict__}"
 
 
 if __name__ == '__main__':

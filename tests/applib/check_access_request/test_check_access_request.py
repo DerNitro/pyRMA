@@ -2,6 +2,7 @@ import datetime
 
 from pyrmalib import schema
 
+
 # Test worked mocked session
 def test_mocked_session_access_request(mocked_session):
     access_request = mocked_session.query(schema.RequestAccess).all()
@@ -13,7 +14,7 @@ def test_check_access_request(mocked_session):
     user_id = 1
 
     access_request = mocked_session.query(schema.RequestAccess).filter(
-        schema.RequestAccess.host == host_id, 
+        schema.RequestAccess.host == host_id,
         schema.RequestAccess.user == user_id,
         schema.RequestAccess.status == 0,
         schema.RequestAccess.date_access > datetime.datetime.now()

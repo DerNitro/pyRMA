@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-# encoding: utf-8
 
 """
        Copyright 2016 Sergey Utkin utkins01@gmail.com
@@ -18,8 +16,7 @@
 """
 
 import logging
-import os
-from logging import handlers, Formatter
+from logging import Formatter, handlers
 
 
 class Log:

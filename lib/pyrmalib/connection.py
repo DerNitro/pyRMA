@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 """
        Copyright 2016 Sergey Utkin utkins01@gmail.com
@@ -16,13 +15,14 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 """
+import datetime
 import os
 import shlex
 import subprocess
-import datetime
-from sshtunnel import SSHTunnelForwarder, BaseSSHTunnelForwarderError
 
-from pyrmalib import modules, dict, applib, parameters, schema, access, error, utils
+from sshtunnel import BaseSSHTunnelForwarderError, SSHTunnelForwarder
+
+from pyrmalib import access, applib, dict, error, modules, parameters, schema, utils
 
 
 class SSH(modules.ConnectionModules):
@@ -66,7 +66,7 @@ class SSH(modules.ConnectionModules):
         stdout, stderr = proc.communicate('through stdin to stdout')
         if proc.returncode > 0:
             self.TERMINATION = 2
-            self.ERROR = "Error {0}: {1}; run command: {2}".format(proc.returncode, stderr, cmd)
+            self.ERROR = f"Error {proc.returncode}: {stderr}; run command: {cmd}"
             self.PARAMETERS.log.error(
                 self.ERROR,
                 pr=True
@@ -98,11 +98,11 @@ class SFTP(modules.ConnectionModules):
         cmd = '/usr/bin/python3 {bin} --host {host} --port {port} --user {user} --password {password} --id {id}'
         args = shlex.split(
             cmd.format(
-                bin=self.ft_bin, 
-                user=self.LOGIN, 
+                bin=self.ft_bin,
+                user=self.LOGIN,
                 password=self.PASSWORD,
-                host=self.HOST.ip, 
-                port=self.HOST.tcp_port, 
+                host=self.HOST.ip,
+                port=self.HOST.tcp_port,
                 id=self.connection_id
             )
         )
@@ -110,12 +110,12 @@ class SFTP(modules.ConnectionModules):
         stdout, stderr = proc.communicate('through stdin to stdout')
         if proc.returncode > 0:
             self.TERMINATION = 2
-            self.ERROR = "Error {0}: {1}".format(proc.returncode, stderr)
+            self.ERROR = f"Error {proc.returncode}: {stderr}"
             self.PARAMETERS.log.error(
                 self.ERROR,
                 pr=True
             )
-        
+
 
 
 class TELNET(modules.ConnectionModules):
@@ -134,13 +134,13 @@ class TELNET(modules.ConnectionModules):
         super().connection()
 
         cmd = "/usr/bin/telnet {ip} {port}"
-        
+
         args = shlex.split(cmd.format(ip=self.HOST.ip, port=self.HOST.tcp_port))
         proc = subprocess.Popen(args)
         stdout, stderr = proc.communicate('through stdin to stdout')
 
         if proc.returncode > 0:
-            print("Error {0}: {1}; run command: {2}".format(proc.returncode, stderr, cmd))
+            print(f"Error {proc.returncode}: {stderr}; run command: {cmd}")
 
         pass
 
@@ -196,7 +196,7 @@ class IPMI:
 
     def run(self):
         self.PARAMETERS.log.info(
-            'Подключение {name} к хосту {host.name}({host.ilo})'.format(name=self.NAME, host=self.HOST)
+            f'Подключение {self.NAME} к хосту {self.HOST.name}({self.HOST.ilo})'
         )
         connection = schema.Connection(
             status=1,
@@ -228,21 +228,21 @@ class IPMI:
             if ip not in acs_ips:
                 self.local_ip_ipmi = ip
                 break
-        
+
         if not self.local_ip_ipmi:
             raise error.ErrorConnectionIPMI('Нет свободных IP адресов для подключения по IPMI!')
 
     def close(self):
         self.PARAMETERS.log.info(
-            'Отключение {name} от хоста {host.name}'.format(name=self.NAME, host=self.HOST)
+            f'Отключение {self.NAME} от хоста {self.HOST.name}'
         )
-        
+
         if self.JUMP and self.JUMP.id != self.HOST.id:
             if getattr(self, 'jump', False) and self.jump.is_active:
                 self.jump.stop()
 
         self.firewall('close')
-        
+
         with schema.db_edit(self.PARAMETERS.engine) as db:
             connection = db.query(schema.Connection).filter(schema.Connection.id == self.connection_id).one()
             connection.date_end = datetime.datetime.now()
@@ -256,7 +256,7 @@ class IPMI:
     def connection(self):
         if self.JUMP and self.JUMP.id != self.HOST.id:
             ipmi = [(self.HOST.ilo, int(i)) for i in str(self.ilo_type.ports).split(',')]
-            self.PARAMETERS.log.debug('IPMI(connection) ipmi: {}'.format(ipmi))
+            self.PARAMETERS.log.debug(f'IPMI(connection) ipmi: {ipmi}')
             self.jump = SSHTunnelForwarder(
                 (self.JUMP.ip, self.JUMP.tcp_port),
                 ssh_username=self.JUMP.default_login,
@@ -268,17 +268,17 @@ class IPMI:
                 self.jump.start()
             except BaseSSHTunnelForwarderError as e:
                 self.PARAMETERS.log.error(
-                    'Ошибка подключения к Jump хосту({}): {}'.format(self.JUMP.name, e.value),
+                    f'Ошибка подключения к Jump хосту({self.JUMP.name}): {e.value}',
                     pr=True
                 )
                 self.TERMINATION = 2
-                self.ERROR = 'Ошибка подключения к Jump хосту({}): {}'.format(self.JUMP.name, e.value)
-                raise error.ErrorConnectionJump('Ошибка подключения к Jump хосту({}): {}'.format(self.JUMP.name, e.value))
+                self.ERROR = f'Ошибка подключения к Jump хосту({self.JUMP.name}): {e.value}'
+                raise error.ErrorConnectionJump(f'Ошибка подключения к Jump хосту({self.JUMP.name}): {e.value}')
             self.PARAMETERS.log.debug(
-                'self.jump: {}'.format(self.jump)
+                f'self.jump: {self.jump}'
             )
             self.PARAMETERS.log.info(
-                'Подключение к Jump хосту: {}'.format(self.JUMP.name)
+                f'Подключение к Jump хосту: {self.JUMP.name}'
             )
 
             for ipmi_port in str(self.ilo_type.ports).split(','):
@@ -312,10 +312,10 @@ class IPMI:
 
         print()
         print('=================== pyRMA ===================')
-        print('IP адрес для подключения: {}'.format(self.local_ip_ipmi))
+        print(f'IP адрес для подключения: {self.local_ip_ipmi}')
         print('=============================================')
         print()
-        
+
         user_input = ''
         while user_input.lower() != 'exit'.lower():
             user_input = input('Для завершения сессии введите "exit": ')

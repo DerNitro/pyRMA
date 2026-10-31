@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 """
     Filename : firewall
@@ -21,30 +20,31 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 """
-from pyrmalib import parameters, applib
-import sys
 import os
-import traceback
-import signal
-import time
-from sqlalchemy import create_engine, table
-import iptc
 import shlex
+import signal
 import subprocess
+import sys
+import time
+import traceback
+
+import iptc
 import psutil
+from sqlalchemy import create_engine
 
 import pyrmalib.info as app_info
+from pyrmalib import applib, parameters
 
 interrupted = False
 dump_traffic = []
 
 
-class Capture():
+class Capture:
     user_ip = None
     service_port = None
     filename = None
     connection_id = None
-    
+
     def __init__(self, user_ip, acs_ip, service_port, filename, connection_id):
         self.user_ip = user_ip
         self.acs_ip = acs_ip
@@ -59,7 +59,7 @@ class Capture():
         ))
         self.process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.pid = self.process.pid
-        
+
     def kill(self):
         self.process.terminate()
         self.process.wait()
@@ -76,22 +76,20 @@ class Capture():
         return True
 
     def __str__(self) -> str:
-        return "user ip: {user_ip}; dest ip: {acs_ip}; dest port: {service_port}; connection: {connection_id}".format(
-            user_ip=self.user_ip, service_port=self.service_port, connection_id=self.connection_id, acs_ip=self.acs_ip
-        )
+        return f"user ip: {self.user_ip}; dest ip: {self.acs_ip}; dest port: {self.service_port}; connection: {self.connection_id}"
 
 
 def handle_sig_term(signum, frame):
     global interrupted
     if signum != 15:
-        appParameters.log.debug('Получен сигнал на завершение приложения!!!({},{})'.format(signum, frame))
+        appParameters.log.debug(f'Получен сигнал на завершение приложения!!!({signum},{frame})')
     interrupted = True
 
 
 def app_exit(code):
     for v in dump_traffic:
         v.kill()
-        appParameters.log.info('Остановка записи дампа: {}'.format(v))
+        appParameters.log.info(f'Остановка записи дампа: {v}')
     appParameters.log.info('Завершение работы приложения')
     sys.exit(code)
 
@@ -102,62 +100,56 @@ def connection(param: parameters.FirewallParameters):
 
 
 def capture_traffic(param: parameters.FirewallParameters, user_ip, acs_ip, service_port, connection_id, command):
-    filename = os.path.join(param.tcp_capture_folder, str(connection_id), "{}.pcap".format(service_port))
+    filename = os.path.join(param.tcp_capture_folder, str(connection_id), f"{service_port}.pcap")
     if not os.path.isdir(os.path.join(param.data_dir, param.tcp_capture_folder, str(connection_id))):
         os.mkdir(os.path.join(param.data_dir, param.tcp_capture_folder, str(connection_id)))
     path = os.path.join(param.data_dir, *os.path.split(filename))
 
     capture = Capture(user_ip, acs_ip, service_port, path, connection_id)
-    
+
     if command == 'create':
         if capture not in dump_traffic:
             capture.run()
             dump_traffic.append(capture)
             applib.add_capture_traffic(param, connection_id, filename, service_port)
-            param.log.info('Старт записи дампа: {}'.format(str(capture)))
+            param.log.info(f'Старт записи дампа: {str(capture)}')
     if command == 'close':
         dump_traffic.pop(dump_traffic.index(capture)).kill()
-        param.log.info('Остановка записи дампа: {}'.format(str(capture)))
+        param.log.info(f'Остановка записи дампа: {str(capture)}')
 
 def tcp_forward(param: parameters.FirewallParameters):
     tcp_forwards = applib.get_tcp_forward_connection(param)
     for tcp_forward in tcp_forwards:
         rule = iptc.Rule()
         rule.protocol = "tcp"
-        rule.src = "{user_ip}/255.255.255.255".format(user_ip=tcp_forward.user_ip)
-        rule.dst = "{acs_ip}".format(acs_ip=tcp_forward.acs_ip)
+        rule.src = f"{tcp_forward.user_ip}/255.255.255.255"
+        rule.dst = f"{tcp_forward.acs_ip}"
         match = rule.create_match("tcp")
         match.dport = str(tcp_forward.local_port)
         comment = rule.create_match("comment")
-        comment.comment = "\"Connection id: {id}\"".format(id=tcp_forward.connection_id)
+        comment.comment = f"\"Connection id: {tcp_forward.connection_id}\""
         target = iptc.Target(rule, "DNAT")
-        target.to_destination = "{ip}:{port}".format(ip=tcp_forward.forward_ip, port=tcp_forward.forward_port)
+        target.to_destination = f"{tcp_forward.forward_ip}:{tcp_forward.forward_port}"
         rule.target = target
-        
+
         if tcp_forward.state == 0:
             if rule not in iptc.Chain(iptc.Table(iptc.Table.NAT), param.firewall_forward_table).rules:
                 applib.del_tcp_forward_connection(param, tcp_forward)
                 param.log.info(
-                    'deleted record {tcp_forward.connection_id}: {tcp_forward.user_ip}:{tcp_forward.local_port}'.format(
-                        tcp_forward=tcp_forward
-                    )
+                    f'deleted record {tcp_forward.connection_id}: {tcp_forward.user_ip}:{tcp_forward.local_port}'
                 )
             else:
                 capture_traffic(param, tcp_forward.user_ip, tcp_forward.acs_ip, tcp_forward.local_port, tcp_forward.connection_id, 'close')
                 iptc.Chain(iptc.Table(iptc.Table.NAT), param.firewall_forward_table).delete_rule(rule)
                 param.log.info(
-                    'deleted forward {tcp_forward.connection_id}: {tcp_forward.user_ip}:{tcp_forward.local_port}'.format(
-                        tcp_forward=tcp_forward
-                    )
+                    f'deleted forward {tcp_forward.connection_id}: {tcp_forward.user_ip}:{tcp_forward.local_port}'
                 )
         elif tcp_forward.state == 1:
             capture_traffic(param, tcp_forward.user_ip, tcp_forward.acs_ip, tcp_forward.local_port, tcp_forward.connection_id, 'create')
             if rule not in iptc.Chain(iptc.Table(iptc.Table.NAT), param.firewall_forward_table).rules:
                 iptc.Chain(iptc.Table(iptc.Table.NAT), param.firewall_forward_table).append_rule(rule)
                 param.log.info(
-                    'append rule {tcp_forward.connection_id}: {tcp_forward.user_ip}:{tcp_forward.local_port}'.format(
-                        tcp_forward=tcp_forward
-                    )
+                    f'append rule {tcp_forward.connection_id}: {tcp_forward.user_ip}:{tcp_forward.local_port}'
                 )
 
 def check_session_live(param: parameters.FirewallParameters):
@@ -184,7 +176,7 @@ except parameters.CheckConfigError:
     print(traceback.print_exc(limit=1))
     sys.exit(2)
 
-appParameters.log.info('Запуск приложения {}'.format(app_info.version))
+appParameters.log.info(f'Запуск приложения {app_info.version}')
 
 signal.signal(signal.SIGTERM, handle_sig_term)
 signal.signal(signal.SIGINT, handle_sig_term)
@@ -209,7 +201,7 @@ appParameters.engine = engine
 # создание цепочек.
 if not iptc.Table(iptc.Table.NAT).is_chain(appParameters.firewall_forward_table):
     iptc.Table(iptc.Table.NAT).create_chain(appParameters.firewall_forward_table)
-    appParameters.log.info('Create chains {} in table NAT.'.format(appParameters.firewall_forward_table))
+    appParameters.log.info(f'Create chains {appParameters.firewall_forward_table} in table NAT.')
 else:
     iptc.Chain(iptc.Table(iptc.Table.NAT), appParameters.firewall_forward_table).flush()
 
@@ -226,7 +218,7 @@ for chain in iptc.Table(iptc.Table.NAT).chains:
             target = iptc.Target(rule, appParameters.firewall_forward_table)
             rule.target = target
             chain.insert_rule(rule)
-            appParameters.log.info('Added rule: -A PREROUTING -j {}'.format(appParameters.firewall_forward_table))
+            appParameters.log.info(f'Added rule: -A PREROUTING -j {appParameters.firewall_forward_table}')
 
     elif chain.name == 'POSTROUTING':
             ACCEPT = 0

@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-# encoding: utf-8
 # PYTHONPATH=./lib/ ./bin/pyrma.py
 
 
@@ -20,26 +18,26 @@
    limitations under the License.
 """
 
-import sys
+import argparse
+import curses
 import os
 import shutil
+import signal
 import stat
-import time
-import argparse
+import sys
 import tarfile
-from checksumdir import dirhash
 import tempfile
-from pyrmalib import parameters, template, error, applib, utils
+import time
+
 import npyscreen
-import curses
 import pysftp
-from paramiko import ssh_exception, SFTPAttributes
+from checksumdir import dirhash
+from paramiko import SFTPAttributes, ssh_exception
 from paramiko.py3compat import strftime
 from sqlalchemy import create_engine
-import signal
 
 import pyrmalib.info as app_info
-
+from pyrmalib import applib, error, parameters, template, utils
 
 ftParameters = parameters.FileTransfer()
 
@@ -55,7 +53,7 @@ engine = create_engine(
 )
 ftParameters.engine = engine
 
-ftParameters.log.info('запуск модуля передачи файлов - {} v.{}'.format(app_info.program, app_info.version))
+ftParameters.log.info(f'запуск модуля передачи файлов - {app_info.program} v.{app_info.version}')
 
 parser = argparse.ArgumentParser(description='Модуль передачи файлов pyRMA')
 parser.add_argument('--host', help='Узел для подключения', required=True)
@@ -73,24 +71,24 @@ ftParameters.connection = applib.get_connection(ftParameters, args.id)
 cnopts = pysftp.CnOpts()
 cnopts.hostkeys = None
 cinfo = {
-    'host': args.host, 
-    'username': args.user, 
-    'password': args.password, 
-    'port': int(args.port), 
+    'host': args.host,
+    'username': args.user,
+    'password': args.password,
+    'port': int(args.port),
     'cnopts': cnopts
 }
 
-ftParameters.log.info('параметры запуска: {}:{} user {}'.format(args.host, args.port, args.user))
+ftParameters.log.info(f'параметры запуска: {args.host}:{args.port} user {args.user}')
 
 local_path = []
 remote_path = []
 local_path.append(os.path.join(ftParameters.data_dir, ftParameters.file_transfer_folder))
 
 def handle_sig_term(signum, frame):
-    raise error.HandleSigTerm('Получен сигнал на завершение приложения!!!({},{})'.format(signum, frame))
+    raise error.HandleSigTerm(f'Получен сигнал на завершение приложения!!!({signum},{frame})')
 
 def resize_sig_term(signum, frame):
-    raise error.TerminalResize('Получен сигнал изменения размера терминала!!!({},{})'.format(signum, frame))
+    raise error.TerminalResize(f'Получен сигнал изменения размера терминала!!!({signum},{frame})')
 
 signal.signal(signal.SIGTERM, handle_sig_term)
 signal.signal(signal.SIGINT, handle_sig_term)
@@ -99,7 +97,7 @@ signal.signal(signal.SIGHUP, handle_sig_term)
 signal.signal(signal.SIGWINCH, resize_sig_term)
 
 
-class File(object):
+class File:
     st_mode = None
     st_uid = None
     st_gid = None
@@ -132,7 +130,7 @@ class File(object):
                 break
             st_size = st_size // 1024
 
-        return(str('{}{}'.format(st_size, size)))
+        return(str(f'{st_size}{size}'))
 
     @staticmethod
     def _rwx(n, suid, sticky=False):
@@ -175,7 +173,7 @@ class File(object):
             self.st_mode & 7, self.st_mode & stat.S_ISVTX, True
         )
         return ks
-    
+
     def __str__(self) -> str:
         # Copy past from paramiko import SFTPAttributes
         if (self.st_mtime is None):
@@ -202,7 +200,7 @@ class File(object):
 
 class Mkdir(npyscreen.ActionPopup):
     is_ok = False
-    
+
     def on_ok(self):
         self.is_ok = True
         return False
@@ -212,14 +210,14 @@ class LocalMultiLineAction (npyscreen.MultiLineAction):
         return str(vl)
 
     def actionHighlighted(self, record, keypress):
-        ftParameters.log.debug('LocalMultiLineAction(actionHighlighted): {}'.format(str(record.name)))
+        ftParameters.log.debug(f'LocalMultiLineAction(actionHighlighted): {str(record.name)}')
         global local_path
         if stat.S_IFMT(record.st_mode) == stat.S_IFDIR and record.name != '..':
             local_path.append(record.name)
         if stat.S_IFMT(record.st_mode) == stat.S_IFDIR and record.name == '..':
             local_path.pop()
 
-        ftParameters.log.debug('local_path: {}'.format(local_path))
+        ftParameters.log.debug(f'local_path: {local_path}')
         self.parent.update_files()
 
 class RemoteMultiLineAction (npyscreen.MultiLineAction):
@@ -227,7 +225,7 @@ class RemoteMultiLineAction (npyscreen.MultiLineAction):
         return str(vl)
 
     def actionHighlighted(self, record, keypress):
-        ftParameters.log.debug('RemoteMultiLineAction(actionHighlighted): {}'.format(str(record.name)))
+        ftParameters.log.debug(f'RemoteMultiLineAction(actionHighlighted): {str(record.name)}')
         global remote_path
         if stat.S_IFMT(record.st_mode) == stat.S_IFDIR and record.name != '..':
             remote_path.append(record.name)
@@ -238,7 +236,7 @@ class RemoteMultiLineAction (npyscreen.MultiLineAction):
         if stat.S_IFMT(record.st_mode) == stat.S_IFDIR and record.name == '..':
             remote_path.pop()
 
-        ftParameters.log.debug('remote_path: {}'.format(remote_path))
+        ftParameters.log.debug(f'remote_path: {remote_path}')
         self.parent.update_files()
 
 
@@ -270,19 +268,19 @@ class FT(npyscreen.FormBaseNew):
         self.cycle_widgets = True
         lines, columns = self.xy()
         self.bx_width = (columns // 2) - 2
-        
+
         self.source = self.add(LocalBoxBasic, name = 'acs', max_width=self.bx_width)
         self.dest = self.add(
-            RemoteBoxBasic, 
+            RemoteBoxBasic,
             name = ftParameters.connection['host'].name, rely=2, max_width=self.bx_width, relx=self.bx_width + 2
         )
 
 
     def update_files(self, *args, **keywords):
         lines, columns = self.xy()
-        
+
         if self.bx_width != (columns // 2) - 2:
-            raise error.TerminalResize('Resize terminal line: {}, columns: {}'.format(lines, columns))
+            raise error.TerminalResize(f'Resize terminal line: {lines}, columns: {columns}')
 
         try:
             self.source.values = self.get_local_files(os.path.join(*local_path))
@@ -304,43 +302,39 @@ class FT(npyscreen.FormBaseNew):
         form = Mkdir()
         path = form.add_widget(npyscreen.TitleText, name='Имя')
         form.edit()
-        ftParameters.log.debug('FT(mkdir) form: {}'.format(str(form.__dict__)))
+        ftParameters.log.debug(f'FT(mkdir) form: {str(form.__dict__)}')
         if self.source.editing and form.is_ok:
             if os.path.isdir(os.path.join(*local_path, path.value)):
                 ftParameters.log.warning(
-                    'не возможно создать директорию {} - уже существует'.format(
-                        str(os.path.join(*local_path, path.value))
-                    )
+                    f'не возможно создать директорию {str(os.path.join(*local_path, path.value))} - уже существует'
                 )
                 npyscreen.notify_confirm("Директория уже существует", title="Создание директории", wide=True)
             else:
                 try:
                     os.mkdir(os.path.join(*local_path, path.value))
                     ftParameters.log.info(
-                            "создана директория: {}".format(str(os.path.join(*local_path, path.value)))
+                            f"создана директория: {str(os.path.join(*local_path, path.value))}"
                         )
                 except OSError as e:
-                    ftParameters.log.warning("{}".format(str(e)))
-                    npyscreen.notify_confirm("{}".format(str(e)), title="Создание директории", wide=True)
-        
+                    ftParameters.log.warning(f"{str(e)}")
+                    npyscreen.notify_confirm(f"{str(e)}", title="Создание директории", wide=True)
+
         if self.dest.editing and form.is_ok:
             with pysftp.Connection(**cinfo) as sftp:
                 if sftp.isdir(os.path.join(*remote_path, path.value)):
                     ftParameters.log.warning(
-                        'не возможно создать директорию {} - уже существует'.format(
-                            str(os.path.join(*remote_path, path.value))
-                        )
+                        f'не возможно создать директорию {str(os.path.join(*remote_path, path.value))} - уже существует'
                     )
                     npyscreen.notify_confirm("Директория уже существует", title="Создание директории", wide=True)
                 else:
                     try:
                         sftp.mkdir(os.path.join(*remote_path, path.value))
                         ftParameters.log.info(
-                            "создана директория: {}".format(str(os.path.join(*remote_path, path.value)))
+                            f"создана директория: {str(os.path.join(*remote_path, path.value))}"
                         )
                     except OSError as e:
-                        ftParameters.log.warning("{}".format(str(e)))
-                        npyscreen.notify_confirm("{}".format(str(e)), title="Создание директории", wide=True)
+                        ftParameters.log.warning(f"{str(e)}")
+                        npyscreen.notify_confirm(f"{str(e)}", title="Создание директории", wide=True)
         self.update_files()
 
     def beforeEditing(self):
@@ -364,9 +358,9 @@ class FT(npyscreen.FormBaseNew):
         except PermissionError:
             error.WTF('Нет доступа к локальной директории')
             ftParameters.log.error(
-                'Нет доступа к локальной директории передачи файлов: {}'.format(str(os.path.join(*local_path)))
+                f'Нет доступа к локальной директории передачи файлов: {str(os.path.join(*local_path))}'
             )
-            sys.exit('PermissionError: '.format(str(os.path.join(*local_path))))
+            sys.exit('PermissionError: ')
         self.dest.values = self.get_remote_files()
 
     def get_local_files(self, path=os.path.join(ftParameters.data_dir, ftParameters.file_transfer_folder)):
@@ -383,16 +377,16 @@ class FT(npyscreen.FormBaseNew):
             npyscreen.notify_confirm(
                 "Ошибка получения списка файлов\n" + e.strerror,
                 title="Передача данных", wide=True)
-            raise error.ErrorGetListFiles('Ошибка получения списка файлов: {}'.format(path))
-        
+            raise error.ErrorGetListFiles(f'Ошибка получения списка файлов: {path}')
+
         allList = sorted(dirs) + sorted(files)
 
         for f in allList:
             file_list.append(
                 File(os.stat(os.path.join(path, f)), name=f)
             )
-            
-        ftParameters.log.debug('FT(get_local_files): {}'.format(file_list))
+
+        ftParameters.log.debug(f'FT(get_local_files): {file_list}')
         return file_list
 
     def get_remote_files(self):
@@ -408,26 +402,26 @@ class FT(npyscreen.FormBaseNew):
                     "Ошибка получения списка файлов\n" + e.strerror,
                     title="Передача данных", wide=True)
                 raise error.ErrorGetListFiles(
-                    'Ошибка получения списка файлов удаленного узла: {}'.format(os.path.join(*remote_path))
+                    f'Ошибка получения списка файлов удаленного узла: {os.path.join(*remote_path)}'
                 )
 
         allList = dirs + files
 
         if len(remote_path) > 1:
             file_list.append(File(parent_folder, name='..'))
-        
+
         for f in allList:
             file_list.append(File(f))
-        ftParameters.log.debug('FT(get_remote_files): - {}'.format(file_list))
+        ftParameters.log.debug(f'FT(get_remote_files): - {file_list}')
         return file_list
-    
+
     def transfer(self, *args, **keywords):
         try:
             if self.source.editing:
                 for widget in self.source._my_widgets:
                     if isinstance(widget, LocalMultiLineAction):
                         if len(widget.get_filtered_values()) > 0:
-                            ftParameters.log.debug("widget.get_filtered_values(): {}".format(widget.get_filtered_values()))
+                            ftParameters.log.debug(f"widget.get_filtered_values(): {widget.get_filtered_values()}")
                             self.SELECTED_SOURCE_LIST_FILE = widget.get_filtered_values()
                         elif len(self.SELECTED_SOURCE_LIST_FILE) > 0:
                             pass
@@ -446,17 +440,17 @@ class FT(npyscreen.FormBaseNew):
                                 )
                                 self.store_backup_file(os.path.join(*local_path, selected.name), 'upload')
                                 self.notify('stop')
-                                ftParameters.log.info('передана директория: {}'.format(str(os.path.join(*local_path, selected.name))))
+                                ftParameters.log.info(f'передана директория: {str(os.path.join(*local_path, selected.name))}')
                             except PermissionError:
                                 npyscreen.notify_confirm(
                                     'Ошибка передачи файла PermissionError',
                                     title="Ошибка передачи файла", wide=True)
-                                ftParameters.log.warning('Ошибка передачи файла PermissionError: {}'.format(str(os.path.join(*local_path, selected.name))))
+                                ftParameters.log.warning(f'Ошибка передачи файла PermissionError: {str(os.path.join(*local_path, selected.name))}')
                             except UnicodeEncodeError:
                                 npyscreen.notify_confirm(
                                     'Имя файла не в UTF8!!!',
                                     title="Ошибка передачи файла", wide=True)
-                                ftParameters.log.warning('Имя файла не в UTF8: {}'.format(str(os.path.join(*local_path, selected.name))))
+                                ftParameters.log.warning(f'Имя файла не в UTF8: {str(os.path.join(*local_path, selected.name))}')
                         if stat.S_IFMT(selected.st_mode) == stat.S_IFREG:
                             self.notify('start', name=selected.name)
                             try:
@@ -465,23 +459,23 @@ class FT(npyscreen.FormBaseNew):
                                 )
                                 self.store_backup_file(os.path.join(*local_path, selected.name), 'upload')
                                 self.notify('stop')
-                                ftParameters.log.info('передан файл: {}'.format(str(os.path.join(*local_path, selected.name))))
+                                ftParameters.log.info(f'передан файл: {str(os.path.join(*local_path, selected.name))}')
                             except PermissionError:
                                 npyscreen.notify_confirm(
                                     'Ошибка передачи файла PermissionError',
                                     title="Ошибка передачи файла", wide=True)
-                                ftParameters.log.warning('Ошибка передачи файла PermissionError: {}'.format(str(os.path.join(*local_path, selected.name))))
+                                ftParameters.log.warning(f'Ошибка передачи файла PermissionError: {str(os.path.join(*local_path, selected.name))}')
                             except UnicodeEncodeError:
                                 npyscreen.notify_confirm(
                                     'Имя файла не в UTF8!!!',
                                     title="Ошибка передачи файла", wide=True)
-                                ftParameters.log.warning('Имя файла не в UTF8: {}'.format(str(os.path.join(*local_path, selected.name))))
-            
+                                ftParameters.log.warning(f'Имя файла не в UTF8: {str(os.path.join(*local_path, selected.name))}')
+
             if self.dest.editing:
                 for widget in self.dest._my_widgets:
                     if isinstance(widget, RemoteMultiLineAction):
                         if len(widget.get_filtered_values()) > 0:
-                            ftParameters.log.debug("widget.get_filtered_values(): {}".format(widget.get_filtered_values()))
+                            ftParameters.log.debug(f"widget.get_filtered_values(): {widget.get_filtered_values()}")
                             self.SELECTED_DEST_LIST_FILE = widget.get_filtered_values()
                         elif len(self.SELECTED_DEST_LIST_FILE) > 0:
                             pass
@@ -499,17 +493,17 @@ class FT(npyscreen.FormBaseNew):
                                 )
                                 self.store_backup_file(os.path.join(*local_path, selected.name), 'download')
                                 self.notify('stop')
-                                ftParameters.log.info('загружена директория: {}'.format(str(os.path.join(*local_path, selected.name))))
+                                ftParameters.log.info(f'загружена директория: {str(os.path.join(*local_path, selected.name))}')
                             except PermissionError:
                                 npyscreen.notify_confirm(
                                     'Ошибка передачи файла PermissionError',
                                     title="Ошибка передачи файла", wide=True)
-                                ftParameters.log.warning('Ошибка передачи файла PermissionError: {}'.format(str(os.path.join(*remote_path, selected.name))))
+                                ftParameters.log.warning(f'Ошибка передачи файла PermissionError: {str(os.path.join(*remote_path, selected.name))}')
                             except UnicodeEncodeError:
                                 npyscreen.notify_confirm(
                                     'Имя файла не в UTF8!!!',
                                     title="Ошибка передачи файла", wide=True)
-                                ftParameters.log.warning('Имя файла не в UTF8: {}'.format(str(os.path.join(*remote_path, selected.name))))
+                                ftParameters.log.warning(f'Имя файла не в UTF8: {str(os.path.join(*remote_path, selected.name))}')
                         if stat.S_IFMT(selected.st_mode) == stat.S_IFREG:
                             self.notify('start', name=selected.name)
                             try:
@@ -518,21 +512,21 @@ class FT(npyscreen.FormBaseNew):
                                 )
                                 self.store_backup_file(os.path.join(*local_path, selected.name), 'download')
                                 self.notify('stop')
-                                ftParameters.log.info('загружен файл: {}'.format(str(os.path.join(*local_path, selected.name))))
+                                ftParameters.log.info(f'загружен файл: {str(os.path.join(*local_path, selected.name))}')
                             except PermissionError:
                                 npyscreen.notify_confirm(
                                     'Ошибка передачи файла PermissionError',
                                     title="Ошибка передачи файла", wide=True)
-                                ftParameters.log.warning('Ошибка передачи файла PermissionError: {}'.format(str(os.path.join(*remote_path, selected.name))))
+                                ftParameters.log.warning(f'Ошибка передачи файла PermissionError: {str(os.path.join(*remote_path, selected.name))}')
                             except UnicodeEncodeError:
                                 npyscreen.notify_confirm(
                                     'Имя файла не в UTF8!!!',
                                     title="Ошибка передачи файла", wide=True)
-                                ftParameters.log.warning('Имя файла не в UTF8: {}'.format(str(os.path.join(*remote_path, selected.name))))
+                                ftParameters.log.warning(f'Имя файла не в UTF8: {str(os.path.join(*remote_path, selected.name))}')
         except FileExistsError as e:
             npyscreen.notify_confirm(e.strerror, title="Передача данных", wide=True)
             ftParameters.log.warning('Ошибка передачи файлов ' + str(e))
-        
+
         self.SELECTED_SOURCE_LIST_FILE.clear()
         self.SELECTED_DEST_LIST_FILE.clear()
         self.update_files()
@@ -540,7 +534,7 @@ class FT(npyscreen.FormBaseNew):
     def store_backup_file(self, path, direction):
         backup_folder = '{}'.format(
             os.path.join(
-                ftParameters.data_dir, 
+                ftParameters.data_dir,
                 ftParameters.file_transfer_backup_folder,
                 ftParameters.connection['host'].name)
         )
@@ -552,7 +546,7 @@ class FT(npyscreen.FormBaseNew):
 
         if not os.path.isdir(backup_folder):
             os.mkdir(backup_folder)
-        tar_name = '{}_{}.tar'.format(args.id, os.path.basename(path))
+        tar_name = f'{args.id}_{os.path.basename(path)}.tar'
         with tempfile.TemporaryDirectory() as tmpdirname:
             tar = tarfile.open(os.path.join(tmpdirname, tar_name), "w")
             tar.add(path)
@@ -571,7 +565,7 @@ class FT(npyscreen.FormBaseNew):
                 if not hardlink:
                     shutil.move(os.path.join(tmpdirname, tar_name), os.path.join(backup_folder, tar_name))
         applib.set_file_transfer(
-            ftParameters, 
+            ftParameters,
             args.id,
             os.path.basename(path),
             os.path.join(ftParameters.file_transfer_backup_folder, ftParameters.connection['host'].name, tar_name),
@@ -596,7 +590,7 @@ class FT(npyscreen.FormBaseNew):
                     else:
                         widget._filtered_values_cache.append(widget.cursor_line)
                         self.SELECTED_SOURCE_LIST_FILE.append(self.source.values[widget.cursor_line])
-                    ftParameters.log.debug('self.SELECTED_SOURCE_LIST_FILE: {}'.format(self.SELECTED_SOURCE_LIST_FILE))
+                    ftParameters.log.debug(f'self.SELECTED_SOURCE_LIST_FILE: {self.SELECTED_SOURCE_LIST_FILE}')
                     widget.update()
                     break
         if self.dest.editing:
@@ -608,10 +602,10 @@ class FT(npyscreen.FormBaseNew):
                     else:
                         widget._filtered_values_cache.append(widget.cursor_line)
                         self.SELECTED_DEST_LIST_FILE.append(self.dest.values[widget.cursor_line])
-                    ftParameters.log.debug('self.SELECTED_DEST_LIST_FILE: {}'.format(self.SELECTED_DEST_LIST_FILE))
+                    ftParameters.log.debug(f'self.SELECTED_DEST_LIST_FILE: {self.SELECTED_DEST_LIST_FILE}')
                     widget.update()
                     break
-        
+
 
 
 class ErrorForm(npyscreen.FormBaseNew):
@@ -641,7 +635,7 @@ class UserApp(npyscreen.NPSAppManaged):
         else:
             self.addForm("MAIN", ErrorForm)
             self.getForm("MAIN").error_text = str(connection_error_message)
-            ftParameters.log.error('Ошибка подключения к узлу: {}'.format(connection_error_message), pr=True)
+            ftParameters.log.error(f'Ошибка подключения к узлу: {connection_error_message}', pr=True)
 
 connection_error = False
 connection_error_message = ''

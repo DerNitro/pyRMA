@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-# encoding: utf-8
 # PYTHONPATH=./lib/ ./bin/pyrma.py
 
 """
@@ -19,9 +17,11 @@
    limitations under the License.
 """
 
-from pickle import TRUE
-import sys, os
-import pwd, grp
+import grp
+import os
+import pwd
+import sys
+
 from pyrmalib import parameters
 
 try:
@@ -36,19 +36,20 @@ except OSError as err:
     print(f"Error: {err}!!!")
     sys.exit(1)
 
-from pyrmalib import interface, schema, applib, mail, template
-import sqlalchemy.orm
-from sqlalchemy import create_engine
-import pyrmalib.utils as pyutils
-import pyrmalib.error as pyerror
 import datetime
 import signal
 
+import sqlalchemy.orm
+from sqlalchemy import create_engine
+
+import pyrmalib.error as pyerror
 import pyrmalib.info as app_info
+import pyrmalib.utils as pyutils
+from pyrmalib import applib, interface, mail, schema, template
 
 
 def handle_sig_term(signum, frame):
-    raise pyerror.HandleSigTerm('Получен сигнал на завершение приложения!!!({},{})'.format(signum, frame))
+    raise pyerror.HandleSigTerm(f'Получен сигнал на завершение приложения!!!({signum},{frame})')
 
 signal.signal(signal.SIGTERM, handle_sig_term)
 signal.signal(signal.SIGINT, handle_sig_term)
@@ -57,7 +58,7 @@ signal.signal(signal.SIGHUP, handle_sig_term)
 
 appParameters.program = app_info.program
 appParameters.version = app_info.version
-appParameters.log.info('Запуск приложения: {0} {1}'.format(app_info.program, app_info.version))
+appParameters.log.info(f'Запуск приложения: {app_info.program} {app_info.version}')
 appParameters.log.debug(appParameters)
 pw_name, pw_passwd, pw_uid, pw_gid, pw_gecos, pw_dir, pw_shell = pwd.getpwuid(os.getuid())
 
@@ -105,10 +106,10 @@ if not applib.user_info(pw_name, engine):
             },
             appParameters
         )
-        
+
         mail.send_mail(
             appParameters,
-            'Регистрация нового пользователя - {}'.format(pw_gecos),
+            f'Регистрация нового пользователя - {pw_gecos}',
             template.registration_user(),
             applib.get_admin_users(appParameters),
             {'username': pw_gecos},
@@ -143,9 +144,7 @@ else:
         sys.exit(15)
     else:
         appParameters.log.info(
-            "Подключение пользователя {0} с IP: {1}.".format(
-                appParameters.user_info.login, ssh_client_ip
-            )
+            f"Подключение пользователя {appParameters.user_info.login} с IP: {ssh_client_ip}."
         )
 
 # Проверка блокировки уч. записи, с автоматическим продлением даты блокировки.
@@ -160,7 +159,7 @@ else:
             status = db.query(schema.User).filter(schema.User.login == user_info.login). \
                 update({schema.User.date_disable: datetime.datetime.now() + datetime.timedelta(days=ex_days)})
         if status == 1:
-            appParameters.log.info("Продлен доступ к системе на {0} дней.".format(ex_days))
+            appParameters.log.info(f"Продлен доступ к системе на {ex_days} дней.")
         else:
             appParameters.log.warning("Huston we have problem!!!")
 

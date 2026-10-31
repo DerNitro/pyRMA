@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 """
     Copyright 2020 Sergey Utkin utkins01@gmail.com

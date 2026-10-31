@@ -2,12 +2,13 @@ import datetime
 
 from pyrmalib import schema
 
+
 # Test worked mocked session
 def test_mocked_session_access_list(mocked_session):
     access_list = mocked_session.query(schema.AccessList).all()
     assert len(access_list) > 0
 
-    
+
 
 def test_get_user_access_hid(mocked_session):
     uid = 1

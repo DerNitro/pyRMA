@@ -1,5 +1,7 @@
-import pytest
 from datetime import datetime, timedelta
+
+import pytest
+
 from pyrmalib.schema import Base
 
 
@@ -35,7 +37,7 @@ def sqlalchemy_mock_config():
             "file_transfer":    False,
             "ipmi":             False
         },
-        # interface.py/AccessRequest stink 
+        # interface.py/AccessRequest stink
         {
             "user":             1,
             "host":             1,

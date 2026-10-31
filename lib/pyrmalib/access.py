@@ -15,7 +15,7 @@
 """
 import datetime
 
-from pyrmalib import schema, error, parameters, applib, mail, template
+from pyrmalib import applib, error, mail, parameters, schema, template
 
 user_access_map = {
     'ShowHostInformation': 0,       # Просмотр информации об узле
@@ -47,7 +47,7 @@ class Access:
         :param n_access: текущее значение доступа int
         """
         self.map = {}
-        bin_str = '{0:b}'.format(n_access).zfill(len(self.access_map))
+        bin_str = f'{n_access:b}'.zfill(len(self.access_map))
         for access, n in self.access_map.items():
             self.map[access] = bin_str[n]
 
@@ -79,7 +79,7 @@ class Access:
         return int(s, 2)
 
     def __repr__(self):
-        return "{0}".format(self.map)
+        return f"{self.map}"
 
 
 class UserAccess(Access):
@@ -141,7 +141,7 @@ def check_access(app_param: parameters.Parameters, access, h_object=None, check_
     :param h_object: хост schema.Host
     :return: bool
     """
-    app_param.log.debug('check_access(param, {},{},{},{})'.format(access, h_object, check_permission, user))
+    app_param.log.debug(f'check_access(param, {access},{h_object},{check_permission},{user})')
     if not user:
         user = app_param.user_info.uid
 
@@ -274,21 +274,21 @@ def request_access(param: parameters.Parameters, request: schema.RequestAccess):
             user=param.user_info.uid,
             action_type=32,
             date=datetime.datetime.now(),
-            message="Запрос доступа до узла {host.name}({request})".format(host=host, request=request)
+            message=f"Запрос доступа до узла {host.name}({request})"
         )
         db.add(action)
         db.flush()
     user_list = []
     for group in host_group:
         l = users_access_list(param, 'AccessRequest', group_host=group)
-        param.log.debug('request_access: group {}, users_access_list {}'.format(group, l))
+        param.log.debug(f'request_access: group {group}, users_access_list {l}')
         if l and isinstance(l, list):
             user_list += l
     if len(user_list) == 0:
         user_list += applib.get_admin_users(param)
     return mail.send_mail(
         param,
-        "Запрос доступа до узла - {host.name} ({user})".format(host=host, user=param.user_info.full_name),
+        f"Запрос доступа до узла - {host.name} ({param.user_info.full_name})",
         template.request_access(),
         user_list,
         {
@@ -341,7 +341,7 @@ def access_request(param: parameters.Parameters, access):
             t_object=0,
             object=access['host'].id,
             date_disable=access['access'].date_access,
-            note="Запрос доступа согласован - {}({})".format(param.user_info.full_name, datetime.datetime.now()),
+            note=f"Запрос доступа согласован - {param.user_info.full_name}({datetime.datetime.now()})",
             conn_access=conn_access.get_int(),
             user_access=user_access.get_int(),
             status=1
