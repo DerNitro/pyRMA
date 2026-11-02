@@ -68,7 +68,7 @@ class RecFile:
                         line.insert(cursor, ch)
                         cursor += 1
             return "\n".join(lines)
-        except:
+        except Exception:
             return "ERROR: Ошибка выполнения анализа файла."
 
     def __repr__(self):

@@ -51,7 +51,7 @@ class Mail:
             s = smtplib.SMTP(host=self.host, port=self.port)
             s.sendmail(self.mail_from, self.mail_to, msg.as_string())
             s.quit()
-        except:
+        except Exception:
             self.log.exception()
             return False
         return True

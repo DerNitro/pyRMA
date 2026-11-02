@@ -280,10 +280,10 @@ def request_access(param: parameters.Parameters, request: schema.RequestAccess):
         db.flush()
     user_list = []
     for group in host_group:
-        l = users_access_list(param, 'AccessRequest', group_host=group)
-        param.log.debug(f'request_access: group {group}, users_access_list {l}')
-        if l and isinstance(l, list):
-            user_list += l
+        access_list = users_access_list(param, 'AccessRequest', group_host=group)
+        param.log.debug(f'request_access: group {group}, users_access_list {access_list}')
+        if access_list and isinstance(access_list, list):
+            user_list += access_list
     if len(user_list) == 0:
         user_list += applib.get_admin_users(param)
     return mail.send_mail(

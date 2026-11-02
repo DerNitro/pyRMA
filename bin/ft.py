@@ -42,7 +42,7 @@ from pyrmalib import applib, error, parameters, template, utils
 ftParameters = parameters.FileTransfer()
 
 engine = create_engine(
-    '{0}://{1}:{2}@{3}:{4}/{5}'.format(
+    '{}://{}:{}@{}:{}/{}'.format(
         ftParameters.dbase,
         ftParameters.dbase_param["user"],
         ftParameters.dbase_param["password"],
@@ -185,14 +185,7 @@ class File:
             else:
                 datestr = strftime("%d %b %H:%M", time_tuple)
 
-        return "%s  %-8d %-8d %6s %-12s %s" % (
-            self.str_mode(),
-            int(self.st_uid),
-            int(self.st_gid),
-            self.str_size(),
-            datestr,
-            self.name,
-        )
+        return f"{self.str_mode()}  {int(self.st_uid):<8d} {int(self.st_gid):<8d} {self.str_size():>6s} {datestr:<12s} {self.name}"
 
     def __repr__(self) -> str:
         return str(self.__dict__)

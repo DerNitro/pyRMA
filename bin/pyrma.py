@@ -67,7 +67,7 @@ if len(pw_gecos) == 0:
 
 if appParameters.dbase in ['postgresql']:
     engine = create_engine(
-        '{0}://{1}:{2}@{3}:{4}/{5}'.format(
+        '{}://{}:{}@{}:{}/{}'.format(
             appParameters.dbase,
             appParameters.dbase_param["user"],
             appParameters.dbase_param["password"],

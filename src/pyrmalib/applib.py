@@ -636,7 +636,7 @@ def get_ilo_type(param: parameters.WebParameters, ipmi_id=None, raw=False):
 
 def get_folders(param: parameters.WebParameters, raw=False):
     with schema.db_select(param.engine) as db:
-        folders = db.query(schema.Host).filter(schema.Host.type == 2, schema.Host.remove == False).all()
+        folders = db.query(schema.Host).filter(schema.Host.type == 2, not schema.Host.remove).all()
     if raw:
         return folders
     else:
@@ -672,9 +672,9 @@ def get_local_port(param: parameters.WebParameters):
     with schema.db_select(param.engine) as db:
         local_port = db.query(schema.Service).all()
 
-    l = [t.local_port for t in local_port]
+    local_ports = [t.local_port for t in local_port]
     for i in ports:
-        if i not in l:
+        if i not in local_ports:
             return i
 
 
@@ -737,7 +737,7 @@ def get_group(param: parameters.WebParameters, group_id):
                 .join(schema.Host, schema.GroupHost.host == schema.Host.id) \
                 .filter(
                     schema.GroupHost.group == group_id,
-                    schema.Host.remove == False
+                    not schema.Host.remove
                 ).all()
             content['hosts'] = hosts
 
@@ -830,7 +830,7 @@ def get_user(param: parameters.Parameters, uid, connection_date_start=None, conn
 def get_admin_users(param: parameters.Parameters) -> list[schema.User]:
     admins = []
     with schema.db_select(param.engine) as db:
-        admins = db.query(schema.User).filter(schema.User.admin == True).all()
+        admins = db.query(schema.User).filter(schema.User.admin).all()
 
     return admins
 
@@ -2147,7 +2147,7 @@ def get_folder_id(param: parameters.WebParameters, folder: str, parent=0, create
 
 
 if __name__ == '__main__':
-    e = create_engine('{0}://{1}:{2}@{3}:{4}/{5}'.format('postgresql',
+    e = create_engine('{}://{}:{}@{}:{}/{}'.format('postgresql',
                                                          'acs',
                                                          'acs',
                                                          'localhost',

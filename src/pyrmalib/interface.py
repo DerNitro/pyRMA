@@ -41,11 +41,11 @@ class RecordList(npyscreen.MultiLineAction):
     def display_value(self, vl: schema.Host):
         if type(vl) is schema.Host:
             if vl.type == 2:
-                return '\t[{0:<20}]\t\t{1}'.format(vl.name, vl.describe if vl.describe else '')
+                return '\t[{:<20}]\t\t{}'.format(vl.name, vl.describe if vl.describe else '')
             elif vl.type == 1:
-                return '\t {0:<20} \t\t{1}'.format(vl.name, vl.describe if vl.describe else '')
+                return '\t {:<20} \t\t{}'.format(vl.name, vl.describe if vl.describe else '')
         else:
-            return '\t{0:<20}'.format('..')
+            return '\t{:<20}'.format('..')
 
     def actionHighlighted(self, act_on_this: schema.Host, key_press):
         if type(act_on_this) is schema.Host:
@@ -238,7 +238,7 @@ class AccessRequest(npyscreen.ActionForm):
     def __init__(self, *args, **keywords):
         super().__init__(*args, **keywords)
         self.add_handlers({'^Q': self.exit_editing})
-        self.name = 'Запрос доступа к узлу: {0}'.format(keywords['name'])
+        self.name = 'Запрос доступа к узлу: {}'.format(keywords['name'])
         self.date_disable = self.add(
             npyscreen.TitleDateCombo,
             name="Доступ до даты",
@@ -298,7 +298,7 @@ class Filter(npyscreen.Popup):
         elif count == 1:
             self.Status_Line.value = '(1 совпадение)'
         else:
-            self.Status_Line.value = '(%s совпадений)' % count
+            self.Status_Line.value = f'({count} совпадений)'
 
     def create(self):
         super().create()

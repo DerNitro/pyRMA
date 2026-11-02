@@ -5,7 +5,7 @@
     Date: 28.09.2018 06:43
     Project: pyRMA
     AUTHOR : Sergey Utkin
-    
+
     Copyright 2016 Sergey Utkin utkins01@gmail.com
 
    Licensed under the Apache License, Version 2.0 (the "License");

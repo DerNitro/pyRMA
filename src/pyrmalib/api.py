@@ -29,7 +29,7 @@ auth = HTTPBasicAuth()
 
 apiParameters = parameters.APIParameters()
 apiParameters.engine = create_engine(
-    '{0}://{1}:{2}@{3}:{4}/{5}'.format(
+    '{}://{}:{}@{}:{}/{}'.format(
         apiParameters.dbase,
         apiParameters.dbase_param["user"],
         apiParameters.dbase_param["password"],

@@ -5,7 +5,7 @@
     Date: 11.08.2020 06:57
     Project: pyRMA
     AUTHOR : Sergey Utkin
-    
+
     Copyright 2020 Sergey Utkin utkins01@gmail.com
 
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -183,7 +183,7 @@ signal.signal(signal.SIGINT, handle_sig_term)
 
 if appParameters.dbase in ['postgresql']:
     engine = create_engine(
-        '{0}://{1}:{2}@{3}:{4}/{5}'.format(
+        '{}://{}:{}@{}:{}/{}'.format(
             appParameters.dbase,
             appParameters.dbase_param["user"],
             appParameters.dbase_param["password"],
@@ -241,7 +241,7 @@ while True:
         check_session_live(appParameters)
         tcp_forward(appParameters)
         connection(appParameters)
-    except:
+    except Exception:
         appParameters.log.exception()
         iptc.Chain(iptc.Table(iptc.Table.NAT), appParameters.firewall_forward_table).flush()
         app_exit(1)

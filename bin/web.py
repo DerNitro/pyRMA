@@ -32,7 +32,7 @@ from pyrmalib import error as rma_error
 
 webParameters = parameters.WebParameters()
 webParameters.engine = create_engine(
-    '{0}://{1}:{2}@{3}:{4}/{5}'.format(
+    '{}://{}:{}@{}:{}/{}'.format(
         webParameters.dbase,
         webParameters.dbase_param["user"],
         webParameters.dbase_param["password"],
@@ -443,7 +443,7 @@ def edit_folder(directory_id):
 def add_host(directory_id):
     form = forms.EditHost()
     search_field = forms.Search()
-    folder = applib.get_host(webParameters, host_id=directory_id)
+    applib.get_host(webParameters, host_id=directory_id)
     form.connection_type.choices = applib.get_connection_type(webParameters)
     form.file_transfer_type.choices = applib.get_file_transfer_type(webParameters)
     form.ilo_type.choices = applib.get_ilo_type(webParameters)

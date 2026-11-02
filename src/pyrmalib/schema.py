@@ -505,7 +505,7 @@ class AccessList(Base):
     object: ID узла/группы
     date_disable: Дата действия доступа
     note: Описание
-    conn_access: Значение разрешений подключений 
+    conn_access: Значение разрешений подключений
     user_access: Значение пользовательских разрешений
     status: Статус подтверждения доступа
         0 - Не подтверждено
@@ -560,7 +560,7 @@ class ForwardTCP(Base):
     forward_ip: IP адрес назначения
     forward_port: TCP порт назначения
     state:
-        0 - Завешено 
+        0 - Завешено
         1 - Активно
     """
     __tablename__ = 'tcp_port_forward'
