@@ -1,4 +1,4 @@
-version     = '1.2.6'
+version     = '2.0.0-dev'
 author      = 'Sergey Utkin'
 email       = 'utkins01@gmail.com'
 status      = "stable"
