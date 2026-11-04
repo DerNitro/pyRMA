@@ -1,8 +1,8 @@
 ansible/inventory.yml
 venv
 test
-.*
 *.pyc
 *~
 *.csv
 tests/csv_generator.py
+.python-version

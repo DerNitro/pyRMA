@@ -16,15 +16,15 @@
 Текущее покрытие unit-тестами имеется только для двух функций в `applib.py` (`check_access_request`, `get_user_access`). Ниже представлен подробный список всех функций, методов и классов библиотеки `pyrmalib`, требующих написания unit-тестов.
 
 ### 3.1. `src/pyrmalib/access.py`
-- [ ] Класс `Access` (методы `__init__`, `__repr__`, `change`, `get`, `get_int`)
-- [ ] Класс `UserAccess` (метод `__init__`)
-- [ ] Класс `ConnectionAccess` (метод `__init__`)
-- [ ] Функция `get_user_access`
-- [ ] Функция `check_access`
-- [ ] Функция `users_access_list`
-- [ ] Функция `request_access`
-- [ ] Функция `access_request`
-- [ ] Функция `deny_request`
+- [x] Класс `Access` (методы `__init__`, `__repr__`, `change`, `get`, `get_int`)
+- [x] Класс `UserAccess` (метод `__init__`)
+- [x] Класс `ConnectionAccess` (метод `__init__`)
+- [x] Функция `get_user_access`
+- [x] Функция `check_access`
+- [x] Функция `users_access_list`
+- [x] Функция `request_access`
+- [x] Функция `access_request`
+- [x] Функция `deny_request`
 
 ### 3.2. `src/pyrmalib/api.py`
 - [ ] Функция `verify_password`
@@ -188,7 +188,7 @@
 - [ ] Функция `date_to_datetime`
 - [ ] Функция `md5`
 
-- [ ] Добавить автоматический запуск линтера (`ruff check .`) и тестов в пайплайн или локальные хуки git (pre-commit).
+- [x] Добавить автоматический запуск линтера (`ruff check .`) и тестов в пайплайн или локальные хуки git (pre-commit).
 
 ## 4. Документация
 - [ ] Актуализировать инструкции по установке и запуску в `README.rst` с учетом текущей версии Python (3.12+) и окружения `pyenv`.
