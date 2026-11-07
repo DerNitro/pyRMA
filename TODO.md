@@ -27,10 +27,10 @@
 - [x] Функция `deny_request`
 
 ### 3.2. `src/pyrmalib/api.py`
-- [ ] Функция `verify_password`
-- [ ] Функция `unauthorized`
-- [ ] Класс `Monitoring` (метод `get`)
-- [ ] Класс `HostUpload` (метод `post`)
+- [x] Функция `verify_password`
+- [x] Функция `unauthorized`
+- [x] Класс `Monitoring` (метод `get`)
+- [x] Класс `HostUpload` (метод `post`)
 
 ### 3.3. `src/pyrmalib/applib.py`
 - [ ] Функция `authorization`
