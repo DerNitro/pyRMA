@@ -16,7 +16,6 @@
 
 import hashlib
 import ipaddress
-import os
 from datetime import date, datetime
 
 import pyrmalib.error
@@ -32,41 +31,6 @@ def get_app_parameters(table_parameter, param):
     return list(filter(lambda x: x.name == param, table_parameter))[0].value
 
 
-def check_license(lic):
-    """
-    Проверка валидности файла лицензии
-
-    :param lic: путь к файлу лицензии string
-    :type lic:  str
-    :return: Возвращает Истина если файл валидный.
-    """
-    import datetime
-    import hashlib
-    from platform import system
-    from socket import gethostname
-
-    f = open(lic, encoding='utf-8')
-    allhash, idhost, hostname, platform, days = str(f.readline()).split()
-    f.close()
-
-    process_hostid = os.popen('hostid')
-    host_id = process_hostid.read()
-    process_hostid.close()
-
-    if not system() == platform:
-        return False
-    if not hashlib.md5(host_id.strip().encode()).hexdigest() == idhost:
-        return False
-    if not gethostname() == hostname:
-        return False
-    if not datetime.datetime.now() < datetime.datetime.strptime(days, '%d/%m/%Y'):
-        return False
-    if not allhash == hashlib.md5(str(hashlib.md5(host_id.strip().encode()).hexdigest()).encode() \
-                                  + str(gethostname()).encode() \
-                                  + str(system()).encode() \
-                                  + str(days).encode()).hexdigest():
-        return False
-    return True
 
 
 def check_ip(user_ip, ip_address):

@@ -148,18 +148,18 @@
 - [ ] Классы интерфейса (`MultiLineEditableBoxed`, `RecordList`, `HostListDisplay`, `Find`, `AccessRequest`, `Filter`, `ConnectionForm`, `InformationForm`, `ErrorForm`, `Interface`)
 
 ### 3.8. `src/pyrmalib/log.py`
-- [ ] Класс `Log` (методы `__init__`, `error`, `info`, `warning`, `debug`, `critical`, `exception`)
+- [x] Класс `Log` (методы `__init__`, `error`, `info`, `warning`, `debug`, `critical`, `exception`)
 
 ### 3.9. `src/pyrmalib/mail.py`
-- [ ] Класс `Mail` (методы `__init__`, `send`, `__repr__`)
-- [ ] Функция `send_mail`
+- [x] Класс `Mail` (методы `__init__`, `send`, `__repr__`)
+- [x] Функция `send_mail`
 
 ### 3.10. `src/pyrmalib/modules.py`
-- [ ] Классы `Modules` и `ConnectionModules` (методы `__init__`, `run`, `close`, `connection`, `firewall`)
+- [x] Классы `Modules` и `ConnectionModules` (методы `__init__`, `run`, `close`, `connection`, `firewall`)
 
 ### 3.11. `src/pyrmalib/parameters.py`
-- [ ] Функция `check_config`
-- [ ] Классы параметров (`CheckConfigError`, `Parameters`, `AppParameters`, `WebParameters`, `APIParameters`, `FirewallParameters`, `FileTransfer`)
+- [x] Функция `check_config`
+- [x] Классы параметров (`CheckConfigError`, `Parameters`, `AppParameters`, `WebParameters`, `APIParameters`, `FirewallParameters`, `FileTransfer`)
 
 ### 3.12. `src/pyrmalib/rec_file.py`
 - [ ] Класс `RecFile` (методы `__init__`, `stdin_to_line`, `__repr__`)
@@ -179,7 +179,6 @@
 
 ### 3.15. `src/pyrmalib/utils.py`
 - [ ] Функция `get_app_parameters`
-- [ ] Функция `check_license`
 - [ ] Функция `check_ip`
 - [ ] Функция `valid_ip`
 - [ ] Функция `valid_net`

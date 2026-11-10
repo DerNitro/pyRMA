@@ -197,7 +197,7 @@ class ConnectionModules(Modules):
             connection = db.query(schema.Connection).filter(schema.Connection.id == self.connection_id).one()
             connection.date_end = datetime.datetime.now()
             connection.status = 2
-            connection.termination = self.TERMINATION,
+            connection.termination = self.TERMINATION
             connection.error = self.ERROR
             db.flush()
             db.refresh(connection)
